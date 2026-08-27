@@ -1,0 +1,97 @@
+# ---------------------------------------------------------------------------
+# Level 3 / restricted data — NEVER commit
+# ---------------------------------------------------------------------------
+data/*
+!data/README.md
+!data/.gitignore
+
+# Statistical and tabular data files anywhere in the tree
+*.dta
+*.csv
+*.tsv
+*.sav
+*.rds
+*.parquet
+*.xlsx
+*.xls
+*.xlsm
+# ...except the deliberately redacted samples
+!docs/source-materials/*_SAMPLE.xlsx
+
+# Media
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.m4v
+*.wav
+*.mp3
+
+# Database dumps and local databases
+*.sql
+*.dump
+*.sqlite
+*.sqlite3
+*.db
+
+# ---------------------------------------------------------------------------
+# Secrets
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*service-account*.json
+credentials.json
+token.json
+
+# ---------------------------------------------------------------------------
+# Dependencies and build output
+# ---------------------------------------------------------------------------
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# Python, if used for data tooling
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------------------
+# LaTeX build artefacts (docs/rubric)
+# ---------------------------------------------------------------------------
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# ---------------------------------------------------------------------------
+# Editors and operating systems
+# ---------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~
+
+# OneDrive / cloud-sync conflict copies
+*conflicted copy*
+*-conflicted-*
