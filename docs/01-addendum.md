@@ -293,9 +293,89 @@ Answer these back to me as a numbered list with your recommendation for each, an
 4. What is the deadline for completing all coding, and is it fixed?
 5. Do transcripts of the videos exist, and should the platform store or display them? (The manual refers
    to garbled transcripts, so something exists.)
-6. Should coders see the context card that *another* coder wrote for the same video, or write independently?
+6. Should coders see the context card that *anaother* coder wrote for the same video, or write independently?
    (I lean towards: first coder writes it, second reviews and amends, with both versions kept.)
 7. Do we need multi-language support in the interface, or is English sufficient for all coders?
 8. Who administers the Google Drive that holds the videos, and can that person grant API access?
 9. What is our hosting budget per month, and who pays for it?
 10. Who maintains this after the coding period ends?
+
+---
+
+# §17. Amendments
+
+## Amendment A — one context card per video, 2026-08-28
+
+Decided by the study team. **Supersedes §16 question 6**, and modifies §3, §6 and §12.
+
+### The decision
+
+The context card is **observational, not evaluative** — uniforms, room, camera position, the adults present
+and what they wear. Two coders describing the same recording would produce near-identical cards, so the
+second is wasted effort. Therefore:
+
+- **One context card per video**, not one per coder.
+- Of the two coders assigned to a video, **exactly one** is assigned to fill it.
+- That assignment is **randomised**, and balanced so that each coder fills the card for roughly **half** of
+  their own assigned videos — not merely half globally, which could leave one person doing all of them.
+  Balance within each pair as well as within each coder's queue.
+- Assignment happens at the same time as video assignment, from the same seed, and is recorded and
+  reproducible like every other assignment decision.
+
+### Consequences for the data model (modifies §3)
+
+The context card now belongs to the **video**, not to the coder–video pair:
+
+- `context_card_scenes` is keyed on `video_id, scene`, with an `authored_by` coder reference — not on
+  `(video_id, coder_id, scene)`. Uniqueness is per video and scene.
+- The assignment record carries a `fills_context_card` boolean per coder–video pair. Exactly one of the
+  two coders on any video has it set to true.
+- When a coder is reassigned, leaves, or a pair is dissolved, the context-card duty **transfers with the
+  video** under the same reassignment rules as everything else (§6). If the assigned coder has already
+  submitted the card, it stays and the duty does not transfer.
+
+### Blinding — the non-authoring coder must not read the card before scoring
+
+This needs a rule, because the card is not as neutral as it first appears. The `A1_behavior` field
+describes what the teacher did, and the `timeline` field describes how the lesson unfolded. A coder who
+reads "teacher moves between the desks for most of the lesson" before scoring concept 1 or concept 5 has
+been influenced.
+
+Therefore: a coder may **not** view another coder's context card for a shared video until they have
+submitted their own individual scores for that video. Enforce this server-side and test it, alongside the
+other blinding rules in `CLAUDE.md` §2. After submission it may be shown freely, and during calibration
+both parties see it.
+
+### A cheap second pair of eyes
+
+Dropping the duplicate card also drops the only check on it — a wrong uniform description or a missed scene
+change is now never caught, and the card is what lets the AI identify the setup. Recommended mitigation,
+for approval:
+
+After the non-authoring coder submits their individual scores, show them the card in a short read-only step
+with two options: **Confirm** or **Flag a problem** (free-text reason). It takes about thirty seconds,
+preserves most of the value of the second pass, and costs almost none of the effort the amendment was made
+to save. Flagged cards go to an admin queue.
+
+If this is adopted, the card record carries `confirmed_by`, `confirmed_at`, `flagged`, `flag_reason`.
+
+### Consequences for the coder's flow
+
+- The coder who fills the card is still told to do it **first**, before watching for notes — it orients them
+  to the classroom (§ "The experience I picture").
+- The other coder's flow starts at notes. Their observation is complete without a card; the interface must
+  not show them an unfilled context-card step or count it against their completion.
+- A **video** is not fully complete until both coders' scores exist *and* the single context card exists.
+  Track that as a separate completion condition from per-coder completion, and show both on the admin
+  dashboard so a video is not silently left cardless.
+- Per-coder progress and time-on-task figures must remain comparable between coders who fill roughly half
+  their cards and the videos where they do not. Report context-card time separately, never folded into
+  scoring time.
+
+### Consequences for the export (modifies §12)
+
+- `clobs_context_cards` and `clobs_context_adults` become **one row per video × scene** (and per adult),
+  which is simpler than before. Add `authored_by_coder_id`, and `confirmed_by_coder_id`, `flagged`,
+  `flag_reason` if the confirmation step is adopted.
+- `clobs_assignments` gains `fills_context_card`, so the randomisation of card duty is auditable and can be
+  described in the paper alongside the video randomisation.
