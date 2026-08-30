@@ -4,12 +4,176 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ==========================================================================
+   LTL CLOBS design tokens — the single source is DESIGN_SYSTEM.md §9.
+   Never invent a color, radius, duration or font size that is not there.
+   Light only: no dark mode in v1.
+   ========================================================================== */
+
+:root {
+  /* Surfaces */
+  --clobs-paper:            #FBF8F1;
+  --clobs-card:             #F5F1E8;
+  --clobs-sunken:           #EDE8DC;
+  --clobs-hairline:         #DFD8C8;
+  --clobs-hairline-strong:  #C9C0AC;
+
+  /* Ink */
+  --clobs-ink:              #23201A;
+  --clobs-graphite:         #57524A;
+  --clobs-smoke:            #6F695E;
+  --clobs-ash:              #9A9284;
+
+  /* Action and state */
+  --clobs-bark:             #5C4630;
+  --clobs-bark-deep:        #48351F;
+  --clobs-lake:             #2C5C8F;
+  --clobs-lake-wash:        #DCE6F1;
+  --clobs-forest:           #3F6B4F;
+  --clobs-forest-wash:      #DEEADF;
+  --clobs-clay:             #9E3B2E;
+  --clobs-clay-wash:        #F6E2DE;
+
+  /* Score ramp — ordinal, warm to cool, from the printed manual */
+  --clobs-score-1:          #F2D3B3;
+  --clobs-score-1-edge:     #C98B4C;
+  --clobs-score-2:          #EDE2D2;
+  --clobs-score-2-edge:     #B9A88C;
+  --clobs-score-3:          #D3DFEC;
+  --clobs-score-3-edge:     #7C9CBF;
+  --clobs-score-4:          #A8C6E8;
+  --clobs-score-4-edge:     #4A7CB0;
+
+  /* Type families — next/font (app/layout.tsx) provides --font-inter,
+     --font-newsreader, --font-jetbrains-mono; fallback stacks per §2. */
+  --clobs-font-sans:  var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --clobs-font-serif: var(--font-newsreader), 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --clobs-font-mono:  var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+
+  /* Type scale */
+  --clobs-text-micro:      11px;   --clobs-leading-micro:      1.45;
+  --clobs-text-caption:    12px;   --clobs-leading-caption:    1.5;
+  --clobs-text-body-sm:    14px;   --clobs-leading-body-sm:    1.55;
+  --clobs-text-body:       15px;   --clobs-leading-body:       1.6;
+  --clobs-text-body-lg:    17px;   --clobs-leading-body-lg:    1.65;
+  --clobs-text-prose:      17px;   --clobs-leading-prose:      1.7;
+  --clobs-text-prose-lg:   19px;   --clobs-leading-prose-lg:   1.65;
+  --clobs-text-heading-sm: 20px;   --clobs-leading-heading-sm: 1.3;   --clobs-tracking-heading-sm: -0.01em;
+  --clobs-text-heading:    26px;   --clobs-leading-heading:    1.25;  --clobs-tracking-heading:    -0.015em;
+  --clobs-text-display:    36px;   --clobs-leading-display:    1.15;  --clobs-tracking-display:    -0.02em;
+  --clobs-text-display-lg: 52px;   --clobs-leading-display-lg: 1.08;  --clobs-tracking-display-lg: -0.025em;
+
+  /* Space */
+  --clobs-space-1: 4px;   --clobs-space-2: 8px;   --clobs-space-3: 12px;
+  --clobs-space-4: 16px;  --clobs-space-5: 20px;  --clobs-space-6: 24px;
+  --clobs-space-8: 32px;  --clobs-space-10: 40px; --clobs-space-12: 48px;
+  --clobs-space-16: 64px;
+
+  /* Shape */
+  --clobs-radius-card:    16px;
+  --clobs-radius-control: 10px;
+  --clobs-radius-frame:   12px;
+  --clobs-radius-sm:      6px;
+  --clobs-radius-pill:    9999px;
+
+  /* Elevation — the only shadow in the system */
+  --clobs-shadow-float: 0 1px 2px rgba(35, 32, 26, 0.04),
+                        0 8px 24px rgba(35, 32, 26, 0.08);
+
+  /* Motion */
+  --clobs-dur-instant: 90ms;
+  --clobs-dur-fast:    150ms;
+  --clobs-dur-base:    220ms;
+  --clobs-dur-page:    280ms;
+  --clobs-dur-moment:  420ms;
+  --clobs-ease-out:    cubic-bezier(0.22, 1, 0.36, 1);
+  --clobs-ease-in:     cubic-bezier(0.64, 0, 0.78, 0);
+  --clobs-ease-inout:  cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Layout */
+  --clobs-page-max:    1440px;
+  --clobs-prose-max:   68ch;
+  --clobs-section-gap: 48px;
+
+  /* ------------------------------------------------------------------
+     shadcn semantic variables, pointed at the tokens above so imported
+     components inherit the palette with no second source of truth.
+     ------------------------------------------------------------------ */
+  --background: var(--clobs-paper);
+  --foreground: var(--clobs-ink);
+  --card: var(--clobs-card);
+  --card-foreground: var(--clobs-ink);
+  --popover: var(--clobs-paper);
+  --popover-foreground: var(--clobs-ink);
+  --primary: var(--clobs-bark);
+  --primary-foreground: var(--clobs-paper);
+  --secondary: var(--clobs-sunken);
+  --secondary-foreground: var(--clobs-ink);
+  --muted: var(--clobs-sunken);
+  --muted-foreground: var(--clobs-smoke);
+  --accent: var(--clobs-lake-wash);
+  --accent-foreground: var(--clobs-ink);
+  --destructive: var(--clobs-clay);
+  --border: var(--clobs-hairline);
+  --input: var(--clobs-hairline);
+  --ring: var(--clobs-lake);
+  /* Chart placeholders from ink/action tokens; the score ramp is for scores
+     only (DESIGN_SYSTEM.md §1) and is never used for generic chart series. */
+  --chart-1: var(--clobs-bark);
+  --chart-2: var(--clobs-lake);
+  --chart-3: var(--clobs-forest);
+  --chart-4: var(--clobs-graphite);
+  --chart-5: var(--clobs-ash);
+  --radius: var(--clobs-radius-control);
+  --sidebar: var(--clobs-card);
+  --sidebar-foreground: var(--clobs-ink);
+  --sidebar-primary: var(--clobs-bark);
+  --sidebar-primary-foreground: var(--clobs-paper);
+  --sidebar-accent: var(--clobs-lake-wash);
+  --sidebar-accent-foreground: var(--clobs-ink);
+  --sidebar-border: var(--clobs-hairline);
+  --sidebar-ring: var(--clobs-lake);
+}
+
+/* Tailwind v4 theme — utility names for the tokens (bg-paper, text-ink,
+   border-hairline, bg-score-1, rounded-card, ease-out-clobs, …). */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+
+  --color-paper:            var(--clobs-paper);
+  --color-card:             var(--clobs-card);
+  --color-sunken:           var(--clobs-sunken);
+  --color-hairline:         var(--clobs-hairline);
+  --color-hairline-strong:  var(--clobs-hairline-strong);
+  --color-ink:              var(--clobs-ink);
+  --color-graphite:         var(--clobs-graphite);
+  --color-smoke:            var(--clobs-smoke);
+  --color-ash:              var(--clobs-ash);
+  --color-bark:             var(--clobs-bark);
+  --color-bark-deep:        var(--clobs-bark-deep);
+  --color-lake:             var(--clobs-lake);
+  --color-lake-wash:        var(--clobs-lake-wash);
+  --color-forest:           var(--clobs-forest);
+  --color-forest-wash:      var(--clobs-forest-wash);
+  --color-clay:             var(--clobs-clay);
+  --color-clay-wash:        var(--clobs-clay-wash);
+  --color-score-1:          var(--clobs-score-1);
+  --color-score-1-edge:     var(--clobs-score-1-edge);
+  --color-score-2:          var(--clobs-score-2);
+  --color-score-2-edge:     var(--clobs-score-2-edge);
+  --color-score-3:          var(--clobs-score-3);
+  --color-score-3-edge:     var(--clobs-score-3-edge);
+  --color-score-4:          var(--clobs-score-4);
+  --color-score-4-edge:     var(--clobs-score-4-edge);
+
+  /* Fonts — the real chains live on :root as --clobs-font-*. */
+  --font-sans:  var(--clobs-font-sans);
+  --font-serif: var(--clobs-font-serif);
+  --font-mono:  var(--clobs-font-mono);
+  --font-heading: var(--clobs-font-sans);
+
+  /* shadcn component variable pass-through */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -38,68 +202,55 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  /* Radius scale pinned to DESIGN_SYSTEM.md §3 — never computed values.
-     sm 6px (inline code, small badges) · md 10px (buttons, inputs) ·
-     lg 12px (table containers, video frame) · xl 16px (cards, panels, modals) */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 16px;
-  --radius-3xl: 16px;
-  --radius-4xl: 16px;
-}
 
-/* shadcn semantic variables mapped to DESIGN_SYSTEM.md §1/§9 tokens.
-   Light only — no dark mode in v1 (DESIGN_SYSTEM.md, header note).
-   The full --clobs-* custom-property set and @theme block land in scaffold
-   step 2; these are the same values under shadcn's names. */
-:root {
-  --background: #FBF8F1;            /* paper */
-  --foreground: #23201A;            /* ink */
-  --card: #F5F1E8;                  /* card */
-  --card-foreground: #23201A;
-  --popover: #FBF8F1;               /* floats on paper, shadow-float in §3 */
-  --popover-foreground: #23201A;
-  --primary: #5C4630;               /* bark — the single action fill */
-  --primary-foreground: #FBF8F1;    /* paper text on bark */
-  --secondary: #EDE8DC;             /* sunken */
-  --secondary-foreground: #23201A;
-  --muted: #EDE8DC;                 /* sunken */
-  --muted-foreground: #6F695E;      /* smoke */
-  --accent: #DCE6F1;                /* lake wash — selected row, active tab */
-  --accent-foreground: #23201A;
-  --destructive: #9E3B2E;           /* clay */
-  --border: #DFD8C8;                /* hairline */
-  --input: #DFD8C8;                 /* hairline; focus uses ring */
-  --ring: #2C5C8F;                  /* lake — the focus ring */
-  /* Chart placeholders from the ink/action tokens; the score ramp (§1) is
-     for scores only and is wired separately in step 2. */
-  --chart-1: #5C4630;
-  --chart-2: #2C5C8F;
-  --chart-3: #3F6B4F;
-  --chart-4: #57524A;
-  --chart-5: #9A9284;
-  --radius: 10px;                   /* control radius §3 */
-  --sidebar: #F5F1E8;               /* card */
-  --sidebar-foreground: #23201A;
-  --sidebar-primary: #5C4630;
-  --sidebar-primary-foreground: #FBF8F1;
-  --sidebar-accent: #DCE6F1;        /* lake wash */
-  --sidebar-accent-foreground: #23201A;
-  --sidebar-border: #DFD8C8;
-  --sidebar-ring: #2C5C8F;
+  /* Radius scale pinned to DESIGN_SYSTEM.md §3 — never computed values.
+     sm 6px (inline code, badges) · md 10px (buttons, inputs) ·
+     lg 12px (table containers, video frame) · xl 16px (cards, modals) */
+  --radius-sm: var(--clobs-radius-sm);
+  --radius-md: var(--clobs-radius-control);
+  --radius-lg: var(--clobs-radius-frame);
+  --radius-xl: var(--clobs-radius-card);
+  --radius-2xl: var(--clobs-radius-card);
+  --radius-3xl: var(--clobs-radius-card);
+  --radius-4xl: var(--clobs-radius-card);
+  --radius-control: var(--clobs-radius-control);
+  --radius-frame:   var(--clobs-radius-frame);
+  --radius-card:    var(--clobs-radius-card);
+
+  /* Easing (ease-out-clobs, …). Durations stay as --clobs-dur-* variables. */
+  --ease-out-clobs:   var(--clobs-ease-out);
+  --ease-in-clobs:    var(--clobs-ease-in);
+  --ease-inout-clobs: var(--clobs-ease-inout);
+
+  --shadow-float: var(--clobs-shadow-float);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
+    @apply border-border;
   }
   html {
+    background: var(--clobs-paper);
+    color: var(--clobs-ink);
     @apply font-sans;
   }
+  body {
+    font-size: var(--clobs-text-body);
+    line-height: var(--clobs-leading-body);
+    @apply bg-background text-foreground;
+  }
+  /* Visible focus everywhere — WCAG 2.2 AA, DESIGN_SYSTEM.md §3. */
+  *:focus-visible {
+    outline: 2px solid var(--clobs-lake);
+    outline-offset: 2px;
+  }
+}
+
+/* Mono with tabular figures for video codes, timestamps, numeric columns. */
+.mono,
+td.num,
+.timestamp,
+.video-code {
+  font-family: var(--clobs-font-mono);
+  font-variant-numeric: tabular-nums;
 }
