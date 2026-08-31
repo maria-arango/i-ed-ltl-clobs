@@ -8,6 +8,7 @@
  */
 import { useState } from "react";
 import { AutosaveIndicator } from "@/components/workspace/autosave-indicator";
+import { encouragement } from "@/lib/encouragement";
 import { useAutosave } from "@/lib/use-autosave";
 
 export interface AdultData {
@@ -99,6 +100,7 @@ export function ContextCardForm({
   };
   const [confirming, setConfirming] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [moment, setMoment] = useState<string | null>(null);
   const editable = mode === "edit" && status !== "submitted";
 
   const { status: saveStatus, savedAt, flush } = useAutosave({
@@ -174,6 +176,7 @@ export function ContextCardForm({
     }
     setStatus("submitted");
     setConfirming(false);
+    setMoment(encouragement.cardSubmitted());
   };
 
   return (
@@ -183,7 +186,28 @@ export function ContextCardForm({
           Your partner wrote this card. Read-only.
         </p>
       )}
-      {status === "submitted" && mode === "edit" && (
+      {moment && (
+        <div
+          role="status"
+          className="flex items-center gap-4 rounded-xl border border-hairline p-5"
+          style={{ background: "var(--clobs-forest-wash)" }}
+        >
+          <span
+            aria-hidden
+            className="flex size-10 shrink-0 items-center justify-center rounded-full"
+            style={{ background: "var(--clobs-forest)", color: "var(--clobs-paper)" }}
+          >
+            ✓
+          </span>
+          <p
+            className="font-serif text-ink"
+            style={{ fontSize: "var(--clobs-text-prose)", lineHeight: "var(--clobs-leading-prose)" }}
+          >
+            {moment}
+          </p>
+        </div>
+      )}
+      {status === "submitted" && mode === "edit" && !moment && (
         <p
           className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium"
           style={{ background: "var(--clobs-forest-wash)", color: "var(--clobs-forest)" }}
