@@ -59,6 +59,7 @@ export default async function CalibrationRoomPage({
           videoId={videoId}
           conceptNames={conceptNames}
           initial={JSON.parse(JSON.stringify(initial))}
+          myName={session.user.name ?? session.user.email ?? "You"}
         />
       </div>
     </AppShell>
