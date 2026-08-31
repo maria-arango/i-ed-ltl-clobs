@@ -1,27 +1,13 @@
 /**
- * My videos — the coder's queue, with who they share each video with
- * (the partner they will calibrate with). Server component; reads
- * exclusively through the restricted coder query layer.
+ * My videos — the coder's queue, filterable by status, searchable by code
+ * or partner. Server component; reads exclusively through the restricted
+ * coder query layer.
  */
 import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
 import { getCoderQueue } from "@/lib/db/coder";
-import { StatusPill } from "@/components/ui/status-pill";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
-function formatDuration(seconds: number | null): string {
-  if (!seconds) return "—";
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { VideosTable } from "@/components/videos/videos-table";
 
 export default async function MyVideos() {
   const session = await requireSession();
@@ -53,7 +39,7 @@ export default async function MyVideos() {
           My videos
         </h1>
         <p className="text-[14px] text-smoke">
-          <span className="mono">{done}</span> of{" "}
+          <NumberTicker value={done} /> of{" "}
           <span className="mono">{queue.length}</span> complete
         </p>
       </header>
@@ -66,43 +52,16 @@ export default async function MyVideos() {
           </p>
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow header>
-              <TableHead>Video</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Partner</TableHead>
-              <TableHead>Context card</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {queue.map((row) => (
-              <TableRow key={row.videoId}>
-                <TableCell>
-                  <Link
-                    href={`/videos/${row.videoId}`}
-                    className="video-code rounded-sm text-[14px] text-lake underline-offset-4 hover:underline"
-                  >
-                    {row.displayCode}
-                  </Link>
-                </TableCell>
-                <TableCell className="num text-smoke">
-                  {formatDuration(row.durationSeconds)}
-                </TableCell>
-                <TableCell className="text-graphite">
-                  {row.partnerName ?? "—"}
-                </TableCell>
-                <TableCell className="text-graphite">
-                  {row.fillsContextCard ? "Yours to fill" : "—"}
-                </TableCell>
-                <TableCell>
-                  <StatusPill status={row.observationStatus} />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <VideosTable
+          rows={queue.map((q) => ({
+            videoId: q.videoId,
+            displayCode: q.displayCode,
+            durationSeconds: q.durationSeconds,
+            partnerName: q.partnerName,
+            fillsContextCard: q.fillsContextCard,
+            observationStatus: q.observationStatus,
+          }))}
+        />
       )}
     </div>
   );

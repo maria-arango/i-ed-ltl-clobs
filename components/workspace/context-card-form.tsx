@@ -22,6 +22,13 @@ export interface AdultData {
   speaks: string | null;
 }
 
+export interface CardReview {
+  confirmedAt: string | null;
+  confirmedByMe: boolean;
+  flagged: boolean;
+  flagReason: string | null;
+}
+
 export interface CardData {
   subject: string | null;
   composition: string | null;
@@ -79,6 +86,7 @@ export function ContextCardForm({
   videoId,
   initialCard,
   initialStatus,
+  initialReview,
   fieldHelp,
   mode,
   onStatusChange,
@@ -86,6 +94,8 @@ export function ContextCardForm({
   videoId: string;
   initialCard: CardData | null;
   initialStatus: "none" | "draft" | "submitted";
+  /** Second-pass state (Amendment A): null until the card exists. */
+  initialReview: CardReview | null;
   fieldHelp: Record<string, string>;
   /** 'edit' (assigned filler), 'locked' (partner, pre-submission),
    *  'readonly' (partner, released). */
@@ -94,6 +104,7 @@ export function ContextCardForm({
 }) {
   const [card, setCard] = useState<CardData>(initialCard ?? EMPTY_CARD);
   const [status, setStatusRaw] = useState(initialStatus);
+  const [review, setReview] = useState<CardReview | null>(initialReview);
   const setStatus = (s: "none" | "draft" | "submitted") => {
     setStatusRaw(s);
     onStatusChange?.(s);
@@ -101,7 +112,9 @@ export function ContextCardForm({
   const [confirming, setConfirming] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [moment, setMoment] = useState<string | null>(null);
-  const editable = mode === "edit" && status !== "submitted";
+  // A FLAGGED submitted card reopens for its author (second pass).
+  const editable =
+    mode === "edit" && (status !== "submitted" || review?.flagged === true);
 
   const { status: saveStatus, savedAt, flush } = useAutosave({
     value: card,
@@ -175,6 +188,7 @@ export function ContextCardForm({
       return;
     }
     setStatus("submitted");
+    setReview((r) => (r ? { ...r, flagged: false, confirmedAt: null, confirmedByMe: false } : r));
     setConfirming(false);
     setMoment(encouragement.cardSubmitted());
   };
@@ -182,9 +196,22 @@ export function ContextCardForm({
   return (
     <div className="max-w-[68ch] space-y-6">
       {mode === "readonly" && (
-        <p className="rounded-lg bg-lake-wash p-3 text-[13px] leading-[1.5] text-ink">
-          Your partner wrote this card. Read-only.
-        </p>
+        <ReviewPanel videoId={videoId} review={review} onChange={setReview} />
+      )}
+      {mode === "edit" && review?.flagged && (
+        <div
+          role="alert"
+          className="elev-card rounded-xl border p-4"
+          style={{ borderColor: "var(--clobs-clay, #B4572E)", background: "var(--clobs-card)" }}
+        >
+          <p className="text-[14px] font-medium text-ink">
+            Your partner flagged this card
+          </p>
+          <p className="mt-1 text-[13px] leading-[1.5] text-graphite">
+            &ldquo;{review.flagReason}&rdquo; — the card is editable again;
+            fix what is needed and resubmit.
+          </p>
+        </div>
       )}
       {moment && (
         <div
@@ -342,7 +369,7 @@ export function ContextCardForm({
                 onClick={() => setConfirming(true)}
                 className="rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
               >
-                Submit context card
+                {review?.flagged ? "Resubmit the updated card" : "Submit context card"}
               </button>
             ) : (
               <button
@@ -358,6 +385,137 @@ export function ContextCardForm({
             )}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- second pass: confirm or flag (Amendment A) --------- */
+
+function ReviewPanel({
+  videoId,
+  review,
+  onChange,
+}: {
+  videoId: string;
+  review: CardReview | null;
+  onChange: (r: CardReview) => void;
+}) {
+  const [flagOpen, setFlagOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const post = async (path: string, body?: unknown) => {
+    setPending(true);
+    setError(null);
+    const res = await fetch(`/api/coder/videos/${videoId}/context-card/${path}`, {
+      method: "POST",
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    setPending(false);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setError(j.error ?? "Something went wrong");
+      return false;
+    }
+    return true;
+  };
+
+  if (review?.flagged) {
+    return (
+      <div className="elev-card rounded-xl border border-hairline bg-card p-4">
+        <p className="text-[14px] font-medium text-ink">You flagged this card</p>
+        <p className="mt-1 text-[13px] leading-[1.5] text-graphite">
+          &ldquo;{review.flagReason}&rdquo; — your partner can now revise and
+          resubmit it; it comes back to you to confirm.
+        </p>
+      </div>
+    );
+  }
+
+  if (review?.confirmedAt) {
+    return (
+      <p
+        className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[13px] font-medium"
+        style={{ background: "var(--clobs-forest-wash)", color: "var(--clobs-forest)" }}
+      >
+        ✓ {review.confirmedByMe ? "You confirmed this card." : "Card confirmed."}
+      </p>
+    );
+  }
+
+  return (
+    <div className="elev-card rounded-xl border border-hairline bg-card p-4">
+      <p className="text-[14px] font-medium text-ink">
+        Your partner wrote this card — does it match what you saw?
+      </p>
+      <p className="mt-1 text-[13px] leading-[1.5] text-graphite">
+        Confirm it, or flag anything that looks wrong so your partner can fix
+        it. This second look is part of the protocol.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={async () => {
+            if (await post("confirm")) {
+              onChange({
+                confirmedAt: new Date().toISOString(),
+                confirmedByMe: true,
+                flagged: false,
+                flagReason: null,
+              });
+            }
+          }}
+          className="rounded-md bg-bark px-4 py-2 text-[14px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98] disabled:bg-sunken disabled:text-ash"
+        >
+          Confirm the card
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => setFlagOpen((o) => !o)}
+          className="rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[14px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+        >
+          Flag an issue
+        </button>
+      </div>
+      {flagOpen && (
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <textarea
+            rows={2}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="What looks wrong? One or two sentences."
+            aria-label="Why are you flagging this card?"
+            className="block min-w-64 flex-1 resize-none rounded-md border border-hairline bg-paper px-3 py-2 text-[14px] text-ink focus:border-hairline-strong"
+          />
+          <button
+            type="button"
+            disabled={pending}
+            onClick={async () => {
+              if (await post("flag", { reason })) {
+                onChange({
+                  confirmedAt: null,
+                  confirmedByMe: false,
+                  flagged: true,
+                  flagReason: reason.trim(),
+                });
+                setFlagOpen(false);
+              }
+            }}
+            className="shrink-0 rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[14px] font-semibold text-clay transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+          >
+            Send the flag
+          </button>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="mt-2 text-[13px] text-clay">
+          {error}
+        </p>
       )}
     </div>
   );

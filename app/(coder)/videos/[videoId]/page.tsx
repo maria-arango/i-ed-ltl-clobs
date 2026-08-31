@@ -68,7 +68,7 @@ export default async function VideoWorkspace({
       </nav>
 
       {/* The video link card — the darker rectangle from the brief. */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline-strong bg-sunken p-5">
+      <div className="elev-card card-lift flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline-strong bg-sunken p-5">
         <div>
           <p className="video-code text-[20px] text-ink">{video.displayCode}</p>
           <p className="mt-1 text-[13px] text-smoke">
@@ -82,9 +82,15 @@ export default async function VideoWorkspace({
                 href={video.driveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
+                className="group rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
               >
-                Open video in Drive ↗
+                Open video in Drive{" "}
+                <span
+                  aria-hidden
+                  className="inline-block transition-transform duration-[150ms] ease-out-clobs group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 motion-reduce:group-hover:translate-y-0"
+                >
+                  ↗
+                </span>
               </a>
               <CopyButton text={video.driveUrl} />
             </>
@@ -104,6 +110,17 @@ export default async function VideoWorkspace({
         initialSubmitted={submitted}
         initialCard={contextCard.card}
         initialCardStatus={cardStatus}
+        initialCardReview={
+          contextCard.card
+            ? {
+                confirmedAt:
+                  contextCard.card.confirmedAt?.toISOString() ?? null,
+                confirmedByMe: contextCard.card.confirmedByMe,
+                flagged: contextCard.card.flagged,
+                flagReason: contextCard.card.flagReason,
+              }
+            : null
+        }
         cardMode={cardMode}
         concepts={rubric.concepts as never}
         guidance={rubric.guidance}

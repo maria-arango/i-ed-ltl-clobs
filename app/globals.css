@@ -302,8 +302,31 @@
   .card-lift:hover { transform: none; }
 }
 
+/* Success check stroke-draw (transitions-dev 08-success-check), used for
+   the calibration-completed moment (DESIGN_SYSTEM: full moment, 1-2/day). */
+@keyframes check-draw {
+  to { stroke-dashoffset: 0; }
+}
+.check-draw {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+  animation: check-draw var(--clobs-dur-moment) var(--clobs-ease-out) 120ms forwards;
+}
+
+/* Notification badge pop-in (transitions-dev 04-notification-badge). */
+@keyframes badge-pop {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.badge-pop {
+  animation: badge-pop var(--clobs-dur-base) var(--clobs-ease-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-enter { animation: none; }
+  .badge-pop { animation: none; }
+  .check-draw { stroke-dashoffset: 0; animation: none; }
 }
 
 /* The score-guidance callout's 150ms opacity reveal (DESIGN_SYSTEM §4/§5:

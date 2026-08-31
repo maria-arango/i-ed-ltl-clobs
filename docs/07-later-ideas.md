@@ -75,3 +75,30 @@ components).
   (DESIGN_SYSTEM: all motion behind the media query) and stay pointer-only (no effect on
   touch devices). Sign-in is a Boundary surface where playfulness is allowed.
 - **Fits best:** Stage 5 polish, together with the rest of the sign-in page's character.
+
+## Motion & component adoption map (2026-08-31, "alive" pass)
+
+Where María's referenced libraries/skills landed. IN = live on the platform.
+
+| Reference | Status | Where |
+|---|---|---|
+| beui file-tree "gliding selection" | IN (technique) | Sidebar: hover glide (GlideMenu) + active pill that glides between items (motion layoutId) |
+| beautifului sidebar-nav / animate-ui sidebar | IN (spirit) | Same sidebar; the animate-ui sidebar file was removed — its registry install was missing three dependencies and could not compile |
+| animate-ui checkbox | IN | Week plan roster ("Who codes this week") |
+| beautifului filter-table | IN (pattern) | My videos (status chips + search) and admin Progress table |
+| beautifului insight-cards | IN (pattern) | Progress dashboard stat cards |
+| transitions notification-badge | IN | Sidebar badges: new videos, calibrations ready |
+| transitions success-check + confetti-burst | IN | Calibration completed (live in the room only); observation submit already had confetti |
+| transitions page-side-by-side | IN | Route transitions (content pane slide) |
+| transitions tabs-sliding | IN (already) | Workspace tabs indicator |
+| transitions spinning-counter / beui number | IN | NumberTicker: home stats, video library coverage, Progress cards |
+| transitions 3d-tilt | IN | Sign-in photograph panel (pointer-only, reduced-motion safe) |
+| transitions learn-more-hover | IN | Video link card (lift + arrow slide) |
+| transitions shimmer-text / text-states-swap / matrix-dot-loader | IN (one of them) | Route loading uses shimmering skeletons; the other loader styles stay options |
+| transitions avatar-group-hover | PARTIAL | Calibration room presence bubbles; "who's online" everywhere needs the heartbeat (idea #3 above) |
+| transitions tooltip-open-close | PARKED | No tooltip surface yet worth a system; candidates: toolbar buttons, dashboard terms |
+| transitions texts-reveal | PARKED | Deliberately not on Operate surfaces; candidate: sign-in greeting |
+| beui dock | PARKED | Optional app-level dock; revisit after Stage 4 |
+| beui file-tree (as a browser) | PARKED | Could browse the video library by school prefix (admin-only) in Stage 4+ |
+| rareui fluid-orb | IN (since scaffold) | Sign-in canvas |
+| beautifului records-table | REFERENCE | Full pattern kept in `.reference/beautifului/` for the Stage 4 export/records screens |

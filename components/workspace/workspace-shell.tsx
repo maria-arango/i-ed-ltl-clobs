@@ -15,6 +15,7 @@ import {
 import {
   ContextCardForm,
   type CardData,
+  type CardReview,
 } from "@/components/workspace/context-card-form";
 
 export function WorkspaceShell({
@@ -25,6 +26,7 @@ export function WorkspaceShell({
   initialSubmitted,
   initialCard,
   initialCardStatus,
+  initialCardReview,
   cardMode,
   concepts,
   guidance,
@@ -41,6 +43,7 @@ export function WorkspaceShell({
   initialSubmitted: boolean;
   initialCard: CardData | null;
   initialCardStatus: "none" | "draft" | "submitted";
+  initialCardReview: CardReview | null;
   cardMode: "edit" | "locked" | "readonly";
   concepts: RubricConceptData[];
   guidance: RubricGuidanceRow[];
@@ -79,6 +82,7 @@ export function WorkspaceShell({
         videoId={videoId}
         initialCard={initialCard}
         initialStatus={initialCardStatus}
+        initialReview={initialCardReview}
         fieldHelp={fieldHelp}
         mode={cardMode}
         onStatusChange={setCardStatus}
