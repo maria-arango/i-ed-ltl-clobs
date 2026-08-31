@@ -47,7 +47,7 @@ export default async function Home() {
         isChiefCoder={user.isChiefCoder}
       />
 
-      <div className="mt-10 max-w-[880px] space-y-12">
+      <div className="mx-auto mt-10 max-w-[880px] space-y-12">
         {/* Greeting */}
         <section className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <h1
