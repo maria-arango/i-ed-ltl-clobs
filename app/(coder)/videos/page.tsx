@@ -5,34 +5,8 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
 import { getCoderQueue } from "@/lib/db/coder";
-
-function StatusPill({ status }: { status: string | null }) {
-  const map: Record<string, { bg: string; fg: string; text: string }> = {
-    submitted: {
-      bg: "var(--clobs-forest-wash)",
-      fg: "var(--clobs-forest)",
-      text: "Complete",
-    },
-    in_progress: {
-      bg: "var(--clobs-lake-wash)",
-      fg: "var(--clobs-lake)",
-      text: "In progress",
-    },
-  };
-  const s = (status && map[status]) || {
-    bg: "var(--clobs-sunken)",
-    fg: "var(--clobs-graphite)",
-    text: "Not started",
-  };
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium"
-      style={{ background: s.bg, color: s.fg }}
-    >
-      {s.text}
-    </span>
-  );
-}
+import { AppHeader } from "@/components/app-header";
+import { StatusPill } from "@/components/ui/status-pill";
 
 function formatDuration(seconds: number | null): string {
   if (!seconds) return "—";
@@ -47,7 +21,12 @@ export default async function MyVideos() {
   const done = queue.filter((q) => q.observationStatus === "submitted").length;
 
   return (
-    <main className="mx-auto max-w-[1440px] space-y-6 bg-paper p-8">
+    <main className="mx-auto min-h-screen max-w-[1440px] space-y-6 bg-paper p-8">
+      <AppHeader
+        email={session.user.email}
+        role={session.user.role}
+        isChiefCoder={session.user.isChiefCoder}
+      />
       <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
         <Link
           href="/"
