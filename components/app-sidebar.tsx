@@ -1,13 +1,18 @@
 "use client";
 /**
- * App-level navigation (Amendment B §21): a left sidebar with icons.
- * Active item carries the lake wash; more entries appear as their screens
- * arrive (Calibration, My progress, Export).
+ * App-level navigation (Amendment B §21 + the 2026-08-31 "alive" pass):
+ * a left sidebar whose selection GLIDES — the lake-wash pill is a shared
+ * layout element that slides to the active item (motion layoutId), and a
+ * quiet hover layer glides under the pointer (GlideMenu). Notification
+ * badges show what is waiting: new videos, calibrations ready.
+ * All of it collapses under prefers-reduced-motion.
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, useReducedMotion } from "motion/react";
 import {
   Award,
+  ChartLine,
   Clapperboard,
   Film,
   Handshake,
@@ -15,6 +20,15 @@ import {
   ListChecks,
   Users,
 } from "lucide-react";
+import GlideMenu from "@/components/primitives/GlideMenu";
+import { SPRING_LAYOUT } from "@/lib/ease";
+
+export interface SidebarBadges {
+  /** New (unopened) videos in the coder's queue. */
+  newVideos?: number;
+  /** Videos ready to calibrate. */
+  calibrationsReady?: number;
+}
 
 const coderItems = [
   { href: "/", label: "Home", icon: House, exact: true },
@@ -26,11 +40,38 @@ const adminItems = [
   { href: "/admin/assignment", label: "Assignment", icon: ListChecks, exact: false },
   { href: "/admin/videos", label: "Video library", icon: Clapperboard, exact: false },
   { href: "/admin/gold", label: "Gold set", icon: Award, exact: false },
+  { href: "/admin/progress", label: "Progress", icon: ChartLine, exact: false },
 ];
 
-export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
+function Badge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className="badge-pop mono ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold"
+      style={{ background: "var(--clobs-lake)", color: "var(--clobs-paper)" }}
+      aria-label={`${count} waiting`}
+    >
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
+
+export function AppSidebar({
+  isAdmin,
+  badges,
+}: {
+  isAdmin: boolean;
+  badges?: SidebarBadges;
+}) {
   const pathname = usePathname();
+  const reduce = useReducedMotion();
   const items = isAdmin ? [...coderItems, ...adminItems] : coderItems;
+  const badgeFor = (href: string) =>
+    href === "/videos"
+      ? (badges?.newVideos ?? 0)
+      : href === "/calibration"
+        ? (badges?.calibrationsReady ?? 0)
+        : 0;
 
   return (
     <nav
@@ -45,27 +86,44 @@ export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {
         <br />
         Observations
       </Link>
-      {items.map((item) => {
-        const active = item.exact
-          ? pathname === item.href
-          : pathname.startsWith(item.href);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={active ? "page" : undefined}
-            className={`flex items-center gap-3 rounded-md px-3 py-2 text-[14px] transition-colors duration-[90ms] ${
-              active
-                ? "bg-lake-wash font-semibold text-ink"
-                : "text-graphite hover:bg-sunken hover:text-ink"
-            }`}
-          >
-            <Icon size={17} strokeWidth={active ? 2.2 : 1.8} aria-hidden />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
+      <GlideMenu
+        className="flex flex-1 flex-row gap-1 md:flex-none md:flex-col"
+        highlightClassName="inset-x-0 rounded-md bg-sunken"
+      >
+        {items.map((item) => {
+          const active = item.exact
+            ? pathname === item.href
+            : pathname.startsWith(item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              data-menu-row
+              aria-current={active ? "page" : undefined}
+              className="relative flex items-center gap-3 rounded-md px-3 py-2 text-[14px]"
+            >
+              {active && (
+                <motion.span
+                  layoutId="sidebar-active-pill"
+                  transition={reduce ? { duration: 0 } : SPRING_LAYOUT}
+                  className="absolute inset-0 rounded-md bg-lake-wash"
+                  aria-hidden
+                />
+              )}
+              <span
+                className={`relative z-10 flex w-full items-center gap-3 ${
+                  active ? "font-semibold text-ink" : "text-graphite"
+                }`}
+              >
+                <Icon size={17} strokeWidth={active ? 2.2 : 1.8} aria-hidden />
+                <span>{item.label}</span>
+                <Badge count={badgeFor(item.href)} />
+              </span>
+            </Link>
+          );
+        })}
+      </GlideMenu>
       <div className="hidden flex-1 md:block" />
       <Link
         href="/styleguide"

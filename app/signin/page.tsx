@@ -6,6 +6,7 @@
  */
 import { readdirSync } from "node:fs";
 import path from "node:path";
+import { TiltCard } from "@/components/ui/tilt-card";
 import { SignInClient } from "./signin-client";
 
 function findKimanyaPhoto(): string | null {
@@ -28,16 +29,21 @@ export default function SignInPage() {
   return (
     <div className="grid min-h-screen bg-paper lg:grid-cols-2">
       <SignInClient />
-      <aside className="relative hidden lg:block" aria-label="Kimanya-Ngeyo">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={photo}
-          alt="A classroom of the Kimanya-Ngeyo Foundation in Uganda"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <p className="absolute bottom-0 left-0 right-0 bg-sunken/95 px-6 py-3 text-[13px] text-graphite">
-          Kimanya-Ngeyo Foundation for Science and Education, Uganda
-        </p>
+      <aside
+        className="relative hidden overflow-hidden p-6 lg:block"
+        aria-label="Kimanya-Ngeyo"
+      >
+        <TiltCard className="relative h-full w-full overflow-hidden rounded-2xl border border-hairline">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo}
+            alt="A classroom of the Kimanya-Ngeyo Foundation in Uganda"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <p className="absolute bottom-0 left-0 right-0 bg-sunken/95 px-6 py-3 text-[13px] text-graphite">
+            Kimanya-Ngeyo Foundation for Science and Education, Uganda
+          </p>
+        </TiltCard>
       </aside>
     </div>
   );

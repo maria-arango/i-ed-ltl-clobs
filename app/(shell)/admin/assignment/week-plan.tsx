@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/animate-ui/components/radix/checkbox";
 import {
   confirmWaveAction,
   previewWaveAction,
@@ -181,17 +182,17 @@ export function WeekPlan({
                 return (
                   <TableRow key={r.userId} className={p.working ? "" : "opacity-55"}>
                     <TableCell>
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         aria-label={`${label(r)} works this week`}
                         checked={p.working}
-                        onChange={(e) =>
+                        onCheckedChange={(checked) =>
                           setPlan((prev) => ({
                             ...prev,
-                            [r.userId]: { ...p, working: e.target.checked },
+                            [r.userId]: { ...p, working: checked === true },
                           }))
                         }
-                        className="size-4 accent-[var(--clobs-bark)]"
+                        size="sm"
+                        className="border-hairline-strong"
                       />
                     </TableCell>
                     <TableCell className="text-ink">{label(r)}</TableCell>

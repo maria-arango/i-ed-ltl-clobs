@@ -138,6 +138,11 @@ export interface WorkspaceContextCard {
   card: {
     id: string;
     status: string;
+    /** The confirm/flag second pass (Amendment A). */
+    confirmedAt: Date | null;
+    confirmedByMe: boolean;
+    flagged: boolean;
+    flagReason: string | null;
     subject: string | null;
     composition: string | null;
     approxCount: string | null;
@@ -315,6 +320,10 @@ async function getContextCardForCoder(
       id: contextCards.id,
       authoredBy: contextCards.authoredBy,
       status: contextCards.status,
+      confirmedBy: contextCards.confirmedBy,
+      confirmedAt: contextCards.confirmedAt,
+      flagged: contextCards.flagged,
+      flagReason: contextCards.flagReason,
       subject: contextCards.subject,
       composition: contextCards.composition,
       approxCount: contextCards.approxCount,
@@ -361,11 +370,15 @@ async function getContextCardForCoder(
     )
     .orderBy(asc(contextAdults.adultNo));
 
-  const { authoredBy: _authoredBy, ...cardFields } = row;
+  const { authoredBy: _authoredBy, confirmedBy, ...cardFields } = row;
   return {
     locked: false,
     authoredByMe,
-    card: { ...cardFields, adults },
+    card: {
+      ...cardFields,
+      confirmedByMe: confirmedBy === coderId,
+      adults,
+    },
   };
 }
 
@@ -827,6 +840,7 @@ export async function saveContextCard(
       id: contextCards.id,
       status: contextCards.status,
       authoredBy: contextCards.authoredBy,
+      flagged: contextCards.flagged,
     })
     .from(contextCards)
     .where(eq(contextCards.videoId, videoId))
@@ -837,7 +851,9 @@ export async function saveContextCard(
     if (existing[0].authoredBy !== coderId) {
       throw new CoderError("The card was authored by someone else", 403);
     }
-    if (existing[0].status === "submitted") {
+    // A FLAGGED submitted card reopens for its author (Amendment A second
+    // pass); otherwise submitted stays read-only.
+    if (existing[0].status === "submitted" && !existing[0].flagged) {
       throw new CoderError("The card is submitted and read-only", 409);
     }
     cardId = existing[0].id;
@@ -911,6 +927,7 @@ export async function submitContextCard(coderId: string, videoId: string) {
       id: contextCards.id,
       status: contextCards.status,
       authoredBy: contextCards.authoredBy,
+      flagged: contextCards.flagged,
     })
     .from(contextCards)
     .where(eq(contextCards.videoId, videoId))
@@ -918,14 +935,102 @@ export async function submitContextCard(coderId: string, videoId: string) {
   if (!existing[0] || existing[0].authoredBy !== coderId) {
     throw new CoderError("Not found", 404);
   }
-  if (existing[0].status === "submitted") {
-    throw new CoderError("Already submitted", 409);
-  }
   const now = new Date();
+  if (existing[0].status === "submitted") {
+    if (!existing[0].flagged) throw new CoderError("Already submitted", 409);
+    // Resubmission after a flag: the flag is resolved by the author, the
+    // partner's confirmation resets so they review the updated card.
+    await coderDb
+      .update(contextCards)
+      .set({
+        submittedAt: now,
+        updatedAt: now,
+        flagged: false,
+        flagResolvedBy: coderId,
+        flagResolvedAt: now,
+        confirmedBy: null,
+        confirmedAt: null,
+      })
+      .where(eq(contextCards.id, existing[0].id));
+    await logEvent(coderId, dataset, "context_card_flag_resolved", { videoId });
+    return { submittedAt: now };
+  }
   await coderDb
     .update(contextCards)
     .set({ status: "submitted", submittedAt: now, updatedAt: now })
     .where(eq(contextCards.id, existing[0].id));
   await logEvent(coderId, dataset, "context_card_submitted", { videoId });
   return { submittedAt: now };
+}
+
+/* ------------------ card second pass (Amendment A) ------------------- */
+
+async function getReviewableCard(coderId: string, videoId: string) {
+  const { dataset } = await assertAssigned(coderId, videoId);
+  const own = await getOwnObservation(coderId, videoId);
+  if (own?.status !== "submitted") {
+    throw new CoderError("Submit your own scores before reviewing the card", 409);
+  }
+  const rows = await coderDb
+    .select({
+      id: contextCards.id,
+      status: contextCards.status,
+      authoredBy: contextCards.authoredBy,
+      flagged: contextCards.flagged,
+      confirmedBy: contextCards.confirmedBy,
+    })
+    .from(contextCards)
+    .where(eq(contextCards.videoId, videoId))
+    .limit(1);
+  const card = rows[0];
+  if (!card || card.status !== "submitted") {
+    throw new CoderError("The card has not been submitted yet", 409);
+  }
+  if (card.authoredBy === coderId) {
+    throw new CoderError("You wrote this card; your partner reviews it", 403);
+  }
+  return { card, dataset };
+}
+
+/** Confirm the partner's card as accurate (second pass, Amendment A). */
+export async function confirmContextCard(coderId: string, videoId: string) {
+  const { card, dataset } = await getReviewableCard(coderId, videoId);
+  if (card.flagged) {
+    throw new CoderError("The card is flagged; wait for the update", 409);
+  }
+  if (card.confirmedBy) throw new CoderError("Already confirmed", 409);
+  const now = new Date();
+  await coderDb
+    .update(contextCards)
+    .set({ confirmedBy: coderId, confirmedAt: now, updatedAt: now })
+    .where(eq(contextCards.id, card.id));
+  await logEvent(coderId, dataset, "context_card_confirmed", { videoId });
+  return { confirmedAt: now };
+}
+
+/** Flag the partner's card with a reason; the author can then revise. */
+export async function flagContextCard(
+  coderId: string,
+  videoId: string,
+  reason: string,
+) {
+  const trimmed = reason.trim();
+  if (!trimmed) {
+    throw new CoderError("Say briefly what looks wrong, so it can be fixed", 400);
+  }
+  const { card, dataset } = await getReviewableCard(coderId, videoId);
+  if (card.flagged) throw new CoderError("Already flagged", 409);
+  const now = new Date();
+  await coderDb
+    .update(contextCards)
+    .set({
+      flagged: true,
+      flagReason: trimmed,
+      confirmedBy: null,
+      confirmedAt: null,
+      updatedAt: now,
+    })
+    .where(eq(contextCards.id, card.id));
+  await logEvent(coderId, dataset, "context_card_flagged", { videoId });
+  return { flagged: true };
 }

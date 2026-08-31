@@ -15,6 +15,7 @@
  * (lib/sanitize-note.ts); it is rendered, never re-parsed.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import confetti from "canvas-confetti";
 
 interface ScoreView {
   itemNo: number;
@@ -244,6 +245,19 @@ export function CalibrationRoom({
   const completed = room.sessionStatus === "completed";
   const open = room.sessionStatus === "open" || completed;
 
+  // The calibration-completed MOMENT (DESIGN_SYSTEM §4: full moment, 1-2 a
+  // day): one confetti burst, only when completion happens while you are in
+  // the room — never when re-opening an already-completed record.
+  const wasLive = useRef(initial.sessionStatus !== "completed");
+  const celebrated = useRef(false);
+  useEffect(() => {
+    if (!completed || !wasLive.current || celebrated.current) return;
+    celebrated.current = true;
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      confetti({ particleCount: 110, spread: 75, origin: { y: 0.6 } });
+    }
+  }, [completed]);
+
   const join = useCallback(async () => {
     try {
       const res = await fetch(`/api/coder/calibration/${videoId}/join`, {
@@ -416,19 +430,37 @@ export function CalibrationRoom({
 
       {completed && (
         <div
-          className="rounded-xl border p-5"
+          className="elev-card flex items-center gap-4 rounded-xl border p-5"
           style={{
             borderColor: "var(--clobs-forest)",
             background: "var(--clobs-forest-wash, var(--clobs-card))",
           }}
         >
-          <p className="text-[15px] font-medium text-ink">
-            Calibration complete, signed by both of you.
-          </p>
-          <p className="mt-1 text-[13px] text-graphite">
-            The record below is final. Individual scores stay on file
-            unchanged, alongside the consensus.
-          </p>
+          <span
+            aria-hidden
+            className="flex size-11 shrink-0 items-center justify-center rounded-full"
+            style={{ background: "var(--clobs-forest)" }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path
+                className="check-draw"
+                d="M5 12.5l4.5 4.5L19 7.5"
+                stroke="var(--clobs-paper)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <div>
+            <p className="text-[15px] font-medium text-ink">
+              Calibration complete, signed by both of you.
+            </p>
+            <p className="mt-1 text-[13px] text-graphite">
+              The record below is final. Individual scores stay on file
+              unchanged, alongside the consensus.
+            </p>
+          </div>
         </div>
       )}
 

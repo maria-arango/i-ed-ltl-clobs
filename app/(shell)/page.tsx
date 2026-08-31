@@ -8,6 +8,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getAdminHomeStats } from "@/lib/db/admin";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { StatusPill } from "@/components/ui/status-pill";
 
 function formatToday(): string {
@@ -77,7 +78,7 @@ export default async function Home() {
             <>
               <div className="flex items-baseline justify-between">
                 <p className="text-[15px] text-ink">
-                  <span className="mono font-medium">{done}</span> of{" "}
+                  <NumberTicker value={done} className="font-medium" /> of{" "}
                   <span className="mono font-medium">{queue.length}</span>{" "}
                   observations complete
                   {inProgress > 0 && (
@@ -178,8 +179,8 @@ export default async function Home() {
               ].map((s) => (
                 <div key={s.label} className="px-4 py-3">
                   <dt className="text-[12px] text-smoke">{s.label}</dt>
-                  <dd className="num mt-0.5 text-[20px] leading-[1.3] text-ink">
-                    {s.n}
+                  <dd className="mt-0.5 text-[20px] leading-[1.3] text-ink">
+                    <NumberTicker value={s.n} />
                   </dd>
                 </div>
               ))}

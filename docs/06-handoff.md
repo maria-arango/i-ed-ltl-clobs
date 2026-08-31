@@ -183,6 +183,28 @@ single attach by display code, Google-Drive-only URL validation.
 purgeFixture handles gold/cert rows. 72 tests (9 new). Sidebar: Video
 library + Gold set. Screens browser-verified.
 
+## Progress (2026-08-31, cont. 7 — alive pass, card second pass, Progress)
+
+María installed registry components (kept: GlideMenu, animate-ui checkbox,
+motion file-tree/dock as reference, skeleton/button/input; removed:
+animate-ui sidebar — registry install incomplete; beautifului table demos
+moved to .reference/beautifului/). **Alive pass** (adoption map at the end
+of docs/07): gliding sidebar (hover glide + layoutId active pill) with
+notification badges (new videos / calibrations ready, computed in the
+(shell) layout), filterable My videos table (chips + search), animated
+checkboxes in the week plan, shimmering route skeletons
+(app/(shell)/loading.tsx), calibration-completed MOMENT (stroke-drawn
+check + one confetti burst, only when completion happens live), video-link
+card lift + arrow slide, NumberTicker count-ups (home, video library,
+Progress), TiltCard on the sign-in photo. **Card second pass (Amendment A)
+shipped**: confirm/flag in lib/db/coder.ts (getReviewableCard guards:
+reviewer's own scores first, author never reviews, flag needs a reason),
+routes context-card/confirm + /flag, ReviewPanel in the card form, flagged
+cards reopen for the author and resubmission resolves the flag + resets
+confirmation; 6 new tests. **Stage 4 begun**: /admin/progress — insight
+cards + per-video stage table (pool → assigned → one submitted → ready →
+calibrated), lib/db/admin-progress.ts. Sidebar: Progress item added.
+
 ## Next up
 
 1. **Stage 3 continues:** gold set + certification gate (María's gold videos pending),

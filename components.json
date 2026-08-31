@@ -28,6 +28,7 @@
       "headers": {
         "Authorization": "Bearer ${API_KEY_21ST}"
       }
-    }
+    },
+    "@animate-ui": "https://animate-ui.com/r/{name}.json"
   }
 }

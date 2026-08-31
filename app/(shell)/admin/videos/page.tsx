@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { LinkAttacher } from "./link-attacher";
 
 export default async function VideoLibraryPage() {
@@ -56,17 +57,17 @@ export default async function VideoLibraryPage() {
         className="flex flex-wrap items-baseline gap-x-10 gap-y-2 border-y border-hairline py-4"
       >
         <p className="text-[14px] text-graphite">
-          <span className="mono text-[20px] text-ink">{stats.codable}</span>{" "}
+          <NumberTicker value={stats.codable} className="text-[20px] text-ink" />{" "}
           codable sessions
         </p>
         <p className="text-[14px] text-graphite">
-          <span className="mono text-[20px]" style={{ color: "var(--clobs-forest)" }}>
-            {stats.withLink}
+          <span style={{ color: "var(--clobs-forest)" }}>
+            <NumberTicker value={stats.withLink} className="text-[20px]" />
           </span>{" "}
           with a Drive link
         </p>
         <p className="text-[14px] text-graphite">
-          <span className="mono text-[20px] text-clay">{stats.withoutLink}</span>{" "}
+          <NumberTicker value={stats.withoutLink} className="text-[20px] text-clay" />{" "}
           still missing
         </p>
       </section>
