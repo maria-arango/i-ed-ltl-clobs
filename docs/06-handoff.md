@@ -79,9 +79,25 @@ with adults + inline help, useAutosave with localStorage mirror + offline retry)
 Live HTTP smoke test passed end-to-end. `scripts/seed-demo.mts` gave María a training-dataset
 demo queue (V-DEMO-01/02) so she can try the whole flow.
 
+## Progress since (2026-08-31, cont.)
+
+Deployed to Vercel (https://i-ed-ltl-clobs.vercel.app) — María signed in on production.
+Editor review rounds done: Tiptap toolbar (icons, multicolor markers incl. purple, no tables,
+no dashed list), heading styles INLINE in stored HTML (environment-proof; verified on a prod
+build with save→reload roundtrip via Playwright — kept as devDep for hands-on UI verification).
+pg SSL warning silenced via lib/pg-url.ts hardenSslMode. Home page = progress dashboard +
+admin study-overview strip (PR #6). Stage 3 begun: lib/assignment/algorithm.ts — pure seeded
+wave assignment (arm blocking ±1, history-aware school spread, Amendment A card-duty balance),
+12 tests (PR #7). 41 tests total.
+
 ## Next up
 
-1. **Stage 2 leftovers:** the confirm/flag read-only second pass on the card after the partner
+1. **Stage 3 continues:** wire the algorithm to the DB (assignments + assignment_raters +
+   assignment_log with seed, inside a transaction; wave capacity from coder_availability),
+   admin screens (Team: add coders/chiefs; Assignment: preview wave → confirm), Drive-link
+   attachment step, then the calibration room (co-presence gate — the ONLY place partner data
+   is released; sanitize partner note HTML before display), gold set + certification gate.
+2. **Stage 2 leftovers:** the confirm/flag read-only second pass on the card after the partner
    submits (Amendment A), events for focus-lost/idle, elapsed-session indicator, small-screen
    fallback for the side-by-side layout, encouragement messages at section completion (docs/05).
 2. **Deploy to Vercel** (import repo, set env vars incl. DATABASE_URL/CODER, AUTH_SECRET,
