@@ -136,7 +136,7 @@ export function NotesEditor({
       Highlight.configure({ multicolor: true }),
       Placeholder.configure({
         placeholder:
-          "Write what you see and hear — in your own words, at your own pace.",
+          "Write what you see and hear, in your own words, at your own pace.",
       }),
     ],
     content: initialNote?.body ?? "",
@@ -364,7 +364,7 @@ export function NotesEditor({
         <EditorContent editor={editor} />
       </div>
       <p className="mt-2 text-[12px] text-smoke">
-        Your notes are yours alone until calibration — write freely, in any
+        Your notes are yours alone until calibration. Write freely, in any
         form you like.
       </p>
     </section>

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getAdminHomeStats } from "@/lib/db/admin";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { StatusPill } from "@/components/ui/status-pill";
 
 function formatToday(): string {
@@ -40,14 +40,8 @@ export default async function Home() {
   const adminStats = user.role === "admin" ? await getAdminHomeStats() : null;
 
   return (
-    <main className="mx-auto min-h-screen max-w-[1440px] bg-paper p-8">
-      <AppHeader
-        email={user.email}
-        role={user.role}
-        isChiefCoder={user.isChiefCoder}
-      />
-
-      <div className="mx-auto mt-10 max-w-[880px] space-y-12">
+    <AppShell email={user.email} role={user.role} isChiefCoder={user.isChiefCoder}>
+      <div className="mx-auto mt-2 max-w-[880px] space-y-12">
         {/* Greeting */}
         <section className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <h1
@@ -170,19 +164,8 @@ export default async function Home() {
               >
                 Study overview
               </h2>
-              <span className="flex items-center gap-4">
-                <Link
-                  href="/admin/assignment"
-                  className="rounded-sm text-[14px] text-lake underline underline-offset-4"
-                >
-                  Assignment →
-                </Link>
-                <Link
-                  href="/admin/team"
-                  className="rounded-sm text-[14px] text-lake underline underline-offset-4"
-                >
-                  Manage team →
-                </Link>
+              <span className="text-[12px] text-smoke">
+                Team and Assignment live in the sidebar
               </span>
             </div>
             <dl className="grid grid-cols-2 divide-hairline overflow-hidden rounded-lg border border-hairline bg-card sm:grid-cols-4 sm:divide-x">
@@ -209,15 +192,7 @@ export default async function Home() {
           </section>
         )}
 
-        <footer className="border-t border-hairline pt-4">
-          <Link
-            href="/styleguide"
-            className="rounded-sm text-[13px] text-smoke underline underline-offset-4 hover:text-lake"
-          >
-            Style guide
-          </Link>
-        </footer>
       </div>
-    </main>
+    </AppShell>
   );
 }

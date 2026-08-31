@@ -22,7 +22,7 @@ function defaultSeed(waveNo: number): string {
 
 export function WaveRunner({ nextWaveNo, poolSize }: { nextWaveNo: number; poolSize: number }) {
   const [seed, setSeed] = useState(defaultSeed(nextWaveNo));
-  const [videosPerPair, setVideosPerPair] = useState(15);
+  const [waveDays, setWaveDays] = useState(5);
   const [previewState, previewAction, previewPending] = useActionState<
     WaveActionResult | null,
     FormData
@@ -43,20 +43,22 @@ export function WaveRunner({ nextWaveNo, poolSize }: { nextWaveNo: number; poolS
         <h3 className="text-[15px] font-medium text-ink">Run a wave</h3>
         <p className="mt-1 max-w-[62ch] text-[13px] leading-[1.5] text-graphite">
           The algorithm deals the pool ({poolSize} videos) to the active
-          pairs: arm-balanced within every pair, schools spread, card duty
-          split. Preview writes nothing; confirming writes exactly what you
-          previewed, recorded with its seed.
+          pairs. Each pair&apos;s share comes from its members&apos; availability
+          (videos per day, set on the Team screen) times the working days
+          you choose here. Arm-balanced within every pair, schools spread,
+          card duty split. Preview writes nothing; confirming writes exactly
+          what you previewed, recorded with its seed.
         </p>
         <form action={previewAction} className="mt-4 flex flex-wrap items-end gap-4">
           <label className="block text-[14px] font-medium text-ink">
-            Videos per pair
+            Working days in this wave
             <input
-              name="videosPerPair"
+              name="waveDays"
               type="number"
               min={1}
-              max={60}
-              value={videosPerPair}
-              onChange={(e) => setVideosPerPair(Number(e.target.value))}
+              max={20}
+              value={waveDays}
+              onChange={(e) => setWaveDays(Number(e.target.value))}
               className={`mt-1 block w-32 ${inputCls}`}
             />
           </label>
@@ -101,7 +103,7 @@ export function WaveRunner({ nextWaveNo, poolSize }: { nextWaveNo: number; poolS
             ✓
           </span>
           <p className="text-[15px] text-ink">
-            Wave {confirmState.confirmed.waveNo} confirmed —{" "}
+            Wave {confirmState.confirmed.waveNo} confirmed:{" "}
             <span className="mono">{confirmState.confirmed.assigned}</span>{" "}
             videos assigned. Coders will see them in their queues now.
           </p>
@@ -112,7 +114,7 @@ export function WaveRunner({ nextWaveNo, poolSize }: { nextWaveNo: number; poolS
         <div className="space-y-3 rounded-xl border border-hairline-strong bg-paper p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h4 className="text-[15px] font-medium text-ink">
-              Preview — wave {preview.waveNo},{" "}
+              Preview: wave {preview.waveNo},{" "}
               <span className="mono text-[13px]">{preview.seed}</span>
             </h4>
             <p className="text-[13px] text-graphite">
@@ -127,7 +129,7 @@ export function WaveRunner({ nextWaveNo, poolSize }: { nextWaveNo: number; poolS
               <thead>
                 <tr className="bg-sunken text-[12px] text-graphite">
                   <th className="px-4 py-2 font-semibold">Pair</th>
-                  <th className="px-4 py-2 font-semibold">Videos</th>
+                  <th className="px-4 py-2 font-semibold">Videos (of capacity)</th>
                   <th className="px-4 py-2 font-semibold">Control / Dispersed / Connected</th>
                   <th className="px-4 py-2 font-semibold">Max same school</th>
                   <th className="px-4 py-2 font-semibold">Cards (anchor)</th>
@@ -138,7 +140,9 @@ export function WaveRunner({ nextWaveNo, poolSize }: { nextWaveNo: number; poolS
                 {preview.perPair.map((p) => (
                   <tr key={p.pairId} className="h-10 border-t border-hairline">
                     <td className="px-4 text-ink">{p.label}</td>
-                    <td className="num px-4">{p.count}</td>
+                    <td className="num px-4">
+                      {p.count} of {p.capacity}
+                    </td>
                     <td className="num px-4 text-graphite">
                       {p.arms.control} / {p.arms.dispersed} / {p.arms.connected}
                     </td>
@@ -156,11 +160,11 @@ export function WaveRunner({ nextWaveNo, poolSize }: { nextWaveNo: number; poolS
           </div>
           <form action={confirmAction} className="flex items-center justify-end gap-3">
             <input type="hidden" name="seed" value={preview.seed} />
-            <input type="hidden" name="videosPerPair" value={preview.videosPerPair} />
+            <input type="hidden" name="waveDays" value={preview.waveDays} />
             <input type="hidden" name="hash" value={preview.hash} />
             <p className="text-[13px] text-graphite">
-              Confirming writes these assignments and notifies nothing else —
-              coders simply see new videos.
+              Confirming writes these assignments. Coders simply see new videos
+              in their queues.
             </p>
             <button
               type="submit"

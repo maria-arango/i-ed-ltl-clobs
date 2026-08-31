@@ -117,8 +117,10 @@ describe("pair rules (Amendment B §2)", () => {
 });
 
 describe("wave preview → confirm", () => {
+  // Fixture users have no availability entries → default 3 videos/day;
+  // 2 working days × 3/day = capacity 6 per pair.
   it("previews without writing anything", async () => {
-    const r = await previewWave("test-wave-seed", 6, "test");
+    const r = await previewWave("test-wave-seed", 2, "test");
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.preview.totalToAssign).toBe(12);
@@ -134,7 +136,7 @@ describe("wave preview → confirm", () => {
   });
 
   it("refuses to confirm when the pool changed since the preview", async () => {
-    const r = await confirmWave(ids.admin, "test-wave-seed", 6, "stale-hash", "test");
+    const r = await confirmWave(ids.admin, "test-wave-seed", 2, "stale-hash", "test");
     expect(r).toEqual({
       ok: false,
       error: expect.stringMatching(/changed since this preview/i),
@@ -142,9 +144,9 @@ describe("wave preview → confirm", () => {
   });
 
   it("confirms exactly what was previewed, with the seed on record", async () => {
-    const p = await previewWave("test-wave-seed", 6, "test");
+    const p = await previewWave("test-wave-seed", 2, "test");
     if (!p.ok) throw new Error("preview failed");
-    const r = await confirmWave(ids.admin, "test-wave-seed", 6, p.preview.hash, "test");
+    const r = await confirmWave(ids.admin, "test-wave-seed", 2, p.preview.hash, "test");
     expect(r).toEqual({ ok: true, waveNo: p.preview.waveNo, assigned: 12 });
 
     // Assignments + exactly one card filler each.
@@ -186,7 +188,7 @@ describe("wave preview → confirm", () => {
   });
 
   it("a second wave has nothing left to deal", async () => {
-    const p = await previewWave("second-seed", 6, "test");
+    const p = await previewWave("second-seed", 2, "test");
     expect(p.ok).toBe(true);
     if (p.ok) expect(p.preview.totalToAssign).toBe(0);
   });

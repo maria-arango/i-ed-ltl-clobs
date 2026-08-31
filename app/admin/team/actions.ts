@@ -52,3 +52,41 @@ export async function setChiefAction(
   if (result.ok) revalidatePath("/admin/team");
   return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
+
+export async function setRoleAction(
+  userId: string,
+  role: "admin" | "coder",
+): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const { setMemberRole } = await import("@/lib/db/admin");
+  const result = await setMemberRole(session.user.id, userId, role);
+  if (result.ok) revalidatePath("/admin/team");
+  return result;
+}
+
+export async function deleteMemberAction(userId: string): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const { deleteMemberPermanently } = await import("@/lib/db/admin");
+  const result = await deleteMemberPermanently(session.user.id, userId);
+  if (result.ok) revalidatePath("/admin/team");
+  return result;
+}
+
+export async function setAvailabilityAction(
+  userId: string,
+  videosPerDay: number,
+  from: string,
+  to: string | null,
+): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const { setAvailability } = await import("@/lib/db/admin");
+  const result = await setAvailability(
+    session.user.id,
+    userId,
+    videosPerDay,
+    new Date(from + "T00:00:00Z"),
+    to ? new Date(to + "T00:00:00Z") : null,
+  );
+  if (result.ok) revalidatePath("/admin/team");
+  return result;
+}

@@ -123,7 +123,7 @@ export function ContextCardForm({
       <div className="max-w-[68ch] rounded-xl border border-hairline bg-card p-6">
         <p className="text-[15px] leading-[1.6] text-graphite">
           Your partner is filling the context card for this video. It appears
-          here after you submit your own scores — so it cannot colour what
+          here after you submit your own scores, so it cannot colour what
           you see first.
         </p>
       </div>
@@ -350,7 +350,7 @@ export function ContextCardForm({
                 onClick={submit}
                 className="rounded-md bg-bark px-[18px] py-[10px] text-[14px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
               >
-                Click again to confirm — the card becomes read-only
+                Click again to confirm. The card becomes read-only
               </button>
             )}
             {submitError && (

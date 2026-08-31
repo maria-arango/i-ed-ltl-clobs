@@ -480,3 +480,25 @@ Additions of 2026-08-31 (video-unit decision and import findings):
     video minute for coders who want it, and note→justification citations remain fully optional
     (Amendment B §4). This clarifies §5 of this addendum: the timestamp is a convenience, never a
     requirement.
+Additions of 2026-08-31 (platform review, second round):
+
+18. **Availability is entered as videos-per-day with date ranges.** Trained enumerators default to
+    full time (3 videos/day). Admins and chief coders vary: each availability entry is
+    (videos per day, from date, to date — open-ended allowed), editable on the Team screen, and
+    history is preserved by closing the old entry rather than editing it. Examples set by María:
+    María/Aggrey/Justine 3/day from ~Sept 11–14 to end of October; Shaily 2/day from Sept 16;
+    Arya 1/day. **Wave capacity derives from availability**: a pair's capacity for a wave =
+    min(anchor's, enumerator's) videos/day × the wave's working days, computed at preview time.
+19. **Pair rotation.** Manual pair formation stays, and a seeded "rotate pairs" action is added:
+    fixed pairs within a week, new randomised pairings between weeks (preferring combinations that
+    have not worked together before). Rotation soft-dissolves the previous pairs (history intact —
+    calibration still references the pair that coded together) and forms the new set, all recorded.
+20. **Permanent deletion is allowed ONLY for accounts with no work.** An account with zero
+    observations, notes, scores, assignments or audit trail can be hard-deleted (typo/duplicate
+    entries). Any account with work can only be deactivated — CLAUDE.md §7 (nothing destructive)
+    stands for anything evidentiary.
+21. **Interface decisions.** A left sidebar with icons is the app-level navigation (Home, My
+    videos, Team, Assignment; more as screens arrive) — plain blue text links were too easy to
+    miss. Route changes get the 280ms page transition from the design system. UI copy avoids
+    em dashes (reads as AI); instrument text is untouched. Kimanya photographs are approved for
+    the sign-in/landing page.

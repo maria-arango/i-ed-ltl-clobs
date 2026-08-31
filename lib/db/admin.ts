@@ -180,3 +180,144 @@ export async function setChiefCoder(
   await audit(actorId, isChief ? "chief_coder_granted" : "chief_coder_removed", userId, {});
   return { ok: true };
 }
+
+/* ------------------------------------------------------------------ */
+/* Roles, deletion, availability (Amendment B §18–20)                  */
+/* ------------------------------------------------------------------ */
+
+import {
+  assignmentRaters as assignmentRatersT,
+  coderAvailability,
+  observations as observationsT,
+} from "@/db/schema";
+import { desc, isNull, sql } from "drizzle-orm";
+
+/** Promote a coder to admin or demote an admin to coder. */
+export async function setMemberRole(
+  actorId: string,
+  userId: string,
+  role: "admin" | "coder",
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (userId === actorId && role !== "admin") {
+    return { ok: false, error: "You cannot demote your own account." };
+  }
+  await db
+    .update(users)
+    .set({ role, isChiefCoder: role === "admin" ? false : undefined })
+    .where(eq(users.id, userId));
+  await audit(actorId, role === "admin" ? "member_promoted_to_admin" : "member_demoted_to_coder", userId, {});
+  return { ok: true };
+}
+
+/**
+ * Permanent deletion — ONLY for accounts with no work (Amendment B §20).
+ * Anything evidentiary keeps CLAUDE.md §7: deactivate instead.
+ */
+export async function deleteMemberPermanently(
+  actorId: string,
+  userId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (userId === actorId) {
+    return { ok: false, error: "You cannot delete your own account." };
+  }
+  const [target] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!target) return { ok: false, error: "No such account." };
+
+  const blockers: string[] = [];
+  const [{ n: obs }] = await db
+    .select({ n: count() })
+    .from(observationsT)
+    .where(eq(observationsT.coderId, userId));
+  if (Number(obs) > 0) blockers.push("observations");
+  const [{ n: raters }] = await db
+    .select({ n: count() })
+    .from(assignmentRatersT)
+    .where(eq(assignmentRatersT.userId, userId));
+  if (Number(raters) > 0) blockers.push("assignments");
+  const [{ n: authored }] = await db
+    .select({ n: count() })
+    .from(auditLog)
+    .where(eq(auditLog.actorId, userId));
+  if (Number(authored) > 0) blockers.push("admin actions");
+  const [{ n: memberships }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(sql`pair_members`)
+    .where(sql`pair_members.user_id = ${userId}`);
+  if (Number(memberships) > 0) blockers.push("pair history");
+
+  if (blockers.length > 0) {
+    return {
+      ok: false,
+      error: `This account has ${blockers.join(", ")} on record and cannot be deleted. Deactivate it instead.`,
+    };
+  }
+
+  await db.delete(coderAvailability).where(eq(coderAvailability.userId, userId));
+  await db.delete(users).where(eq(users.id, userId)); // sessions/accounts cascade
+  await audit(actorId, "member_deleted_permanently", target.email, {});
+  return { ok: true };
+}
+
+export interface AvailabilityView {
+  videosPerDay: number;
+  effectiveFrom: Date;
+  effectiveTo: Date | null;
+}
+
+/** Current availability per user (the open or latest entry). */
+export async function getAvailabilityMap(): Promise<Record<string, AvailabilityView>> {
+  const rows = await db
+    .select({
+      userId: coderAvailability.userId,
+      videosPerDay: coderAvailability.videosPerDay,
+      effectiveFrom: coderAvailability.effectiveFrom,
+      effectiveTo: coderAvailability.effectiveTo,
+    })
+    .from(coderAvailability)
+    .orderBy(desc(coderAvailability.createdAt));
+  const map: Record<string, AvailabilityView> = {};
+  for (const r of rows) {
+    if (!map[r.userId]) map[r.userId] = r; // newest first
+  }
+  return map;
+}
+
+/**
+ * Set availability from a given date: closes the open entry (history is
+ * preserved, never edited) and starts a new one.
+ */
+export async function setAvailability(
+  actorId: string,
+  userId: string,
+  videosPerDay: number,
+  effectiveFrom: Date,
+  effectiveTo: Date | null,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!(videosPerDay >= 0 && videosPerDay <= 6)) {
+    return { ok: false, error: "Videos per day must be between 0 and 6." };
+  }
+  if (effectiveTo && effectiveTo < effectiveFrom) {
+    return { ok: false, error: "The end date is before the start date." };
+  }
+  await db
+    .update(coderAvailability)
+    .set({ effectiveTo: effectiveFrom })
+    .where(and(eq(coderAvailability.userId, userId), isNull(coderAvailability.effectiveTo)));
+  await db.insert(coderAvailability).values({
+    userId,
+    videosPerDay,
+    fteFraction: Math.round((videosPerDay / 3) * 100),
+    effectiveFrom,
+    effectiveTo,
+  });
+  await audit(actorId, "availability_set", userId, {
+    videosPerDay,
+    from: effectiveFrom.toISOString().slice(0, 10),
+    to: effectiveTo?.toISOString().slice(0, 10) ?? null,
+  });
+  return { ok: true };
+}

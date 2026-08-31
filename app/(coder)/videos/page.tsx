@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
 import { getCoderQueue } from "@/lib/db/coder";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { StatusPill } from "@/components/ui/status-pill";
 
 function formatDuration(seconds: number | null): string {
@@ -21,12 +21,12 @@ export default async function MyVideos() {
   const done = queue.filter((q) => q.observationStatus === "submitted").length;
 
   return (
-    <main className="mx-auto min-h-screen max-w-[1440px] space-y-6 bg-paper p-8">
-      <AppHeader
-        email={session.user.email}
-        role={session.user.role}
-        isChiefCoder={session.user.isChiefCoder}
-      />
+    <AppShell
+      email={session.user.email}
+      role={session.user.role}
+      isChiefCoder={session.user.isChiefCoder}
+    >
+      <div className="space-y-6">
       <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
         <Link
           href="/"
@@ -102,6 +102,7 @@ export default async function MyVideos() {
           </table>
         </div>
       )}
-    </main>
+      </div>
+    </AppShell>
   );
 }

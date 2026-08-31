@@ -100,6 +100,14 @@ preview→confirm with inputs-hash guard, per-pair balance evidence shown, assig
 seed+algorithm version. 47 tests. PRs #8 (CI fix), #10 (centering), #11 (assignment) —
 #11 includes #10.
 
+## Progress (2026-08-31, cont. 3)
+
+Amendment B §18-21 implemented on PR #11's branch: availability model (videos/day + dates,
+Team screen editor; wave capacity = min(pair) × working days), seeded pair rotation
+(prefers new pairings, soft-dissolves old), promote/demote admin, guarded permanent delete,
+left icon sidebar shell + 280ms page transitions, em-dash copy sweep, sign-in ready for
+public/kimanya/ photos (folder README committed; María drops files in Finder).
+
 ## Next up
 
 1. **Stage 3 continues:** the calibration room (co-presence gate — the ONLY place partner data

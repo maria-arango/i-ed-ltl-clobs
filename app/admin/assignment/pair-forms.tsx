@@ -38,8 +38,8 @@ export function CreatePairForm({
     <form ref={formRef} action={formAction} className="rounded-xl border border-hairline bg-card p-6">
       <h3 className="text-[15px] font-medium text-ink">Form a pair</h3>
       <p className="mt-1 max-w-[60ch] text-[13px] leading-[1.5] text-graphite">
-        Every pair is one anchor (an admin or chief coder) and one enumerator
-        — enumerators are never paired together.
+        Every pair is one anchor (an admin or chief coder) and one
+        enumerator. Enumerators are never paired together.
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="block text-[14px] font-medium text-ink">
@@ -86,7 +86,7 @@ export function CreatePairForm({
       </div>
       {enumerators.length === 0 && (
         <p className="mt-2 text-[13px] text-graphite">
-          No eligible enumerators yet — add coders on the Team screen first.
+          No eligible enumerators yet. Add coders on the Team screen first.
         </p>
       )}
     </form>

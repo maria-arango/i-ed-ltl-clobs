@@ -17,6 +17,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  real,
   index,
   integer,
   jsonb,
@@ -178,7 +179,10 @@ export const coderAvailability = pgTable("coder_availability", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id),
-  fteFraction: integer("fte_percent").notNull(), // 0–100, whole percent
+  // Amendment B §18: availability is thought of in videos per day
+  // (3/day = full time). fte_percent kept for the record.
+  videosPerDay: real("videos_per_day").notNull().default(3),
+  fteFraction: integer("fte_percent").notNull().default(100),
   effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull(),
   effectiveTo: timestamp("effective_to", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })

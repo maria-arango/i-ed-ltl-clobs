@@ -50,7 +50,7 @@ export async function previewWaveAction(
   await requireAdmin();
   const result = await previewWave(
     String(formData.get("seed") ?? ""),
-    Number(formData.get("videosPerPair")),
+    Number(formData.get("waveDays")),
   );
   return result.ok ? { ok: true, preview: result.preview } : { ok: false, error: result.error };
 }
@@ -63,13 +63,48 @@ export async function confirmWaveAction(
   const result = await confirmWave(
     session.user.id,
     String(formData.get("seed") ?? ""),
-    Number(formData.get("videosPerPair")),
+    Number(formData.get("waveDays")),
     String(formData.get("hash") ?? ""),
   );
   if (result.ok) {
     revalidatePath("/admin/assignment");
     revalidatePath("/");
     return { ok: true, confirmed: { waveNo: result.waveNo, assigned: result.assigned } };
+  }
+  return { ok: false, error: result.error };
+}
+
+export interface RotationActionResult {
+  ok: boolean;
+  error?: string;
+  preview?: import("@/lib/db/admin-assignment").RotationPreview;
+  confirmed?: { formed: number };
+}
+
+export async function previewRotationAction(
+  _prev: RotationActionResult | null,
+  formData: FormData,
+): Promise<RotationActionResult> {
+  await requireAdmin();
+  const { previewRotation } = await import("@/lib/db/admin-assignment");
+  const result = await previewRotation(String(formData.get("seed") ?? ""));
+  return result.ok ? { ok: true, preview: result.preview } : { ok: false, error: result.error };
+}
+
+export async function confirmRotationAction(
+  _prev: RotationActionResult | null,
+  formData: FormData,
+): Promise<RotationActionResult> {
+  const session = await requireAdmin();
+  const { confirmRotation } = await import("@/lib/db/admin-assignment");
+  const result = await confirmRotation(
+    session.user.id,
+    String(formData.get("seed") ?? ""),
+    String(formData.get("hash") ?? ""),
+  );
+  if (result.ok) {
+    revalidatePath("/admin/assignment");
+    return { ok: true, confirmed: { formed: result.formed } };
   }
   return { ok: false, error: result.error };
 }

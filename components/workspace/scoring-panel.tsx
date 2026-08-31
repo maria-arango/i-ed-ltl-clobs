@@ -276,7 +276,7 @@ export function ScoringPanel({
               {emptyJustifications > 0 && (
                 <p className="text-[12px] leading-[1.5] text-graphite">
                   {emptyJustifications} item{emptyJustifications > 1 ? "s have" : " has"} no
-                  justification — the rubric expects one, but you can submit.
+                  justification. The rubric expects one, but you can still submit.
                 </p>
               )}
               {!confirming ? (
@@ -293,7 +293,7 @@ export function ScoringPanel({
                   onClick={submit}
                   className="w-full rounded-md bg-bark px-[18px] py-[10px] text-[14px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
                 >
-                  Click again to confirm — scores lock permanently
+                  Click again to confirm. Scores lock permanently
                 </button>
               )}
               {submitError && (
@@ -368,7 +368,7 @@ export function ScoringPanel({
           </ul>
           <div className="mt-5 rounded-sm bg-sunken p-3">
             <p className="text-[11px] font-medium uppercase tracking-[0.02em] text-smoke">
-              Special note — read first
+              Special note (read first)
             </p>
             <p className="mt-1 max-w-[68ch] font-serif text-[15px] leading-[1.6] text-graphite">
               {concept.specialNote}
@@ -471,7 +471,7 @@ export function ScoringPanel({
         </h3>
         {!noteHtml || noteHtml === "<p></p>" ? (
           <p className="mt-2 text-[13px] text-graphite">
-            Nothing yet — what you write in the Notes tab appears here while
+            Nothing yet. What you write in the Notes tab appears here while
             you score.
           </p>
         ) : (

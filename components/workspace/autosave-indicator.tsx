@@ -20,7 +20,7 @@ export function AutosaveIndicator({
     idle: { dot: "var(--clobs-ash)", text: "—" },
     saving: { dot: "var(--clobs-ash)", text: "Saving…" },
     saved: { dot: "var(--clobs-forest)", text: time ? `Saved ${time}` : "Saved" },
-    offline: { dot: "var(--clobs-clay)", text: "Offline — saved on this device" },
+    offline: { dot: "var(--clobs-clay)", text: "Offline. Saved on this device" },
   }[status];
 
   return (
