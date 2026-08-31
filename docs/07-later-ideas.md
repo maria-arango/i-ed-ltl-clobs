@@ -53,7 +53,18 @@ Team screen.
 - **Fits best:** alongside or right after the calibration room, since co-presence is
   already being tracked there.
 
-### 4. Sign-in page cursor effect
+### 4. Email notification when a wave lands
+
+When an admin confirms a wave, email each coder their new videos and who
+their partner is (Resend is already configured for sign-in codes). In-app,
+both facts are already visible (My videos shows the partner; Calibration
+shows the pair per video) — the email is a nudge, not the source of truth.
+
+- **Feasibility:** high; ~30 lines in the confirm path plus a template.
+- **Fits best:** after the chat/scheduling decision, so the email can point
+  wherever coordination ends up happening.
+
+### 5. Sign-in page cursor effect
 
 On the sign-in page, a cursor-tracked effect where the dotted background highlights around
 the pointer as it moves (in the spirit of https://21st.dev/?q=follow+mouse — "follow mouse"

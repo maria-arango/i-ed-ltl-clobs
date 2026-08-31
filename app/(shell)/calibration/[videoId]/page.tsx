@@ -9,7 +9,6 @@ import { requireSession } from "@/lib/auth-helpers";
 import { getRubricContent } from "@/lib/db/coder";
 import { CoderError } from "@/lib/db/coder";
 import { getCalibrationRoom } from "@/lib/db/coder-calibration";
-import { AppShell } from "@/components/app-shell";
 import { CalibrationRoom } from "@/components/calibration/calibration-room";
 
 export default async function CalibrationRoomPage({
@@ -34,11 +33,6 @@ export default async function CalibrationRoomPage({
   for (const c of rubric?.concepts ?? []) conceptNames[c.itemNo] = c.name;
 
   return (
-    <AppShell
-      email={session.user.email}
-      role={session.user.role}
-      isChiefCoder={session.user.isChiefCoder}
-    >
       <div className="space-y-6">
         <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
           <Link href="/" className="rounded-sm text-lake underline underline-offset-4">
@@ -62,6 +56,5 @@ export default async function CalibrationRoomPage({
           myName={session.user.name ?? session.user.email ?? "You"}
         />
       </div>
-    </AppShell>
   );
 }

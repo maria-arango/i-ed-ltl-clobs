@@ -17,7 +17,7 @@
  * The ESLint boundary rule forbids importing the admin client (`@/lib/db`)
  * anywhere under app/api/coder or app/(coder).
  */
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { hardenSslMode } from "@/lib/pg-url";
@@ -29,6 +29,7 @@ import {
   notes,
   observations,
   scores,
+  users,
   videos,
 } from "@/db/schema";
 
@@ -57,12 +58,17 @@ export interface QueueRow {
   fillsContextCard: boolean;
   observationStatus: string | null;
   submittedAt: Date | null;
+  /** Who codes this video with me — released by design: pairs calibrate
+   *  together, so knowing WHO the partner is is never a blinding matter
+   *  (their scores and notes remain gated by the calibration room). */
+  partnerName: string | null;
 }
 
 /** The coder's own assigned videos, with their own progress. */
 export async function getCoderQueue(coderId: string): Promise<QueueRow[]> {
-  return coderDb
+  const rows = await coderDb
     .select({
+      assignmentId: assignments.id,
       videoId: videos.id,
       displayCode: videos.displayCode,
       driveUrl: videos.driveUrl,
@@ -90,6 +96,33 @@ export async function getCoderQueue(coderId: string): Promise<QueueRow[]> {
       ),
     )
     .orderBy(asc(videos.displayCode));
+
+  if (rows.length === 0) return [];
+  const partnerRows = await coderDb
+    .select({
+      assignmentId: assignmentRaters.assignmentId,
+      name: users.name,
+      email: users.email,
+    })
+    .from(assignmentRaters)
+    .innerJoin(users, eq(users.id, assignmentRaters.userId))
+    .where(
+      and(
+        inArray(
+          assignmentRaters.assignmentId,
+          rows.map((r) => r.assignmentId),
+        ),
+        eq(assignmentRaters.status, "active"),
+        ne(assignmentRaters.userId, coderId),
+      ),
+    );
+  const partnerByAssignment = new Map(
+    partnerRows.map((p) => [p.assignmentId, p.name ?? p.email]),
+  );
+  return rows.map(({ assignmentId, ...row }) => ({
+    ...row,
+    partnerName: partnerByAssignment.get(assignmentId) ?? null,
+  }));
 }
 
 /* ------------------------------------------------------------------ */
@@ -340,7 +373,7 @@ async function getContextCardForCoder(
 /* Rubric (read-only reference data)                                   */
 /* ------------------------------------------------------------------ */
 
-import { inArray, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
   events,
   fieldHelp,
