@@ -379,3 +379,63 @@ If this is adopted, the card record carries `confirmed_by`, `confirmed_at`, `fla
   `flag_reason` if the confirmation step is adopted.
 - `clobs_assignments` gains `fills_context_card`, so the randomisation of card duty is auditable and can be
   described in the paper alongside the video randomisation.
+
+## Amendment B — decisions of 2026-08-30
+
+Decided by María in review of `docs/02-plan.md` / `03-data-model.md` / `04-questions.md`. Modifies §3,
+§7, §12, §13 and answers most of §16.
+
+1. **Context cards lose the scene dimension.** One card per video (Amendment A stands), holding the
+   general fields once — subject, composition, approx. count, uniforms, appearance caveats, room,
+   camera, notes, timeline — plus one free-text field for the rare mid-recording setting change.
+   Adults remain add/remove in the form. **The export is a single table**, one row per video, with the
+   adults flattened into `A1_…A6_` blocks exactly matching `context_cards_v3.xlsx`, because that is the
+   shape the AI-training pipeline was designed around. This supersedes the per-scene rows in §3 and
+   §12 and the per-scene keying in Amendment A.
+2. **Roles.** "Enumerator", "coder" and "observer" are one role: **coder**. The separate read-only
+   PI/observer role from §13 is dropped. Added instead: a **chief-coder** flag on coder accounts.
+   **Pairing rule:** every pair contains exactly one anchor (an admin or chief-coder) and one
+   enumerator; enumerators are never paired together, and admins are not paired together. Admins also
+   code full-time.
+3. **Calibration has no escalation path.** Consensus per item is mandatory before sign-off — an anchor
+   is present in every pair, so adjudication is built into the room. Who-moved and the consensus
+   rationale (required where the two scores differed) are still recorded. Supersedes §7 point 1.
+4. **Column B evidence is not enforced.** Coders may optionally attach note entries to a justification,
+   but the platform never requires or nags for a timestamp citation; the training carries that norm.
+5. **Consensus stored = the agreed score only**; averages are computed at analysis time (confirms §3).
+6. **Identifiers.** From a filename like `11002_11002_29_11_EAST_BIOLOGY_comp.mp4`: `sid = 11002`
+   (school), `tr_id = 11002_29` (teacher). Both must appear in every admin export and nightly backup.
+   Coders see only the opaque display code (`V-0417`), which is also how they refer to videos between
+   themselves and in calibration; the display-code ↔ true-ID crosswalk is admin-only.
+7. **Scope.** Videos taught in Arabic, Kiswahili, Lusoga, Luganda, or French are excluded → **511
+   codable videos**. ~25 videos previously coded by admins under the old rubric are recoded on the
+   platform, each by one original admin coder plus one trained enumerator, flagged as a named batch
+   with the prior coder's `previously_coded` recorded (list: `data/admin-recode-set.md`, local only —
+   raw IDs never enter the repository). Gold-standard videos will likely come from this set (pending
+   team meeting).
+8. **Deadline.** Coding and calibration complete by **2026-10-30**; analysis starts the first week of
+   November.
+9. **Training space.** Uses the `dataset = 'training'` mechanism from ADR 0001. Trainee accounts are
+   coder accounts scoped to `training`: they see only the admin-chosen training videos (~4: two coded
+   alongside an experienced coder, two solo for evaluation), no calibration surface, and their work
+   never enters live exports or dashboards. Evaluation against master scores uses the certification
+   machinery; passing trainees are promoted by an admin flipping the account to `live` (audited).
+10. **Housekeeping.** No transcripts (no budget). English-only interface. María José maintains the
+    platform after the coding period; project data is archived, **not deleted**, at project end.
+
+Additions of 2026-08-30 (second review):
+
+11. **Import exclusion rule.** At video-list import, exclude (a) rows whose `tr_id` contains `(-666)`
+    or `NO_TEACHER` (e.g. `"(-666)"`, `"10402_(-666)"`, `"11102_(-666)"`), and (b) lessons taught in
+    Arabic, Kiswahili (incl. "Lugha ya Kiswahili" / "Faishi(a) ya Kiswahili"), Lusoga, Luganda, or
+    French — coders cannot understand the speech. Excluded rows are kept in `video_provenance` with
+    `excluded_reason`, never assigned, never in denominators. The codable count is computed at import,
+    not assumed.
+12. **Drive filenames — accepted disclosure.** The team discussed and accepts that coders see raw video
+    filenames (which contain `sid`/`tr_id`) when watching in Drive; files will not be renamed. The
+    platform's blinding rules stand unchanged for everything the platform itself serves: display codes
+    everywhere in the interface, no school/arm/teacher fields in any coder-facing payload, and arm
+    remains invisible everywhere (filenames do not reveal treatment arm). Recorded so a future session
+    does not reopen this.
+13. **Anchor roster (provisional).** Confirmed anchors: María, Aggrey, Justine. Probable chief-coders:
+    Hamlet, Simon, Shaily (to be confirmed; profiles added later via the Team screen).

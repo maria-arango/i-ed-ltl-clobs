@@ -17,6 +17,9 @@ data/*
 *.xlsm
 # ...except the deliberately redacted samples
 !docs/source-materials/*_SAMPLE.xlsx
+# ...and the app's synthetic seed fixtures (invented data only — never real).
+# Scoped to db/seed/ so nothing under data/ is ever weakened.
+!db/seed/**/*.csv
 
 # Media
 *.mp4
@@ -33,6 +36,9 @@ data/*
 *.sqlite
 *.sqlite3
 *.db
+# ...but Drizzle migration files are code, not data, and must be committed
+# (this negation must stay BELOW the *.sql rule — last match wins):
+!drizzle/**/*.sql
 
 # ---------------------------------------------------------------------------
 # Secrets
@@ -95,3 +101,15 @@ desktop.ini
 # OneDrive / cloud-sync conflict copies
 *conflicted copy*
 *-conflicted-*
+
+# ---------------------------------------------------------------------------
+# Node / Next.js generated files
+# ---------------------------------------------------------------------------
+node_modules/
+.next/
+out/
+.vercel/
+next-env.d.ts
+*.tsbuildinfo
+.turbo/
+.neon

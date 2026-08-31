@@ -1,0 +1,17 @@
+#!/bin/sh
+# Shim used ONLY when running the shadcn CLI (see the "ui" script in package.json).
+# Why: the shadcn CLI passes --allow-scripts to npm, and npm >= 11.17 refuses
+# that flag in project-scoped installs (error EALLOWSCRIPTS). This shim strips
+# that one flag and delegates everything else to the real npm unchanged, so
+# npm's normal install-script approval policy still applies.
+REAL_NPM="/opt/homebrew/bin/npm"
+# The CLI can also pass the setting as an environment variable; clear both forms.
+unset npm_config_allow_scripts NPM_CONFIG_ALLOW_SCRIPTS npm_config_allow_Scripts
+args=""
+for a in "$@"; do
+  case "$a" in
+    --allow-scripts|--allow-scripts=*) ;;
+    *) args="$args \"$a\"" ;;
+  esac
+done
+eval exec "\"$REAL_NPM\"" $args
