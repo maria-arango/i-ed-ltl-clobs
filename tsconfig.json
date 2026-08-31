@@ -34,6 +34,7 @@
   "exclude": [
     "node_modules",
     ".claude",
+    ".reference",
     // Neon onboarding template; not part of the app and references an
     // uninstalled package. Delete it or keep it excluded — either is safe.
     "neon.ts"

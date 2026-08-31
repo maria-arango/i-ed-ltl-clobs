@@ -79,6 +79,12 @@
       "skillPath": "skills/review-animations/SKILL.md",
       "computedHash": "b9f669af5ae280c19a592a94611520335a81de25c88f225bf60ae4b2d66c8c7c"
     },
+    "tiptap": {
+      "source": "ueberdosis/tiptap",
+      "sourceType": "github",
+      "skillPath": "skills/tiptap/SKILL.md",
+      "computedHash": "622e01bb76685369f3c4d94a298b861fc732042585835776e396211e9059d224"
+    },
     "transitions-dev": {
       "source": "Jakubantalik/transitions.dev",
       "sourceType": "github",

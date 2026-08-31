@@ -198,17 +198,17 @@ export function ScoringPanel({
 
   const select = (n: number) => {
     if (submitted) return;
-    setScores((prev) => {
-      const next = {
-        ...prev,
-        [currentItem]: { ...prev[currentItem], scoreNum: n },
-      };
-      onProgress?.(
-        Object.values(next).filter((s) => s.scoreNum != null).length,
-        false,
-      );
-      return next;
-    });
+    // Compute the next map OUTSIDE the updater: calling the parent's
+    // setState from inside an updater runs during render (React error).
+    const next = {
+      ...scores,
+      [currentItem]: { ...scores[currentItem], scoreNum: n },
+    };
+    setScores(next);
+    onProgress?.(
+      Object.values(next).filter((s) => s.scoreNum != null).length,
+      false,
+    );
   };
 
   const submit = async () => {

@@ -50,6 +50,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Not application code:
     ".claude/**",
+    ".reference/**",
     "scripts/**",
     "neon.ts",
   ]),

@@ -1,19 +1,51 @@
 "use client";
 /**
- * ONE rich-text note per observation (Amendment B §16): a quiet writing
- * page with a small formatting bar — bold, highlight, text size,
- * alignment, bulleted / numbered / dashed lists. Content is stored as
- * HTML in the coder's single note row. No motion on this surface.
+ * ONE rich-text note per observation (Amendment B §16), with a proper
+ * Tiptap toolbar: undo/redo · text style · bold/italic/strike/underline ·
+ * multicolor highlighter · alignment · bulleted/dashed/numbered lists ·
+ * table. Content is stored as self-contained HTML (highlight colors are
+ * hex, not CSS variables, so exports render anywhere). No motion.
+ *
+ * Grounded in tiptap v3 (.reference/tiptap*): StarterKit already includes
+ * bold/italic/strike/underline, undo-redo and the list extensions; tables
+ * come from TableKit; Highlight is configured multicolor.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
-import BulletList from "@tiptap/extension-bullet-list";
+import { BulletList } from "@tiptap/extension-list";
+import { TableKit } from "@tiptap/extension-table";
 import { Placeholder } from "@tiptap/extensions";
+import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Highlighter,
+  Italic,
+  List,
+  ListOrdered,
+  Redo2,
+  Strikethrough,
+  Table2,
+  Trash2,
+  Underline,
+  Undo2,
+} from "lucide-react";
 import { AutosaveIndicator } from "@/components/workspace/autosave-indicator";
 import { useAutosave } from "@/lib/use-autosave";
+
+// Marker palette (DESIGN_SYSTEM §1 — content markers). Stored as hex so the
+// exported HTML is self-contained.
+const MARKERS = [
+  { name: "Yellow", hex: "#F5E9B8" },
+  { name: "Blue", hex: "#DCE6F1" },
+  { name: "Green", hex: "#DEEADF" },
+  { name: "Pink", hex: "#F6E2DE" },
+] as const;
 
 // Bullet list with a 'dash' variant so coders get dashed lists too.
 const VariantBulletList = BulletList.extend({
@@ -28,16 +60,35 @@ const VariantBulletList = BulletList.extend({
   },
 });
 
-function ToolbarButton({
-  label,
+function DashListIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="M4 6h2M4 12h2M4 18h2M10 6h10M10 12h10M10 18h10" />
+    </svg>
+  );
+}
+
+function ToolButton({
   title,
   active,
+  disabled,
   onClick,
+  children,
 }: {
-  label: React.ReactNode;
   title: string;
   active?: boolean;
+  disabled?: boolean;
   onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
@@ -45,17 +96,22 @@ function ToolbarButton({
       title={title}
       aria-label={title}
       aria-pressed={active}
+      disabled={disabled}
       onMouseDown={(e) => e.preventDefault()} // keep editor selection
       onClick={onClick}
-      className={`min-w-8 rounded-sm px-2 py-1 text-[13px] ${
+      className={`flex size-8 items-center justify-center rounded-sm ${
         active
-          ? "bg-lake-wash font-semibold text-ink"
-          : "text-graphite hover:bg-card"
+          ? "bg-lake-wash text-ink"
+          : "text-graphite hover:bg-card disabled:cursor-not-allowed disabled:text-ash"
       }`}
     >
-      {label}
+      {children}
     </button>
   );
+}
+
+function Divider() {
+  return <span aria-hidden className="mx-1 h-5 w-px bg-hairline" />;
 }
 
 export function NotesEditor({
@@ -65,12 +121,16 @@ export function NotesEditor({
 }: {
   videoId: string;
   initialNote: { id: string; body: string } | null;
-  /** Fires with (hasContent, html) so the shell can keep badges and the
+  /** Fires with (hasContent, html) so the shell keeps badges and the
    *  scoring side pane live. */
   onContentChange?: (hasContent: boolean, html: string) => void;
 }) {
   const [noteId, setNoteId] = useState(initialNote?.id ?? null);
   const [html, setHtml] = useState(initialNote?.body ?? "");
+  const [markerOpen, setMarkerOpen] = useState(false);
+  // Re-render the toolbar on every selection/content change so the active
+  // states track the caret.
+  const [, setTick] = useState(0);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -79,9 +139,10 @@ export function NotesEditor({
       VariantBulletList,
       TextAlign.configure({
         types: ["heading", "paragraph"],
-        alignments: ["left", "center", "justify"],
+        alignments: ["left", "center", "right", "justify"],
       }),
-      Highlight,
+      Highlight.configure({ multicolor: true }),
+      TableKit.configure({ table: { resizable: false } }),
       Placeholder.configure({
         placeholder:
           "Write what you see and hear — in your own words, at your own pace.",
@@ -99,7 +160,15 @@ export function NotesEditor({
       setHtml(next);
       onContentChange?.(!editor.isEmpty, next);
     },
+    onSelectionUpdate: () => setTick((t) => t + 1),
+    onTransaction: () => setTick((t) => t + 1),
   });
+
+  useEffect(() => {
+    const close = () => setMarkerOpen(false);
+    if (markerOpen) document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [markerOpen]);
 
   const { status, savedAt } = useAutosave({
     value: html,
@@ -117,91 +186,233 @@ export function NotesEditor({
     },
   });
 
-  const dashActive = useMemo(
-    () =>
-      editor?.isActive("bulletList", { variant: "dash" }) ?? false,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [editor, html],
-  );
-
   if (!editor) return null;
+
+  const chain = () => editor.chain().focus();
 
   const toggleList = (variant: "disc" | "dash") => {
     const isBullet = editor.isActive("bulletList");
     const currentVariant = editor.getAttributes("bulletList").variant;
     if (isBullet && currentVariant === variant) {
-      editor.chain().focus().toggleBulletList().run();
+      chain().toggleBulletList().run();
     } else if (isBullet) {
-      editor.chain().focus().updateAttributes("bulletList", { variant }).run();
+      chain().updateAttributes("bulletList", { variant }).run();
     } else {
-      editor.chain().focus().toggleBulletList().updateAttributes("bulletList", { variant }).run();
+      chain().toggleBulletList().updateAttributes("bulletList", { variant }).run();
     }
   };
 
+  const textStyle = editor.isActive("heading", { level: 2 })
+    ? "h2"
+    : editor.isActive("heading", { level: 3 })
+      ? "h3"
+      : "p";
+
   return (
-    <section aria-label="Notes" className="max-w-[75ch]">
+    <section aria-label="Notes" className="max-w-[80ch]">
       <div className="rounded-xl border border-hairline bg-paper">
         <div
           role="toolbar"
           aria-label="Text formatting"
-          className="flex flex-wrap items-center gap-1 border-b border-hairline bg-card px-2 py-1.5"
+          className="flex flex-wrap items-center gap-0.5 border-b border-hairline bg-card px-2 py-1.5"
         >
-          <ToolbarButton
-            label={<strong>B</strong>}
+          <ToolButton
+            title="Undo"
+            disabled={!editor.can().undo()}
+            onClick={() => chain().undo().run()}
+          >
+            <Undo2 size={16} />
+          </ToolButton>
+          <ToolButton
+            title="Redo"
+            disabled={!editor.can().redo()}
+            onClick={() => chain().redo().run()}
+          >
+            <Redo2 size={16} />
+          </ToolButton>
+
+          <Divider />
+
+          <label className="sr-only" htmlFor="note-text-style">
+            Text style
+          </label>
+          <select
+            id="note-text-style"
+            value={textStyle}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === "p") chain().setParagraph().run();
+              if (v === "h2") chain().setHeading({ level: 2 }).run();
+              if (v === "h3") chain().setHeading({ level: 3 }).run();
+            }}
+            className="h-8 rounded-sm border border-hairline bg-paper px-1.5 text-[13px] text-ink focus:border-hairline-strong"
+          >
+            <option value="p">Normal</option>
+            <option value="h2">Heading</option>
+            <option value="h3">Subheading</option>
+          </select>
+
+          <Divider />
+
+          <ToolButton
             title="Bold"
             active={editor.isActive("bold")}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-          />
-          <ToolbarButton
-            label={<span style={{ background: "var(--clobs-lake-wash)" }}>ab</span>}
-            title="Highlight"
-            active={editor.isActive("highlight")}
-            onClick={() => editor.chain().focus().toggleHighlight().run()}
-          />
-          <ToolbarButton
-            label="Aa+"
-            title="Large text"
-            active={editor.isActive("heading", { level: 3 })}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          />
-          <span aria-hidden className="mx-1 h-5 w-px bg-hairline" />
-          <ToolbarButton
-            label="⯇"
+            onClick={() => chain().toggleBold().run()}
+          >
+            <Bold size={16} />
+          </ToolButton>
+          <ToolButton
+            title="Italic"
+            active={editor.isActive("italic")}
+            onClick={() => chain().toggleItalic().run()}
+          >
+            <Italic size={16} />
+          </ToolButton>
+          <ToolButton
+            title="Strikethrough"
+            active={editor.isActive("strike")}
+            onClick={() => chain().toggleStrike().run()}
+          >
+            <Strikethrough size={16} />
+          </ToolButton>
+          <ToolButton
+            title="Underline"
+            active={editor.isActive("underline")}
+            onClick={() => chain().toggleUnderline().run()}
+          >
+            <Underline size={16} />
+          </ToolButton>
+
+          <span className="relative">
+            <ToolButton
+              title="Highlight color"
+              active={editor.isActive("highlight")}
+              onClick={() => setMarkerOpen((o) => !o)}
+            >
+              <Highlighter size={16} />
+            </ToolButton>
+            {markerOpen && (
+              <span
+                className="absolute left-0 top-9 z-10 flex items-center gap-1 rounded-md border border-hairline bg-paper p-1.5"
+                style={{ boxShadow: "var(--clobs-shadow-float)" }}
+                role="menu"
+                aria-label="Highlight colors"
+              >
+                {MARKERS.map((m) => (
+                  <button
+                    key={m.hex}
+                    type="button"
+                    title={`Highlight ${m.name.toLowerCase()}`}
+                    aria-label={`Highlight ${m.name.toLowerCase()}`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      chain().setHighlight({ color: m.hex }).run();
+                      setMarkerOpen(false);
+                    }}
+                    className="size-6 rounded-sm border border-hairline-strong"
+                    style={{ background: m.hex }}
+                  />
+                ))}
+                <button
+                  type="button"
+                  title="Remove highlight"
+                  aria-label="Remove highlight"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    chain().unsetHighlight().run();
+                    setMarkerOpen(false);
+                  }}
+                  className="flex size-6 items-center justify-center rounded-sm border border-hairline text-[11px] text-graphite hover:bg-card"
+                >
+                  ✕
+                </button>
+              </span>
+            )}
+          </span>
+
+          <Divider />
+
+          <ToolButton
             title="Align left"
             active={editor.isActive({ textAlign: "left" })}
-            onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          />
-          <ToolbarButton
-            label="⯀"
+            onClick={() => chain().setTextAlign("left").run()}
+          >
+            <AlignLeft size={16} />
+          </ToolButton>
+          <ToolButton
             title="Center"
             active={editor.isActive({ textAlign: "center" })}
-            onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          />
-          <ToolbarButton
-            label="☰"
+            onClick={() => chain().setTextAlign("center").run()}
+          >
+            <AlignCenter size={16} />
+          </ToolButton>
+          <ToolButton
+            title="Align right"
+            active={editor.isActive({ textAlign: "right" })}
+            onClick={() => chain().setTextAlign("right").run()}
+          >
+            <AlignRight size={16} />
+          </ToolButton>
+          <ToolButton
             title="Justify"
             active={editor.isActive({ textAlign: "justify" })}
-            onClick={() => editor.chain().focus().setTextAlign("justify").run()}
-          />
-          <span aria-hidden className="mx-1 h-5 w-px bg-hairline" />
-          <ToolbarButton
-            label="•"
+            onClick={() => chain().setTextAlign("justify").run()}
+          >
+            <AlignJustify size={16} />
+          </ToolButton>
+
+          <Divider />
+
+          <ToolButton
             title="Bulleted list"
             active={editor.isActive("bulletList", { variant: "disc" })}
             onClick={() => toggleList("disc")}
-          />
-          <ToolbarButton
-            label="–"
+          >
+            <List size={16} />
+          </ToolButton>
+          <ToolButton
             title="Dashed list"
-            active={dashActive}
+            active={editor.isActive("bulletList", { variant: "dash" })}
             onClick={() => toggleList("dash")}
-          />
-          <ToolbarButton
-            label="1."
+          >
+            <DashListIcon />
+          </ToolButton>
+          <ToolButton
             title="Numbered list"
             active={editor.isActive("orderedList")}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          />
+            onClick={() => chain().toggleOrderedList().run()}
+          >
+            <ListOrdered size={16} />
+          </ToolButton>
+
+          <Divider />
+
+          {!editor.isActive("table") ? (
+            <ToolButton
+              title="Insert table"
+              onClick={() =>
+                chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+              }
+            >
+              <Table2 size={16} />
+            </ToolButton>
+          ) : (
+            <>
+              <ToolButton title="Add row" onClick={() => chain().addRowAfter().run()}>
+                <span className="text-[11px] font-semibold">+row</span>
+              </ToolButton>
+              <ToolButton
+                title="Add column"
+                onClick={() => chain().addColumnAfter().run()}
+              >
+                <span className="text-[11px] font-semibold">+col</span>
+              </ToolButton>
+              <ToolButton title="Delete table" onClick={() => chain().deleteTable().run()}>
+                <Trash2 size={16} />
+              </ToolButton>
+            </>
+          )}
+
           <span className="ml-auto pr-2">
             <AutosaveIndicator status={status} savedAt={savedAt} />
           </span>

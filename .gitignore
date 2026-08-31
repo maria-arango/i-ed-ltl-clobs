@@ -113,3 +113,6 @@ next-env.d.ts
 *.tsbuildinfo
 .turbo/
 .neon
+
+# Reference clones for skills (never committed)
+.reference/

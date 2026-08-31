@@ -78,6 +78,19 @@ because of a hairline and a radius, not because they float.
 **Bark is rationed to one filled button per view.** If a screen has two brown buttons, one of them is
 wrong — demote it to the outline variant.
 
+### Content markers (added 2026-08-31 — highlight colors in the notes editor)
+
+Coders highlight their own notes with a marker pen, like on paper. Four marker fills, stored as
+hex in the note HTML so exports are self-contained. These color *coder content*, never UI chrome,
+and never encode a study category.
+
+| Name | Value | Token | Note |
+|------|-------|-------|------|
+| Marker Yellow | `#F5E9B8` | `--clobs-marker-yellow` | New value, added for this purpose. |
+| Marker Blue | `#DCE6F1` | `--clobs-marker-blue` | Same value as Lake Wash. |
+| Marker Green | `#DEEADF` | `--clobs-marker-green` | Same value as Forest Wash. |
+| Marker Pink | `#F6E2DE` | `--clobs-marker-pink` | Same value as Clay Wash. |
+
 ### The score ramp — the most important color decision in the product
 
 The four options are **ordinal, not good-and-bad**. Column A Very Accurate means *the practice was
