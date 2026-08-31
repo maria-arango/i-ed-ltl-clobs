@@ -90,13 +90,23 @@ admin study-overview strip (PR #6). Stage 3 begun: lib/assignment/algorithm.ts �
 wave assignment (arm blocking ±1, history-aware school spread, Amendment A card-duty balance),
 12 tests (PR #7). 41 tests total.
 
+## Progress (2026-08-31, cont. 2)
+
+Team screen (/admin/team: add sign-in emails, roles, chief/trainee flags, deactivate —
+browser-tested). Home de-slopped per impeccable craft floor (completion bar object, worklist,
+hairline stat strip; ::selection/caret themed) and content column centered. Assignment screen
+(/admin/assignment): pair formation with Amendment B §2 rules enforced, seeded wave
+preview→confirm with inputs-hash guard, per-pair balance evidence shown, assignment_log carries
+seed+algorithm version. 47 tests. PRs #8 (CI fix), #10 (centering), #11 (assignment) —
+#11 includes #10.
+
 ## Next up
 
-1. **Stage 3 continues:** wire the algorithm to the DB (assignments + assignment_raters +
-   assignment_log with seed, inside a transaction; wave capacity from coder_availability),
-   admin screens (Team: add coders/chiefs; Assignment: preview wave → confirm), Drive-link
-   attachment step, then the calibration room (co-presence gate — the ONLY place partner data
-   is released; sanitize partner note HTML before display), gold set + certification gate.
+1. **Stage 3 continues:** the calibration room (co-presence gate — the ONLY place partner data
+   is released; sanitize partner note HTML before display), gold set + certification gate,
+   Drive-link attachment step (match combined files by sid_tr_id prefix), reassignment tooling
+   (dissolve pairs with active work), per-pair capacity from coder_availability (waves currently
+   take one videos-per-pair number).
 2. **Stage 2 leftovers:** the confirm/flag read-only second pass on the card after the partner
    submits (Amendment A), events for focus-lost/idle, elapsed-session indicator, small-screen
    fallback for the side-by-side layout, encouragement messages at section completion (docs/05).
