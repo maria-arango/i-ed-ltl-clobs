@@ -41,5 +41,7 @@ jobs:
         run: npx drizzle-kit migrate
       - name: Create the restricted coder role
         run: node scripts/setup-coder-role.mts
+      - name: Seed the rubric and field help
+        run: node scripts/seed-rubric.mts
       - name: Tests (unit + API-layer blinding suite)
         run: npm test
