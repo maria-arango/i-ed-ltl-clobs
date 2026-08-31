@@ -105,20 +105,36 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ScoreChip({ num, label, fill, edge, selected }: { num: number; label: string; fill: string; edge: string; selected?: boolean }) {
+function ScoreChip({ num, label, fill, edge, selected, dimmed }: { num: number; label: string; fill: string; edge: string; selected?: boolean; dimmed?: boolean }) {
   return (
     <span
-      className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-[14px] font-medium text-ink"
+      className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] text-ink"
       style={{
         background: fill,
         border: selected ? `2px solid ${edge}` : "1px solid var(--clobs-hairline)",
         // Compensate the 1px difference so selection never shifts layout.
         margin: selected ? 0 : 1,
+        opacity: dimmed ? 0.55 : 1,
+        fontWeight: selected ? 600 : 500,
       }}
       aria-label={`Score ${num}: ${label}${selected ? " (selected)" : ""}`}
     >
-      <span className="mono">{num}</span>
+      <span
+        className="mono flex size-6 shrink-0 items-center justify-center rounded-full text-[13px]"
+        style={
+          selected
+            ? { background: edge, color: "var(--clobs-paper)" }
+            : { border: "1px solid var(--clobs-hairline-strong)", color: "var(--clobs-ink)" }
+        }
+      >
+        {num}
+      </span>
       <span>{label}</span>
+      {selected && (
+        <span aria-hidden style={{ color: edge }}>
+          ✓
+        </span>
+      )}
     </span>
   );
 }
@@ -197,9 +213,13 @@ export default function Styleguide() {
             </div>
           </div>
           <div>
-            <div className="mb-2 text-[11px] uppercase tracking-[0.02em] text-smoke">Selected — 2px edge border, no motion, no scale</div>
+            <div className="mb-2 text-[11px] uppercase tracking-[0.02em] text-smoke">
+              One selected — edge-filled numeral, 2px border, check, dimmed siblings. No motion, no scale.
+            </div>
             <div className="flex flex-wrap gap-2">
-              {scores.map((s) => <ScoreChip key={s.num} {...s} selected />)}
+              {scores.map((s) => (
+                <ScoreChip key={s.num} {...s} selected={s.num === 3} dimmed={s.num !== 3} />
+              ))}
             </div>
           </div>
         </div>

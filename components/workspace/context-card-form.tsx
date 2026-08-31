@@ -80,6 +80,7 @@ export function ContextCardForm({
   initialStatus,
   fieldHelp,
   mode,
+  onStatusChange,
 }: {
   videoId: string;
   initialCard: CardData | null;
@@ -88,9 +89,14 @@ export function ContextCardForm({
   /** 'edit' (assigned filler), 'locked' (partner, pre-submission),
    *  'readonly' (partner, released). */
   mode: "edit" | "locked" | "readonly";
+  onStatusChange?: (status: "none" | "draft" | "submitted") => void;
 }) {
   const [card, setCard] = useState<CardData>(initialCard ?? EMPTY_CARD);
-  const [status, setStatus] = useState(initialStatus);
+  const [status, setStatusRaw] = useState(initialStatus);
+  const setStatus = (s: "none" | "draft" | "submitted") => {
+    setStatusRaw(s);
+    onStatusChange?.(s);
+  };
   const [confirming, setConfirming] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const editable = mode === "edit" && status !== "submitted";

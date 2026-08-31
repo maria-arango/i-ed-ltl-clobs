@@ -307,7 +307,7 @@ that is not listed without adding it here first.
 | Video panel | hand-rolled + Drive embed | Theatre mode top, collapsible, resizable. Falls back to a link card if embedding fails. |
 | Video link card | `transitions-dev` → `24-learn-more-hover` | The darker rectangle with display code and Drive link from the brief. |
 | Copy link button | `amicro` → btn-4 | Copy-state feedback. |
-| Notes editor | hand-rolled | Timestamped entries. Mono timestamp, sans body. **No motion.** |
+| Notes editor | **Tiptap** (@tiptap/react + starter-kit, text-align, highlight) | One rich-text note per observation (addendum §17 Amendment B §16). Toolbar: bold, highlight (lake-wash mark), size, alignment, bullet/numbered/dashed lists. Sans body at 17px. **No motion.** *Added 2026-08-31: the original "timestamped entries" plan was superseded by María's review; Tiptap is the boring, dominant rich-text editor and exports clean HTML.* |
 | Rubric pane | hand-rolled, serif | Sticky beside the scoring grid. Importance / Indicators / Special Note always visible. |
 | Score chips | hand-rolled, score ramp | Numeral + label + fill. Selected = 2px ramp border. Instant. |
 | Score guidance callout | `transitions-dev` → `18-texts-reveal` at 150ms | Appears under the selected chip with that option's anchor text. |

@@ -253,6 +253,45 @@
   to { opacity: 1; }
 }
 
+/* The notes editor content (Tiptap) — a quiet writing page at body-lg. */
+.note-editor {
+  min-height: 20rem;
+  padding: var(--clobs-space-5);
+  font-size: var(--clobs-text-body-lg);
+  line-height: var(--clobs-leading-body-lg);
+  color: var(--clobs-ink);
+}
+.note-editor p { margin: 0 0 0.6em; }
+.note-editor h3 {
+  font-size: var(--clobs-text-heading-sm);
+  line-height: var(--clobs-leading-heading-sm);
+  font-weight: 600;
+  margin: 0.6em 0 0.4em;
+}
+.note-editor ul, .note-editor ol { padding-left: 1.4em; margin: 0 0 0.6em; }
+.note-editor ul { list-style: disc; }
+.note-editor ul[data-variant="dash"] { list-style: none; padding-left: 1.1em; }
+.note-editor ul[data-variant="dash"] > li::before {
+  content: "–";
+  margin-right: 0.5em;
+  margin-left: -1.1em;
+  color: var(--clobs-graphite);
+}
+.note-editor ol { list-style: decimal; }
+.note-editor mark {
+  background: var(--clobs-lake-wash);
+  color: var(--clobs-ink);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.note-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--clobs-ash);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 /* Mono with tabular figures for video codes, timestamps, numeric columns. */
 .mono,
 td.num,

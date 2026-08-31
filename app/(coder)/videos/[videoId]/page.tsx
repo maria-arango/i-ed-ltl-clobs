@@ -11,10 +11,7 @@ import {
   getRubricContent,
   getWorkspace,
 } from "@/lib/db/coder";
-import { WorkspaceTabs } from "@/components/workspace/tabs";
-import { NotesPanel } from "@/components/workspace/notes-panel";
-import { ScoringPanel } from "@/components/workspace/scoring-panel";
-import { ContextCardForm } from "@/components/workspace/context-card-form";
+import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { CopyButton } from "@/components/workspace/copy-button";
 
 export default async function VideoWorkspace({
@@ -40,7 +37,6 @@ export default async function VideoWorkspace({
 
   const { video, contextCard, fillsContextCard } = workspace;
   const submitted = workspace.observation?.status === "submitted";
-  const scoredCount = workspace.scores.length;
 
   const cardMode: "edit" | "locked" | "readonly" = fillsContextCard
     ? "edit"
@@ -54,13 +50,8 @@ export default async function VideoWorkspace({
         ? "draft"
         : "none";
 
-  const cardBadge = fillsContextCard
-    ? cardStatus === "submitted"
-      ? "done"
-      : "yours"
-    : cardMode === "locked"
-      ? "after scores"
-      : "theirs";
+  // ONE note per observation (Amendment B §16): the first row is the note.
+  const note = workspace.notes[0] ?? null;
 
   return (
     <main className="mx-auto max-w-[1440px] space-y-6 bg-paper p-8">
@@ -105,35 +96,19 @@ export default async function VideoWorkspace({
         </div>
       </div>
 
-      <WorkspaceTabs
-        initialTab={fillsContextCard && cardStatus !== "submitted" ? "card" : "notes"}
-        tabs={[
-          { id: "card", label: "Context card", badge: cardBadge },
-          { id: "notes", label: "Notes", badge: String(workspace.notes.length) },
-          {
-            id: "scores",
-            label: "Scores",
-            badge: submitted ? "locked" : `${scoredCount}/8`,
-          },
-        ]}
-      >
-        <ContextCardForm
-          videoId={videoId}
-          initialCard={contextCard.card}
-          initialStatus={cardStatus}
-          fieldHelp={rubric.fieldHelp}
-          mode={cardMode}
-        />
-        <NotesPanel videoId={videoId} initialNotes={workspace.notes} />
-        <ScoringPanel
-          videoId={videoId}
-          concepts={rubric.concepts as never}
-          guidance={rubric.guidance}
-          initialScores={workspace.scores}
-          initialSubmitted={submitted}
-          notes={workspace.notes}
-        />
-      </WorkspaceTabs>
+      <WorkspaceShell
+        videoId={videoId}
+        fillsContextCard={fillsContextCard}
+        initialNote={note ? { id: note.id, body: note.body } : null}
+        initialScores={workspace.scores}
+        initialSubmitted={submitted}
+        initialCard={contextCard.card}
+        initialCardStatus={cardStatus}
+        cardMode={cardMode}
+        concepts={rubric.concepts as never}
+        guidance={rubric.guidance}
+        fieldHelp={rubric.fieldHelp}
+      />
     </main>
   );
 }

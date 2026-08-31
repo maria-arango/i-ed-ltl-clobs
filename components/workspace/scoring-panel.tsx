@@ -9,6 +9,7 @@
  */
 import { useMemo, useRef, useState } from "react";
 import { AutosaveIndicator } from "@/components/workspace/autosave-indicator";
+import { encouragement } from "@/lib/encouragement";
 import { useAutosave } from "@/lib/use-autosave";
 
 /* ------------------------------- types ------------------------------ */
@@ -81,6 +82,7 @@ function ScoreChips({
     >
       {SCORE_META.map((meta, i) => {
         const selected = value === meta.num;
+        const somethingSelected = value != null;
         return (
           <button
             key={meta.num}
@@ -94,17 +96,39 @@ function ScoreChips({
             tabIndex={selected || (value == null && i === 0) ? 0 : -1}
             onClick={() => onSelect(meta.num)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-[14px] font-medium text-ink disabled:cursor-not-allowed"
+            // Selection is deliberately INSTANT — no transition (DESIGN_SYSTEM
+            // §4: the scoring grid gets no motion). Emphasis comes from the
+            // edge-filled numeral badge, weight, check, and dimmed siblings.
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-[14px] text-ink disabled:cursor-not-allowed"
             style={{
               background: meta.fill,
               border: selected
                 ? `2px solid ${meta.edge}`
                 : "1px solid var(--clobs-hairline)",
               margin: selected ? 0 : 1, // selection never shifts layout
+              opacity: somethingSelected && !selected ? 0.55 : 1,
+              fontWeight: selected ? 600 : 500,
             }}
           >
-            <span className="mono">{meta.num}</span>
+            <span
+              className="mono flex size-6 shrink-0 items-center justify-center rounded-full text-[13px]"
+              style={
+                selected
+                  ? { background: meta.edge, color: "var(--clobs-paper)" }
+                  : {
+                      border: "1px solid var(--clobs-hairline-strong)",
+                      color: "var(--clobs-ink)",
+                    }
+              }
+            >
+              {meta.num}
+            </span>
             <span>{meta.label}</span>
+            {selected && (
+              <span aria-hidden style={{ color: meta.edge }}>
+                ✓
+              </span>
+            )}
           </button>
         );
       })}
@@ -120,20 +144,23 @@ export function ScoringPanel({
   guidance,
   initialScores,
   initialSubmitted,
-  notes,
+  noteHtml,
+  onProgress,
 }: {
   videoId: string;
   concepts: RubricConceptData[];
   guidance: RubricGuidanceRow[];
   initialScores: Array<{ itemNo: number; scoreNum: number; justification: string | null }>;
   initialSubmitted: boolean;
-  notes: Array<{ body: string; videoTimestampSeconds: number | null }>;
+  /** The coder's OWN note (HTML they authored), shown side by side. */
+  noteHtml?: string | null;
+  onProgress?: (scoredCount: number, submitted: boolean) => void;
 }) {
   const [currentItem, setCurrentItem] = useState(1);
   const [submitted, setSubmitted] = useState(initialSubmitted);
   const [confirming, setConfirming] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [celebrate, setCelebrate] = useState(false);
+  const [moment, setMoment] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<number, ScoreState>>(() => {
     const map: Record<number, ScoreState> = {};
     for (let n = 1; n <= 8; n++) map[n] = { scoreNum: null, justification: "" };
@@ -171,10 +198,17 @@ export function ScoringPanel({
 
   const select = (n: number) => {
     if (submitted) return;
-    setScores((prev) => ({
-      ...prev,
-      [currentItem]: { ...prev[currentItem], scoreNum: n },
-    }));
+    setScores((prev) => {
+      const next = {
+        ...prev,
+        [currentItem]: { ...prev[currentItem], scoreNum: n },
+      };
+      onProgress?.(
+        Object.values(next).filter((s) => s.scoreNum != null).length,
+        false,
+      );
+      return next;
+    });
   };
 
   const submit = async () => {
@@ -191,7 +225,8 @@ export function ScoringPanel({
     }
     setSubmitted(true);
     setConfirming(false);
-    setCelebrate(true);
+    setMoment(encouragement.scoresSubmitted());
+    onProgress?.(8, true);
     // The full completion moment (DESIGN_SYSTEM §4) — never under reduced motion.
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const confetti = (await import("canvas-confetti")).default;
@@ -271,7 +306,7 @@ export function ScoringPanel({
               className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-medium"
               style={{ background: "var(--clobs-forest-wash)", color: "var(--clobs-forest)" }}
             >
-              {celebrate ? "Scores submitted — locked ✓" : "Submitted and locked"}
+              Submitted and locked ✓
             </p>
           )}
         </div>
@@ -279,6 +314,27 @@ export function ScoringPanel({
 
       {/* Rubric + scoring */}
       <div className="min-w-0 space-y-6">
+        {moment && (
+          <div
+            role="status"
+            className="flex items-center gap-4 rounded-xl border border-hairline p-5"
+            style={{ background: "var(--clobs-forest-wash)" }}
+          >
+            <span
+              aria-hidden
+              className="flex size-10 shrink-0 items-center justify-center rounded-full"
+              style={{ background: "var(--clobs-forest)", color: "var(--clobs-paper)" }}
+            >
+              ✓
+            </span>
+            <p
+              className="font-serif text-ink"
+              style={{ fontSize: "var(--clobs-text-prose)", lineHeight: "var(--clobs-leading-prose)" }}
+            >
+              {moment}
+            </p>
+          </div>
+        )}
         <div className="rounded-xl border border-hairline bg-card p-6">
           <p className="text-[11px] font-medium uppercase tracking-[0.02em] text-smoke">
             Concept {concept.itemNo} of 8
@@ -403,7 +459,9 @@ export function ScoringPanel({
         </div>
       </div>
 
-      {/* Notes, side by side (addendum §5) */}
+      {/* Notes, side by side (addendum §5). The HTML is the coder's OWN
+          Tiptap output rendered back to them; sanitize before ever showing
+          one coder's note to another (calibration, Stage 3). */}
       <aside
         aria-label="Your notes"
         className="hidden max-h-[75vh] overflow-y-auto rounded-xl border border-hairline bg-card p-4 xl:block"
@@ -411,24 +469,16 @@ export function ScoringPanel({
         <h3 className="text-[12px] font-semibold uppercase tracking-[0.02em] text-smoke">
           Your notes
         </h3>
-        {notes.length === 0 ? (
+        {!noteHtml || noteHtml === "<p></p>" ? (
           <p className="mt-2 text-[13px] text-graphite">
-            Nothing yet — notes you take appear here while you score.
+            Nothing yet — what you write in the Notes tab appears here while
+            you score.
           </p>
         ) : (
-          <ul className="mt-2 space-y-3">
-            {notes.map((n, i) => (
-              <li key={i} className="text-[13px] leading-[1.55] text-ink">
-                {n.videoTimestampSeconds != null && (
-                  <span className="timestamp mr-2 text-[12px] text-smoke">
-                    {Math.floor(n.videoTimestampSeconds / 60)}:
-                    {String(n.videoTimestampSeconds % 60).padStart(2, "0")}
-                  </span>
-                )}
-                {n.body}
-              </li>
-            ))}
-          </ul>
+          <div
+            className="note-editor mt-1 !min-h-0 !p-0 text-[13px]"
+            dangerouslySetInnerHTML={{ __html: noteHtml }}
+          />
         )}
       </aside>
     </div>
