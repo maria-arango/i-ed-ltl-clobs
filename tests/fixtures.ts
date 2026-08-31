@@ -16,6 +16,11 @@ import {
   observations,
   pairs,
   pairMembers,
+  rubricAnchors,
+  rubricConcepts,
+  rubricExamples,
+  rubricGuidance,
+  rubricIndicators,
   rubricVersions,
   scoreNoteCitations,
   scores,
@@ -113,9 +118,54 @@ export async function purgeFixture(opts: {
   }
 
   if (opts.rubricVersionPrefix) {
-    await db
-      .delete(rubricVersions)
+    // Observations (possibly from ANOTHER suite running in parallel, e.g.
+    // when no live rubric was seeded and a fixture version became "active")
+    // may reference these rubric versions — remove dependents first, or the
+    // FK on observations.rubric_version_id refuses the delete.
+    const rvs = await db
+      .select({ id: rubricVersions.id })
+      .from(rubricVersions)
       .where(like(rubricVersions.versionLabel, `${opts.rubricVersionPrefix}%`));
+    const rvIds = rvs.map((r) => r.id);
+    if (rvIds.length > 0) {
+      const obs = await db
+        .select({ id: observations.id })
+        .from(observations)
+        .where(inArray(observations.rubricVersionId, rvIds));
+      const obsIds = obs.map((o) => o.id);
+      if (obsIds.length > 0) {
+        const scoreRows = await db
+          .select({ id: scores.id })
+          .from(scores)
+          .where(inArray(scores.observationId, obsIds));
+        if (scoreRows.length > 0) {
+          await db.delete(scoreNoteCitations).where(
+            inArray(
+              scoreNoteCitations.scoreId,
+              scoreRows.map((s) => s.id),
+            ),
+          );
+        }
+        await db.delete(scores).where(inArray(scores.observationId, obsIds));
+        await db.delete(notes).where(inArray(notes.observationId, obsIds));
+        await db.delete(events).where(inArray(events.observationId, obsIds));
+        await db.delete(observations).where(inArray(observations.id, obsIds));
+      }
+      // Rubric content rows also reference the version.
+      const concepts = await db
+        .select({ id: rubricConcepts.id })
+        .from(rubricConcepts)
+        .where(inArray(rubricConcepts.rubricVersionId, rvIds));
+      const conceptIds = concepts.map((c) => c.id);
+      if (conceptIds.length > 0) {
+        await db.delete(rubricIndicators).where(inArray(rubricIndicators.conceptId, conceptIds));
+        await db.delete(rubricAnchors).where(inArray(rubricAnchors.conceptId, conceptIds));
+        await db.delete(rubricExamples).where(inArray(rubricExamples.conceptId, conceptIds));
+        await db.delete(rubricConcepts).where(inArray(rubricConcepts.id, conceptIds));
+      }
+      await db.delete(rubricGuidance).where(inArray(rubricGuidance.rubricVersionId, rvIds));
+      await db.delete(rubricVersions).where(inArray(rubricVersions.id, rvIds));
+    }
   }
 
   const userRows = await db
