@@ -8,6 +8,13 @@
       "when": 1788146207854,
       "tag": "0000_dapper_mister_fear",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788148517936,
+      "tag": "0001_foamy_stepford_cuckoos",
+      "breakpoints": true
     }
   ]
 }

@@ -154,7 +154,7 @@ interface Row {
   filename: string;
   sid: string;
   trId: string;
-  arm: "control" | "dispersed" | "connected";
+  arm: "control" | "dispersed" | "connected" | null;
   assignment: string;
   subject: string;
   excludedReason: string | null;
@@ -164,8 +164,10 @@ const parsed: Row[] = rows.map((r, idx) => {
   const [filename, sid, trId, armRaw, assignment, subject] = r.map((f) =>
     f.trim(),
   );
-  const arm = ARM_MAP[armRaw.toLowerCase()];
-  if (!filename || !sid || !trId || !arm) {
+  // Blank arm is allowed (school 22103 has none in the mapping file);
+  // imported as NULL for the admin to resolve before assignment.
+  const arm = armRaw === "" ? null : ARM_MAP[armRaw.toLowerCase()];
+  if (!filename || !sid || !trId || arm === undefined) {
     throw new Error(
       `Row ${idx + 2}: missing/invalid field (filename/sid/tr_id/arm). arm was "${armRaw}".`,
     );
@@ -207,6 +209,9 @@ console.log(
   `Excluded — language:      ${excluded.filter((p) => p.excludedReason?.startsWith("language")).length}`,
 );
 console.log(`Codable:                  ${codable}`);
+console.log(
+  `Missing arm (NULL):       ${parsed.filter((p) => p.arm === null).length}`,
+);
 console.log(`Seed:                     ${seed}`);
 console.log(`Dataset:                  ${dataset}`);
 

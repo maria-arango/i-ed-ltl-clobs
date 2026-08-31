@@ -1,0 +1,1 @@
+ALTER TABLE "video_provenance" ALTER COLUMN "arm" DROP NOT NULL;

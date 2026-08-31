@@ -247,7 +247,9 @@ export const videoProvenance = pgTable("video_provenance", {
   rawFilename: text("raw_filename").notNull(),
   sid: text("sid").notNull(), // school ID, e.g. 11002
   trId: text("tr_id").notNull(), // teacher ID, e.g. 11002_29
-  arm: armEnum("arm").notNull(),
+  // Nullable: school 22103 has no arm anywhere in the mapping file; its rows
+  // import with NULL for the admin to resolve before assignment.
+  arm: armEnum("arm"),
   teacherAssignment: text("teacher_assignment"),
   subject: text("subject"),
   recordedYear: integer("recorded_year"),
