@@ -170,12 +170,20 @@ export default async function Home() {
               >
                 Study overview
               </h2>
-              <Link
-                href="/admin/team"
-                className="rounded-sm text-[14px] text-lake underline underline-offset-4"
-              >
-                Manage team →
-              </Link>
+              <span className="flex items-center gap-4">
+                <Link
+                  href="/admin/assignment"
+                  className="rounded-sm text-[14px] text-lake underline underline-offset-4"
+                >
+                  Assignment →
+                </Link>
+                <Link
+                  href="/admin/team"
+                  className="rounded-sm text-[14px] text-lake underline underline-offset-4"
+                >
+                  Manage team →
+                </Link>
+              </span>
             </div>
             <dl className="grid grid-cols-2 divide-hairline overflow-hidden rounded-lg border border-hairline bg-card sm:grid-cols-4 sm:divide-x">
               {[
@@ -196,8 +204,7 @@ export default async function Home() {
               ))}
             </dl>
             <p className="text-[12px] text-smoke">
-              Assignment waves, reliability statistics and exports arrive in
-              stages 3–4.
+              Reliability statistics and exports arrive in stage 4.
             </p>
           </section>
         )}

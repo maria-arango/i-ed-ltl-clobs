@@ -7,7 +7,9 @@
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  assignmentLog,
   assignmentRaters,
+  auditLog,
   assignments,
   contextAdults,
   contextCards,
@@ -43,6 +45,7 @@ export async function purgeFixture(opts: {
   const videoIds = videoRows.map((v) => v.id);
 
   if (videoIds.length > 0) {
+    await db.delete(assignmentLog).where(inArray(assignmentLog.videoId, videoIds));
     const obs = await db
       .select({ id: observations.id })
       .from(observations)
@@ -172,8 +175,28 @@ export async function purgeFixture(opts: {
     .select({ id: users.id })
     .from(users)
     .where(inArray(users.email, opts.emails));
+  const userIds = userRows.map((u) => u.id);
+
+  if (userIds.length > 0) {
+    // Pairs these users belong to (labels are generated, so the label list
+    // above cannot catch them all).
+    const memberships = await db
+      .select({ pairId: pairMembers.pairId })
+      .from(pairMembers)
+      .where(inArray(pairMembers.userId, userIds));
+    const memberPairIds = [...new Set(memberships.map((m) => m.pairId))];
+    if (memberPairIds.length > 0) {
+      await db.delete(assignmentLog).where(inArray(assignmentLog.toPairId, memberPairIds));
+      await db.delete(pairMembers).where(inArray(pairMembers.pairId, memberPairIds));
+      await db.delete(pairs).where(inArray(pairs.id, memberPairIds));
+    }
+  }
+
   for (const u of userRows) {
     await db.delete(events).where(eq(events.userId, u.id));
+    // Fixture users may have authored audit/assignment-log rows.
+    await db.delete(auditLog).where(eq(auditLog.actorId, u.id));
+    await db.delete(assignmentLog).where(eq(assignmentLog.actorId, u.id));
     await db.delete(users).where(eq(users.id, u.id));
   }
 }
