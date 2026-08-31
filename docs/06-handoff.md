@@ -67,19 +67,30 @@ Node's native TS (Node ≥ 24; CI uses 24). Local Node 26.
 - Training videos (~4) for the trainee space; chief-coder roster (Hamlet/Simon/Shaily probable).
 - Kimanya imagery for the landing page.
 
-## Next up (Stage 2 — the coding workspace, in progress on PR #4's branch)
+## Stage 2 — DONE on PR #4's branch (2026-08-31)
 
-1. Rubric seeded from `docs/rubric/20260822_CLOBS.tex` → `rubric_*` tables (version 2026-08-22);
-   field-help seeded from the context-card sample's instruction row.
-2. Score-lock trigger (DB-level: UPDATE on a locked score is refused).
-3. Coder write layer + routes: start observation, notes CRUD (soft delete), score upsert,
-   context-card save/submit, observation submit (locks scores), events logged server-side.
-4. Workspace page `/videos/[videoId]`: Drive link card, tabs (Context card · Notes · Scores),
-   free-form notes (timestamp OPTIONAL — Amendment B §15), scoring with rubric pane +
-   score chips (no motion), autosave (debounce + localStorage fallback + honest indicator),
-   completion states; confetti only on full completion (reduced-motion: none).
-5. Tests to extend: lock-after-submit refused at API; dataset stamped server-side; card writes
-   only by the assigned filler.
+Rubric seeded from the .tex (version 2026-08-22, extractor + seeder in scripts/), field help
+seeded; score-lock triggers (0002+0003 — locked scores never UPDATE; DELETE allowed only for
+sandbox datasets so the test purge works); coder write layer + routes (notes/scores/submit/
+context-card); dataset stamps from the ASSIGNMENT, not the account; the full workspace UI at
+`/videos/[videoId]` (Drive link card, tabs, free-form notes with optional mm:ss, scoring with
+rubric pane + chips + anchor callout + two-step locking submit + confetti moment, context card
+with adults + inline help, useAutosave with localStorage mirror + offline retry). 29 tests.
+Live HTTP smoke test passed end-to-end. `scripts/seed-demo.mts` gave María a training-dataset
+demo queue (V-DEMO-01/02) so she can try the whole flow.
+
+## Next up
+
+1. **Stage 2 leftovers:** the confirm/flag read-only second pass on the card after the partner
+   submits (Amendment A), events for focus-lost/idle, elapsed-session indicator, small-screen
+   fallback for the side-by-side layout, encouragement messages at section completion (docs/05).
+2. **Deploy to Vercel** (import repo, set env vars incl. DATABASE_URL/CODER, AUTH_SECRET,
+   RESEND_API_KEY, EMAIL_FROM) so the team can touch it.
+3. **Stage 3:** assignment algorithm (seeded, arm-blocked waves, anchor+enumerator pairs —
+   Amendment B §2; capacity note in 04-questions O1), calibration room (co-presence gate,
+   consensus mandatory, sign-off, immutable, partner data released ONLY here), gold set +
+   certification gate, admin Team/Assignment screens, Drive-link attachment step (match
+   combined files by sid_tr_id prefix; 3 duplicate-session placeholders need manual matching).
 
 **Then Stage 3:** assignment algorithm (seeded, arm-blocked waves, anchor+enumerator pairs —
 Amendment B §2, capacity note in 04-questions O1), calibration room (co-presence gate,
