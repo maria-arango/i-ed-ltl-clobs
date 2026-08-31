@@ -253,6 +253,10 @@ export interface SignInPageProps {
 	onVerifyCode?: (code: string) => boolean | Promise<boolean>;
 	/** Called when the signed-in user continues. */
 	onContinue?: () => void;
+	/** Shown under the email form, e.g. "This email is not on the team list." */
+	emailError?: string | null;
+	/** Shown under the code inputs, e.g. "That code is wrong or expired." */
+	codeError?: string | null;
 }
 
 export const SignInPage = ({
@@ -260,6 +264,8 @@ export const SignInPage = ({
 	onSubmitEmail,
 	onVerifyCode,
 	onContinue,
+	emailError,
+	codeError,
 }: SignInPageProps) => {
 	const reduce = useReducedMotion();
 	const [email, setEmail] = useState("");
@@ -404,6 +410,11 @@ export const SignInPage = ({
 									>
 										Email me a code
 									</button>
+									{emailError && (
+										<p role="alert" className="text-[14px] text-clay">
+											{emailError}
+										</p>
+									)}
 								</form>
 							</motion.div>
 						) : step === "code" ? (
@@ -455,6 +466,12 @@ export const SignInPage = ({
 										/>
 									))}
 								</div>
+
+								{codeError && (
+									<p role="alert" className="text-[14px] text-clay">
+										{codeError}
+									</p>
+								)}
 
 								<div className="space-y-4">
 									<button
