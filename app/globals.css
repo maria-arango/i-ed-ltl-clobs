@@ -38,7 +38,8 @@
   --clobs-marker-yellow:    #F5E9B8;
   --clobs-marker-blue:      #DCE6F1;
   --clobs-marker-green:     #DEEADF;
-  --clobs-marker-pink:      #F6E2DE;
+  --clobs-marker-pink:      #F4D9E7;
+  --clobs-marker-purple:    #E7DDF2;
 
   /* Score ramp — ordinal, warm to cool, from the printed manual */
   --clobs-score-1:          #F2D3B3;
@@ -300,20 +301,6 @@
   border-radius: 2px;
   padding: 0 1px;
 }
-.note-editor table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 0 0 0.8em;
-  table-layout: fixed;
-}
-.note-editor th, .note-editor td {
-  border: 1px solid var(--clobs-hairline-strong);
-  padding: 6px 8px;
-  text-align: left;
-  vertical-align: top;
-}
-.note-editor th { background: var(--clobs-sunken); font-weight: 600; }
-.note-editor .selectedCell { background: var(--clobs-lake-wash); }
 .note-editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   color: var(--clobs-ash);
