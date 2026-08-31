@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { requireSession } from "@/lib/auth-helpers";
+import { signOut } from "@/auth";
 
-export default function Home() {
+export default async function Home() {
+  const session = await requireSession();
+  const { user } = session;
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-paper p-8">
       <h1
@@ -14,16 +19,32 @@ export default function Home() {
         LTL CLOBS
       </h1>
       <p className="max-w-prose text-center text-graphite">
-        Classroom observation coding platform for the LTL Secondary project.
-        The application is under construction; the sign-in page arrives in a
-        later build stage.
+        Signed in as <span className="font-medium text-ink">{user.email}</span>{" "}
+        ({user.role}
+        {user.isChiefCoder ? ", chief coder" : ""}). The coding workspace
+        arrives in build stage 2.
       </p>
-      <Link
-        href="/styleguide"
-        className="rounded-md px-1 text-lake underline underline-offset-4"
-      >
-        View the style guide
-      </Link>
+      <div className="flex items-center gap-6">
+        <Link
+          href="/styleguide"
+          className="rounded-md px-1 text-lake underline underline-offset-4"
+        >
+          Style guide
+        </Link>
+        <form
+          action={async () => {
+            "use server";
+            await signOut({ redirectTo: "/signin" });
+          }}
+        >
+          <button
+            type="submit"
+            className="rounded-md border border-hairline-strong bg-paper px-[18px] py-[10px] text-[15px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

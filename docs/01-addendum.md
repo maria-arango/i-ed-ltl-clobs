@@ -439,3 +439,28 @@ Additions of 2026-08-30 (second review):
     does not reopen this.
 13. **Anchor roster (provisional).** Confirmed anchors: María, Aggrey, Justine. Probable chief-coders:
     Hamlet, Simon, Shaily (to be confirmed; profiles added later via the Team screen).
+
+Additions of 2026-08-31 (video-unit decision and import findings):
+
+14. **The coding unit is the teacher session, not the video file.** The mapping file is one row per
+    teacher session; `video1..video4` are parts of one class recording, to be combined into a single
+    compressed file named `{sid}_{tr_id}_{grade}_{stream}_{SUBJECT}_comp.mp4` (format as in the
+    training folder). The platform imports **one video per session row** (538), keyed on the
+    `sid_tr_id` filename prefix; real filenames and Drive links are attached later by prefix match.
+    Import findings, resolved as follows:
+    - **28 language-subject sessions excluded** → **510 codable** (this supersedes the 536/511/505
+      counts; the platform's number is computed, not assumed).
+    - **34 rows had a missing school arm**; 32 filled from other rows of the same school (arms are
+      consistent within every school). **School 22103 (2 sessions) has no arm anywhere — imported
+      with arm NULL, for María to resolve before assignment.**
+    - **Three teachers have two sessions** (`10705_3`, `10705_1006`, `11201_17`) — both sessions
+      imported as separate videos; their Drive files will need manual matching. **Two teachers were
+      recorded at a school other than their own** (`11003_14` at 10701; `11004_24` at 10102) —
+      `sid` records the recording school.
+    - Live import completed with seed `ltl-clobs-live-2026-08-31`, batch `main-2026`, recorded in
+      the audit log.
+15. **Notes are free-form.** Coders are never required to attach a minute to a note. The notes
+    editor is a plain writing surface; a single optional action ("stamp current time") inserts the
+    video minute for coders who want it, and note→justification citations remain fully optional
+    (Amendment B §4). This clarifies §5 of this addendum: the timestamp is a convenience, never a
+    requirement.
