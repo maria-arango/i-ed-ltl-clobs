@@ -251,6 +251,15 @@
     outline: 2px solid var(--clobs-lake);
     outline-offset: 2px;
   }
+  /* Browser surfaces carry the design too: selection and caret in the
+     palette instead of the browser defaults. */
+  ::selection {
+    background: var(--clobs-lake-wash);
+    color: var(--clobs-ink);
+  }
+  input, textarea, [contenteditable="true"] {
+    caret-color: var(--clobs-lake);
+  }
 }
 
 /* The score-guidance callout's 150ms opacity reveal (DESIGN_SYSTEM §4/§5:

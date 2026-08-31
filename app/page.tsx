@@ -1,65 +1,22 @@
 /**
- * Home — the coder's landing page: their progress at a glance and the
- * next videos to work on. Admins additionally see a study-overview strip
- * (the full dashboards arrive in build stage 4).
+ * Home — the coder's landing page. One composed progress object (the
+ * completion bar) instead of a stat-card grid; the queue as a worklist;
+ * for admins, the study figures as a single hairline strip with the door
+ * into Team. Quiet, per DESIGN_SYSTEM ("Operate" surface).
  */
 import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
-import { signOut } from "@/auth";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getAdminHomeStats } from "@/lib/db/admin";
+import { AppHeader } from "@/components/app-header";
+import { StatusPill } from "@/components/ui/status-pill";
 
-function InsightCard({
-  value,
-  label,
-  accent,
-}: {
-  value: string | number;
-  label: string;
-  accent?: "forest" | "lake";
-}) {
-  const color =
-    accent === "forest"
-      ? "var(--clobs-forest)"
-      : accent === "lake"
-        ? "var(--clobs-lake)"
-        : "var(--clobs-ink)";
-  return (
-    <div className="rounded-xl border border-hairline bg-card p-4">
-      <p className="mono text-[26px] leading-[1.25]" style={{ color }}>
-        {value}
-      </p>
-      <p className="mt-1 text-[13px] text-graphite">{label}</p>
-    </div>
-  );
-}
-
-function StatusPill({ status }: { status: string | null }) {
-  const map: Record<string, { bg: string; fg: string; text: string }> = {
-    submitted: {
-      bg: "var(--clobs-forest-wash)",
-      fg: "var(--clobs-forest)",
-      text: "Complete",
-    },
-    in_progress: {
-      bg: "var(--clobs-lake-wash)",
-      fg: "var(--clobs-lake)",
-      text: "In progress",
-    },
-  };
-  const s = (status && map[status]) || {
-    bg: "var(--clobs-sunken)",
-    fg: "var(--clobs-graphite)",
-    text: "Not started",
-  };
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium"
-      style={{ background: s.bg, color: s.fg }}
-    >
-      {s.text}
-    </span>
-  );
+function formatToday(): string {
+  return new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 }
 
 export default async function Home() {
@@ -72,45 +29,27 @@ export default async function Home() {
   const inProgress = queue.filter(
     (q) => q.observationStatus === "in_progress",
   ).length;
-  const notStarted = queue.length - done - inProgress;
   const cardsToFill = queue.filter(
     (q) => q.fillsContextCard && q.observationStatus !== "submitted",
   ).length;
-  const nextUp = queue
+  const worklist = queue
     .filter((q) => q.observationStatus !== "submitted")
-    .slice(0, 5);
+    .slice(0, 6);
+  const pct = queue.length === 0 ? 0 : Math.round((done / queue.length) * 100);
 
   const adminStats = user.role === "admin" ? await getAdminHomeStats() : null;
 
   return (
     <main className="mx-auto min-h-screen max-w-[1440px] bg-paper p-8">
-      {/* Top bar */}
-      <header className="flex items-center justify-between border-b border-hairline pb-4">
-        <p className="font-serif text-[20px] text-ink">LTL Classroom Observations</p>
-        <div className="flex items-center gap-4">
-          <span className="hidden text-[13px] text-smoke sm:inline">
-            {user.email} · {user.role}
-            {user.isChiefCoder ? " · chief coder" : ""}
-          </span>
-          <form
-            action={async () => {
-              "use server";
-              await signOut({ redirectTo: "/signin" });
-            }}
-          >
-            <button
-              type="submit"
-              className="rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[13px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
+      <AppHeader
+        email={user.email}
+        role={user.role}
+        isChiefCoder={user.isChiefCoder}
+      />
 
-      <div className="mt-10 space-y-12">
+      <div className="mt-10 max-w-[880px] space-y-12">
         {/* Greeting */}
-        <section>
+        <section className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
           <h1
             className="font-serif text-ink"
             style={{
@@ -121,83 +60,105 @@ export default async function Home() {
           >
             Welcome back, {firstName}.
           </h1>
-          <p className="mt-2 max-w-[68ch] text-[15px] text-graphite">
-            {queue.length === 0
-              ? "You have no videos assigned yet — your queue fills when an assignment wave runs."
-              : done === queue.length
-                ? "Everything in your queue is complete. Well done."
-                : `You have ${queue.length - done} video${queue.length - done === 1 ? "" : "s"} to finish.`}
-          </p>
+          <span className="mono text-[12px] text-smoke">{formatToday()}</span>
         </section>
 
-        {/* My progress */}
-        <section aria-label="My progress" className="space-y-4">
-          <div className="flex items-baseline justify-between">
-            <h2
-              className="font-sans font-medium text-ink"
-              style={{
-                fontSize: "var(--clobs-text-heading-sm)",
-                lineHeight: "var(--clobs-leading-heading-sm)",
-                letterSpacing: "var(--clobs-tracking-heading-sm)",
-              }}
-            >
-              My progress
-            </h2>
-            <Link
-              href="/videos"
-              className="rounded-sm text-[14px] text-lake underline underline-offset-4"
-            >
-              All my videos →
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <InsightCard value={done} label="Observations complete" accent="forest" />
-            <InsightCard value={inProgress} label="In progress" accent="lake" />
-            <InsightCard value={notStarted} label="Not started" />
-            <InsightCard value={cardsToFill} label="Context cards to fill" />
-          </div>
-
-          {nextUp.length > 0 && (
-            <div className="overflow-x-auto rounded-lg border border-hairline">
-              <table className="w-full border-collapse text-left text-[14px]">
-                <thead>
-                  <tr className="bg-sunken text-[12px] text-graphite">
-                    <th className="px-4 py-2 font-semibold">Next up</th>
-                    <th className="px-4 py-2 font-semibold">Context card</th>
-                    <th className="px-4 py-2 font-semibold">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {nextUp.map((row) => (
-                    <tr
-                      key={row.videoId}
-                      className="h-10 border-t border-hairline transition-colors duration-[90ms] hover:bg-card"
-                    >
-                      <td className="px-4">
-                        <Link
-                          href={`/videos/${row.videoId}`}
-                          className="video-code rounded-sm text-[14px] text-lake underline-offset-4 hover:underline"
-                        >
-                          {row.displayCode}
-                        </Link>
-                      </td>
-                      <td className="px-4 text-graphite">
-                        {row.fillsContextCard ? "Yours to fill" : "—"}
-                      </td>
-                      <td className="px-4">
-                        <StatusPill status={row.observationStatus} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* Progress — one composed object, not a card grid */}
+        <section aria-label="My progress" className="space-y-3">
+          {queue.length === 0 ? (
+            <div className="rounded-xl border border-hairline bg-card p-6">
+              <p
+                className="font-serif text-ink"
+                style={{
+                  fontSize: "var(--clobs-text-prose-lg)",
+                  lineHeight: "var(--clobs-leading-prose-lg)",
+                }}
+              >
+                Nothing assigned yet.
+              </p>
+              <p className="mt-1 max-w-[60ch] text-[14px] leading-[1.55] text-graphite">
+                Your queue fills when an assignment wave runs. Until then,
+                there is nothing you need to do here.
+              </p>
             </div>
+          ) : (
+            <>
+              <div className="flex items-baseline justify-between">
+                <p className="text-[15px] text-ink">
+                  <span className="mono font-medium">{done}</span> of{" "}
+                  <span className="mono font-medium">{queue.length}</span>{" "}
+                  observations complete
+                  {inProgress > 0 && (
+                    <span className="text-graphite">
+                      {" "}
+                      · {inProgress} in progress
+                    </span>
+                  )}
+                  {cardsToFill > 0 && (
+                    <span className="text-graphite">
+                      {" "}
+                      · {cardsToFill} context card
+                      {cardsToFill === 1 ? "" : "s"} waiting on you
+                    </span>
+                  )}
+                </p>
+                <Link
+                  href="/videos"
+                  className="rounded-sm text-[14px] text-lake underline underline-offset-4"
+                >
+                  All my videos →
+                </Link>
+              </div>
+              <div
+                role="progressbar"
+                aria-valuenow={pct}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${done} of ${queue.length} observations complete`}
+                className="h-2 overflow-hidden rounded-full bg-sunken"
+              >
+                <div
+                  className="h-full rounded-full bg-bark"
+                  style={{ width: `${Math.max(pct, done > 0 ? 4 : 0)}%` }}
+                />
+              </div>
+
+              {worklist.length > 0 ? (
+                <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
+                  {worklist.map((row) => (
+                    <li key={row.videoId}>
+                      <Link
+                        href={`/videos/${row.videoId}`}
+                        className="flex h-11 items-center gap-4 px-4 transition-colors duration-[90ms] hover:bg-card"
+                      >
+                        <span className="video-code w-24 text-[14px] text-ink">
+                          {row.displayCode}
+                        </span>
+                        <span className="flex-1 text-[13px] text-graphite">
+                          {row.fillsContextCard
+                            ? "You fill the context card"
+                            : ""}
+                        </span>
+                        <StatusPill status={row.observationStatus} />
+                        <span aria-hidden className="text-[14px] text-lake">
+                          →
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[15px] text-graphite">
+                  Everything in your queue is complete. Well done.
+                </p>
+              )}
+            </>
           )}
         </section>
 
-        {/* Admin overview */}
+        {/* Admin: one hairline strip, not a card grid */}
         {adminStats && (
-          <section aria-label="Study overview" className="space-y-4">
+          <section aria-label="Study overview" className="space-y-3">
             <div className="flex items-baseline justify-between">
               <h2
                 className="font-sans font-medium text-ink"
@@ -209,20 +170,35 @@ export default async function Home() {
               >
                 Study overview
               </h2>
-              <span className="text-[12px] text-smoke">
-                Full dashboards, assignment and exports arrive in stages 3–4
-              </span>
+              <Link
+                href="/admin/team"
+                className="rounded-sm text-[14px] text-lake underline underline-offset-4"
+              >
+                Manage team →
+              </Link>
             </div>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-              <InsightCard value={adminStats.codableVideos} label="Codable videos" />
-              <InsightCard value={adminStats.assignedVideos} label="Currently assigned" accent="lake" />
-              <InsightCard
-                value={adminStats.submittedObservations}
-                label="Individual observations submitted"
-                accent="forest"
-              />
-              <InsightCard value={adminStats.activeCoders} label="Active accounts" />
-            </div>
+            <dl className="grid grid-cols-2 divide-hairline overflow-hidden rounded-lg border border-hairline bg-card sm:grid-cols-4 sm:divide-x">
+              {[
+                { n: adminStats.codableVideos, label: "codable videos" },
+                { n: adminStats.assignedVideos, label: "currently assigned" },
+                {
+                  n: adminStats.submittedObservations,
+                  label: "observations submitted",
+                },
+                { n: adminStats.activeCoders, label: "active accounts" },
+              ].map((s) => (
+                <div key={s.label} className="px-4 py-3">
+                  <dt className="text-[12px] text-smoke">{s.label}</dt>
+                  <dd className="num mt-0.5 text-[20px] leading-[1.3] text-ink">
+                    {s.n}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-[12px] text-smoke">
+              Assignment waves, reliability statistics and exports arrive in
+              stages 3–4.
+            </p>
           </section>
         )}
 
