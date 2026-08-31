@@ -329,3 +329,566 @@ async function getContextCardForCoder(
     card: { ...cardFields, adults },
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Rubric (read-only reference data)                                   */
+/* ------------------------------------------------------------------ */
+
+import { inArray, sql } from "drizzle-orm";
+import {
+  events,
+  fieldHelp,
+  rubricAnchors,
+  rubricConcepts,
+  rubricExamples,
+  rubricGuidance,
+  rubricIndicators,
+  rubricVersions,
+} from "@/db/schema";
+import { tripleFromNum } from "@/lib/score";
+
+export async function getActiveRubricVersion(): Promise<{
+  id: string;
+  versionLabel: string;
+} | null> {
+  const rows = await coderDb
+    .select({ id: rubricVersions.id, versionLabel: rubricVersions.versionLabel })
+    .from(rubricVersions)
+    // NULLS LAST: a version without effective_from is never the active one.
+    .orderBy(sql`${rubricVersions.effectiveFrom} DESC NULLS LAST`)
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getRubricContent() {
+  const version = await getActiveRubricVersion();
+  if (!version) return null;
+
+  const concepts = await coderDb
+    .select({
+      id: rubricConcepts.id,
+      itemNo: rubricConcepts.itemNo,
+      name: rubricConcepts.name,
+      statement: rubricConcepts.statement,
+      importance: rubricConcepts.importance,
+      specialNote: rubricConcepts.specialNote,
+    })
+    .from(rubricConcepts)
+    .where(eq(rubricConcepts.rubricVersionId, version.id))
+    .orderBy(asc(rubricConcepts.itemNo));
+
+  const conceptIds = concepts.map((c) => c.id);
+  const [indicators, anchors, examples, guidance, help] = await Promise.all([
+    coderDb
+      .select({
+        conceptId: rubricIndicators.conceptId,
+        position: rubricIndicators.position,
+        text: rubricIndicators.text,
+      })
+      .from(rubricIndicators)
+      .where(inArray(rubricIndicators.conceptId, conceptIds))
+      .orderBy(asc(rubricIndicators.position)),
+    coderDb
+      .select({
+        conceptId: rubricAnchors.conceptId,
+        scoreNum: rubricAnchors.scoreNum,
+        text: rubricAnchors.text,
+      })
+      .from(rubricAnchors)
+      .where(inArray(rubricAnchors.conceptId, conceptIds)),
+    coderDb
+      .select({
+        conceptId: rubricExamples.conceptId,
+        scoreNum: rubricExamples.scoreNum,
+        position: rubricExamples.position,
+        text: rubricExamples.text,
+      })
+      .from(rubricExamples)
+      .where(inArray(rubricExamples.conceptId, conceptIds))
+      .orderBy(asc(rubricExamples.position)),
+    coderDb
+      .select({
+        kind: rubricGuidance.kind,
+        position: rubricGuidance.position,
+        label: rubricGuidance.label,
+        text: rubricGuidance.text,
+      })
+      .from(rubricGuidance)
+      .where(eq(rubricGuidance.rubricVersionId, version.id))
+      .orderBy(asc(rubricGuidance.position)),
+    coderDb
+      .select({ fieldKey: fieldHelp.fieldKey, helpText: fieldHelp.helpText })
+      .from(fieldHelp)
+      .where(and(eq(fieldHelp.form, "context_card"), eq(fieldHelp.active, true))),
+  ]);
+
+  return {
+    version,
+    guidance,
+    fieldHelp: Object.fromEntries(help.map((h) => [h.fieldKey, h.helpText])),
+    concepts: concepts.map((c) => ({
+      itemNo: c.itemNo,
+      name: c.name,
+      statement: c.statement,
+      importance: c.importance,
+      specialNote: c.specialNote,
+      indicators: indicators.filter((i) => i.conceptId === c.id).map((i) => i.text),
+      anchors: Object.fromEntries(
+        anchors.filter((a) => a.conceptId === c.id).map((a) => [a.scoreNum, a.text]),
+      ) as Record<number, string>,
+      examples: [1, 2, 3, 4].map((n) => ({
+        scoreNum: n,
+        items: examples
+          .filter((e) => e.conceptId === c.id && e.scoreNum === n)
+          .map((e) => e.text),
+      })),
+    })),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Writes — every write verifies ownership and stamps `dataset` from   */
+/* the acting account's scope (server-side, never from the client).    */
+/* ------------------------------------------------------------------ */
+
+export type Dataset = "live" | "test" | "training";
+
+class CoderError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
+}
+export { CoderError };
+
+async function assertAssigned(coderId: string, videoId: string) {
+  const rows = await coderDb
+    .select({ fillsContextCard: assignmentRaters.fillsContextCard })
+    .from(assignmentRaters)
+    .innerJoin(assignments, eq(assignments.id, assignmentRaters.assignmentId))
+    .where(
+      and(
+        eq(assignmentRaters.userId, coderId),
+        eq(assignmentRaters.status, "active"),
+        eq(assignments.status, "active"),
+        eq(assignments.videoId, videoId),
+      ),
+    )
+    .limit(1);
+  if (!rows[0]) throw new CoderError("Not found", 404);
+  return rows[0];
+}
+
+async function logEvent(
+  coderId: string,
+  dataset: Dataset,
+  kind: string,
+  refs: { videoId?: string; observationId?: string },
+  payload?: Record<string, unknown>,
+) {
+  await coderDb.insert(events).values({
+    userId: coderId,
+    dataset,
+    kind,
+    videoId: refs.videoId ?? null,
+    observationId: refs.observationId ?? null,
+    payload: payload ?? null,
+  });
+}
+
+async function getOwnObservation(coderId: string, videoId: string) {
+  const rows = await coderDb
+    .select({
+      id: observations.id,
+      status: observations.status,
+      rubricVersionId: observations.rubricVersionId,
+    })
+    .from(observations)
+    .where(
+      and(eq(observations.videoId, videoId), eq(observations.coderId, coderId)),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** Get-or-create the coder's observation for an assigned video. */
+export async function ensureObservation(
+  coderId: string,
+  videoId: string,
+  dataset: Dataset,
+) {
+  await assertAssigned(coderId, videoId);
+  const existing = await getOwnObservation(coderId, videoId);
+  if (existing) return existing;
+
+  const rubric = await getActiveRubricVersion();
+  if (!rubric) throw new CoderError("No rubric version is seeded", 500);
+
+  const [created] = await coderDb
+    .insert(observations)
+    .values({
+      videoId,
+      coderId,
+      dataset,
+      status: "in_progress",
+      startedAt: new Date(),
+      rubricVersionId: rubric.id,
+    })
+    .returning({
+      id: observations.id,
+      status: observations.status,
+      rubricVersionId: observations.rubricVersionId,
+    });
+  await logEvent(coderId, dataset, "observation_started", {
+    videoId,
+    observationId: created.id,
+  });
+  return created;
+}
+
+/** Create or update one of the coder's own notes. Timestamp is OPTIONAL. */
+export async function saveNote(
+  coderId: string,
+  videoId: string,
+  dataset: Dataset,
+  input: { noteId?: string; body: string; videoTimestampSeconds?: number | null },
+) {
+  const observation = await ensureObservation(coderId, videoId, dataset);
+
+  if (input.noteId) {
+    const updated = await coderDb
+      .update(notes)
+      .set({
+        body: input.body,
+        videoTimestampSeconds: input.videoTimestampSeconds ?? null,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(notes.id, input.noteId),
+          eq(notes.observationId, observation.id),
+          isNull(notes.deletedAt),
+        ),
+      )
+      .returning({ id: notes.id, updatedAt: notes.updatedAt });
+    if (!updated[0]) throw new CoderError("Note not found", 404);
+    return updated[0];
+  }
+
+  const [created] = await coderDb
+    .insert(notes)
+    .values({
+      observationId: observation.id,
+      body: input.body,
+      videoTimestampSeconds: input.videoTimestampSeconds ?? null,
+      dataset,
+    })
+    .returning({ id: notes.id, updatedAt: notes.updatedAt });
+  await logEvent(coderId, dataset, "note_created", {
+    videoId,
+    observationId: observation.id,
+  });
+  return created;
+}
+
+/** Soft-delete one of the coder's own notes (nothing is destructive). */
+export async function deleteNote(
+  coderId: string,
+  videoId: string,
+  dataset: Dataset,
+  noteId: string,
+) {
+  const observation = await getOwnObservation(coderId, videoId);
+  if (!observation) throw new CoderError("Not found", 404);
+  const updated = await coderDb
+    .update(notes)
+    .set({ deletedAt: new Date() })
+    .where(and(eq(notes.id, noteId), eq(notes.observationId, observation.id)))
+    .returning({ id: notes.id });
+  if (!updated[0]) throw new CoderError("Note not found", 404);
+  await logEvent(coderId, dataset, "note_deleted", {
+    videoId,
+    observationId: observation.id,
+  });
+}
+
+/** Upsert one item's score + justification. Refused once locked. */
+export async function saveScore(
+  coderId: string,
+  videoId: string,
+  dataset: Dataset,
+  input: { itemNo: number; scoreNum: number; justification: string | null },
+) {
+  if (!Number.isInteger(input.itemNo) || input.itemNo < 1 || input.itemNo > 8) {
+    throw new CoderError("itemNo must be 1–8", 400);
+  }
+  const triple = tripleFromNum(input.scoreNum); // throws on anything not 1–4
+  const observation = await ensureObservation(coderId, videoId, dataset);
+  if (observation.status === "submitted") {
+    throw new CoderError("Scores are locked after submission", 409);
+  }
+
+  const existing = await coderDb
+    .select({ id: scores.id, lockedAt: scores.lockedAt, scoreNum: scores.scoreNum })
+    .from(scores)
+    .where(
+      and(eq(scores.observationId, observation.id), eq(scores.itemNo, input.itemNo)),
+    )
+    .limit(1);
+
+  if (existing[0]) {
+    if (existing[0].lockedAt) {
+      throw new CoderError("Scores are locked after submission", 409);
+    }
+    const [updated] = await coderDb
+      .update(scores)
+      .set({
+        scoreNum: triple.scoreNum,
+        scoreColumn: triple.scoreColumn,
+        scoreDegree: triple.scoreDegree,
+        justification: input.justification,
+        updatedAt: new Date(),
+      })
+      .where(eq(scores.id, existing[0].id))
+      .returning({ id: scores.id, updatedAt: scores.updatedAt });
+    if (existing[0].scoreNum !== triple.scoreNum) {
+      await logEvent(coderId, dataset, "score_changed", {
+        videoId,
+        observationId: observation.id,
+      }, { itemNo: input.itemNo });
+    }
+    return updated;
+  }
+
+  const [created] = await coderDb
+    .insert(scores)
+    .values({
+      observationId: observation.id,
+      itemNo: input.itemNo,
+      scoreNum: triple.scoreNum,
+      scoreColumn: triple.scoreColumn,
+      scoreDegree: triple.scoreDegree,
+      justification: input.justification,
+      rubricVersionId: observation.rubricVersionId!,
+      dataset,
+    })
+    .returning({ id: scores.id, updatedAt: scores.updatedAt });
+  await logEvent(coderId, dataset, "score_selected", {
+    videoId,
+    observationId: observation.id,
+  }, { itemNo: input.itemNo });
+  return created;
+}
+
+/** Submit the observation: requires all 8 items scored; locks the scores. */
+export async function submitObservation(
+  coderId: string,
+  videoId: string,
+  dataset: Dataset,
+) {
+  const observation = await getOwnObservation(coderId, videoId);
+  if (!observation) throw new CoderError("Not found", 404);
+  if (observation.status === "submitted") {
+    throw new CoderError("Already submitted", 409);
+  }
+
+  const scored = await coderDb
+    .select({ itemNo: scores.itemNo })
+    .from(scores)
+    .where(eq(scores.observationId, observation.id));
+  const missing = [1, 2, 3, 4, 5, 6, 7, 8].filter(
+    (n) => !scored.some((s) => s.itemNo === n),
+  );
+  if (missing.length > 0) {
+    throw new CoderError(`Items not yet scored: ${missing.join(", ")}`, 400);
+  }
+
+  const now = new Date();
+  await coderDb
+    .update(scores)
+    .set({ submittedAt: now, lockedAt: now })
+    .where(and(eq(scores.observationId, observation.id), isNull(scores.lockedAt)));
+  await coderDb
+    .update(observations)
+    .set({ status: "submitted", submittedAt: now })
+    .where(eq(observations.id, observation.id));
+  await logEvent(coderId, dataset, "observation_submitted", {
+    videoId,
+    observationId: observation.id,
+  });
+  return { submittedAt: now };
+}
+
+/* --------------------------- context card --------------------------- */
+
+export interface ContextCardInput {
+  subject?: string | null;
+  composition?: "all_boys" | "all_girls" | "mixed" | null;
+  approxCount?: string | null;
+  uniforms?: string | null;
+  appearanceCaveats?: string | null;
+  room?: string | null;
+  camera?: string | null;
+  notes?: string | null;
+  timeline?: string | null;
+  settingChange?: string | null;
+  adults: Array<{
+    adultNo: number;
+    role?: "teacher" | "camera_operator" | "other" | null;
+    sex?: "male" | "female" | "unknown" | null;
+    clothing?: string | null;
+    clothingCaveats?: string | null;
+    features?: string | null;
+    behavior?: string | null;
+    speaks?: "yes" | "no" | null;
+  }>;
+}
+
+/**
+ * Save the context card. Only the assigned card-filler may write it, and
+ * only while it is a draft (Amendment A/B: one card per video).
+ */
+export async function saveContextCard(
+  coderId: string,
+  videoId: string,
+  dataset: Dataset,
+  input: ContextCardInput,
+) {
+  const { fillsContextCard } = await assertAssigned(coderId, videoId);
+  if (!fillsContextCard) {
+    throw new CoderError("The context card for this video is not yours to fill", 403);
+  }
+  if (input.adults.length > 6) throw new CoderError("At most six adults", 400);
+  for (const a of input.adults) {
+    if (!Number.isInteger(a.adultNo) || a.adultNo < 1 || a.adultNo > 6) {
+      throw new CoderError("adultNo must be 1–6", 400);
+    }
+  }
+  await ensureObservation(coderId, videoId, dataset);
+
+  const fields = {
+    subject: input.subject ?? null,
+    composition: input.composition ?? null,
+    approxCount: input.approxCount ?? null,
+    uniforms: input.uniforms ?? null,
+    appearanceCaveats: input.appearanceCaveats ?? null,
+    room: input.room ?? null,
+    camera: input.camera ?? null,
+    notes: input.notes ?? null,
+    timeline: input.timeline ?? null,
+    settingChange: input.settingChange ?? null,
+    updatedAt: new Date(),
+  };
+
+  const existing = await coderDb
+    .select({
+      id: contextCards.id,
+      status: contextCards.status,
+      authoredBy: contextCards.authoredBy,
+    })
+    .from(contextCards)
+    .where(eq(contextCards.videoId, videoId))
+    .limit(1);
+
+  let cardId: string;
+  if (existing[0]) {
+    if (existing[0].authoredBy !== coderId) {
+      throw new CoderError("The card was authored by someone else", 403);
+    }
+    if (existing[0].status === "submitted") {
+      throw new CoderError("The card is submitted and read-only", 409);
+    }
+    cardId = existing[0].id;
+    await coderDb.update(contextCards).set(fields).where(eq(contextCards.id, cardId));
+  } else {
+    const [created] = await coderDb
+      .insert(contextCards)
+      .values({ videoId, authoredBy: coderId, dataset, ...fields })
+      .returning({ id: contextCards.id });
+    cardId = created.id;
+    await logEvent(coderId, dataset, "context_card_started", { videoId });
+  }
+
+  // Reconcile adults: upsert by adultNo, soft-delete the rest.
+  const currentAdults = await coderDb
+    .select({ id: contextAdults.id, adultNo: contextAdults.adultNo })
+    .from(contextAdults)
+    .where(and(eq(contextAdults.contextCardId, cardId), isNull(contextAdults.deletedAt)));
+
+  for (const a of input.adults) {
+    const adultFields = {
+      role: a.role ?? null,
+      sex: a.sex ?? null,
+      clothing: a.clothing ?? null,
+      clothingCaveats: a.clothingCaveats ?? null,
+      features: a.features ?? null,
+      behavior: a.behavior ?? null,
+      speaks: a.speaks ?? null,
+    };
+    const match = currentAdults.find((c) => c.adultNo === a.adultNo);
+    if (match) {
+      await coderDb
+        .update(contextAdults)
+        .set(adultFields)
+        .where(eq(contextAdults.id, match.id));
+    } else {
+      // A previously soft-deleted adultNo may exist; revive it to respect
+      // the unique index rather than inserting a duplicate.
+      const revived = await coderDb
+        .update(contextAdults)
+        .set({ ...adultFields, deletedAt: null })
+        .where(
+          and(eq(contextAdults.contextCardId, cardId), eq(contextAdults.adultNo, a.adultNo)),
+        )
+        .returning({ id: contextAdults.id });
+      if (!revived[0]) {
+        await coderDb
+          .insert(contextAdults)
+          .values({ contextCardId: cardId, adultNo: a.adultNo, ...adultFields });
+      }
+    }
+  }
+  const keep = new Set(input.adults.map((a) => a.adultNo));
+  for (const c of currentAdults) {
+    if (!keep.has(c.adultNo)) {
+      await coderDb
+        .update(contextAdults)
+        .set({ deletedAt: new Date() })
+        .where(eq(contextAdults.id, c.id));
+    }
+  }
+
+  return { cardId, savedAt: fields.updatedAt };
+}
+
+/** Submit the context card (author only; becomes read-only). */
+export async function submitContextCard(
+  coderId: string,
+  videoId: string,
+  dataset: Dataset,
+) {
+  const existing = await coderDb
+    .select({
+      id: contextCards.id,
+      status: contextCards.status,
+      authoredBy: contextCards.authoredBy,
+    })
+    .from(contextCards)
+    .where(eq(contextCards.videoId, videoId))
+    .limit(1);
+  if (!existing[0] || existing[0].authoredBy !== coderId) {
+    throw new CoderError("Not found", 404);
+  }
+  if (existing[0].status === "submitted") {
+    throw new CoderError("Already submitted", 409);
+  }
+  const now = new Date();
+  await coderDb
+    .update(contextCards)
+    .set({ status: "submitted", submittedAt: now, updatedAt: now })
+    .where(eq(contextCards.id, existing[0].id));
+  await logEvent(coderId, dataset, "context_card_submitted", { videoId });
+  return { submittedAt: now };
+}

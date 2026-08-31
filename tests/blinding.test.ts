@@ -46,6 +46,18 @@ import {
 } from "@/db/schema";
 import { GET as getQueue } from "@/app/api/coder/videos/route";
 import { GET as getWorkspaceRoute } from "@/app/api/coder/videos/[videoId]/route";
+import { purgeFixture } from "./fixtures";
+
+const FIXTURE = {
+  displayCodes: ["V-TEST-BLIND"],
+  emails: [
+    "blindtest-a@example.org",
+    "blindtest-b@example.org",
+    "blindtest-c@example.org",
+  ],
+  pairLabels: ["blindtest-pair"],
+  rubricVersionPrefix: "blindtest-",
+};
 
 const mockedAuth = vi.mocked(auth);
 
@@ -123,6 +135,7 @@ const ids = {
 };
 
 beforeAll(async () => {
+  await purgeFixture(FIXTURE); // heal leftovers from a crashed previous run
   const [a] = await db
     .insert(users)
     .values({
@@ -275,30 +288,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Remove the fixture, children first.
-  const cardRows = await db
-    .select({ id: contextCards.id })
-    .from(contextCards)
-    .where(eq(contextCards.videoId, ids.video));
-  for (const card of cardRows) {
-    await db.delete(contextAdults).where(eq(contextAdults.contextCardId, card.id));
-  }
-  await db.delete(contextCards).where(eq(contextCards.videoId, ids.video));
-  await db.delete(notes).where(eq(notes.observationId, ids.observationA));
-  await db.delete(scores).where(eq(scores.observationId, ids.observationA));
-  await db.delete(observations).where(eq(observations.videoId, ids.video));
-  await db
-    .delete(assignmentRaters)
-    .where(eq(assignmentRaters.assignmentId, ids.assignment));
-  await db.delete(assignments).where(eq(assignments.id, ids.assignment));
-  await db.delete(videoProvenance).where(eq(videoProvenance.videoId, ids.video));
-  await db.delete(videos).where(eq(videos.id, ids.video));
-  await db.delete(pairMembers).where(eq(pairMembers.pairId, ids.pair));
-  await db.delete(pairs).where(eq(pairs.id, ids.pair));
-  await db.delete(rubricVersions).where(eq(rubricVersions.id, ids.rubricVersion));
-  for (const id of [ids.coderA, ids.coderB, ids.coderC]) {
-    await db.delete(users).where(eq(users.id, id));
-  }
+  await purgeFixture(FIXTURE);
 });
 
 /* -------------------------------- tests ------------------------------- */

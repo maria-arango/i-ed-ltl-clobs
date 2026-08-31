@@ -15,6 +15,20 @@
       "when": 1788148517936,
       "tag": "0001_foamy_stepford_cuckoos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788151525261,
+      "tag": "0002_score-lock-trigger",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788151835921,
+      "tag": "0003_score-lock-allow-sandbox-purge",
+      "breakpoints": true
     }
   ]
 }
