@@ -7,13 +7,14 @@
  * with its seed (addendum §6: reproducible and reportable).
  */
 import { createHash } from "node:crypto";
-import { and, asc, count, eq, isNull, max, ne } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, max, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   assignmentLog,
   assignmentRaters,
   assignments,
   auditLog,
+  coderAvailability,
   pairMembers,
   pairs,
   users,
@@ -173,6 +174,36 @@ export async function dissolvePair(
   return { ok: true };
 }
 
+/* --------------------------- availability ---------------------------- */
+
+/**
+ * Effective videos/day per user for a wave starting now (Amendment B §18):
+ * the newest availability entry whose range covers the wave start.
+ * No entry = full time (3/day).
+ */
+async function getVideosPerDayMap(userIds: string[]): Promise<Record<string, number>> {
+  if (userIds.length === 0) return {};
+  const now = new Date();
+  const rows = await db
+    .select({
+      userId: coderAvailability.userId,
+      videosPerDay: coderAvailability.videosPerDay,
+      effectiveFrom: coderAvailability.effectiveFrom,
+      effectiveTo: coderAvailability.effectiveTo,
+    })
+    .from(coderAvailability)
+    .orderBy(desc(coderAvailability.createdAt));
+  const map: Record<string, number> = {};
+  for (const r of rows) {
+    if (map[r.userId] !== undefined) continue;
+    if (r.effectiveFrom > now) continue; // starts later (e.g. back on Sept 16)
+    if (r.effectiveTo && r.effectiveTo < now) continue;
+    map[r.userId] = r.videosPerDay;
+  }
+  for (const id of userIds) map[id] ??= 3;
+  return map;
+}
+
 /* ------------------------------- waves ------------------------------- */
 
 async function getWaveInputs(dataset: Dataset) {
@@ -215,12 +246,21 @@ async function getWaveInputs(dataset: Dataset) {
     .where(eq(assignments.dataset, dataset));
   const waveNo = (waveRow.maxWave ?? 0) + 1;
 
-  return { pool, pairViews, history: { pairSchoolCounts, coderCardCounts } satisfies AlgoHistory, waveNo };
+  const memberIds = pairViews.flatMap((p) => [p.anchor.id, p.enumerator.id]);
+  const vpd = await getVideosPerDayMap(memberIds);
+
+  return {
+    pool,
+    pairViews,
+    vpd,
+    history: { pairSchoolCounts, coderCardCounts } satisfies AlgoHistory,
+    waveNo,
+  };
 }
 
-function inputsHash(pool: { id: string }[], pairViews: PairView[], videosPerPair: number): string {
+function inputsHash(pool: { id: string }[], pairViews: PairView[], waveDays: number): string {
   const h = createHash("sha256");
-  h.update(String(videosPerPair));
+  h.update(String(waveDays));
   h.update(pool.map((v) => v.id).sort().join(","));
   h.update(pairViews.map((p) => p.id).sort().join(","));
   return h.digest("hex").slice(0, 16);
@@ -229,7 +269,7 @@ function inputsHash(pool: { id: string }[], pairViews: PairView[], videosPerPair
 export interface WavePreview {
   waveNo: number;
   seed: string;
-  videosPerPair: number;
+  waveDays: number;
   poolSize: number;
   totalToAssign: number;
   skippedNoArm: number;
@@ -237,6 +277,7 @@ export interface WavePreview {
   perPair: Array<{
     pairId: string;
     label: string | null;
+    capacity: number;
     count: number;
     arms: Record<Arm, number>;
     maxSameSchool: number;
@@ -245,30 +286,37 @@ export interface WavePreview {
   }>;
 }
 
-function compute(dataset: Dataset, seed: string, videosPerPair: number) {
-  return getWaveInputs(dataset).then(({ pool, pairViews, history, waveNo }) => {
+function compute(dataset: Dataset, seed: string, waveDays: number) {
+  return getWaveInputs(dataset).then(({ pool, pairViews, vpd, history, waveNo }) => {
     const algoVideos: AlgoVideo[] = pool.map((v) => ({ id: v.id, sid: v.sid, arm: v.arm }));
+    // A pair moves at the pace of its slower member (Amendment B §18).
+    const capacities = new Map(
+      pairViews.map((p) => [
+        p.id,
+        Math.max(0, Math.round(Math.min(vpd[p.anchor.id], vpd[p.enumerator.id]) * waveDays)),
+      ]),
+    );
     const algoPairs: AlgoPair[] = pairViews.map((p) => ({
       id: p.id,
       anchorId: p.anchor.id,
       enumeratorId: p.enumerator.id,
-      capacity: videosPerPair,
+      capacity: capacities.get(p.id)!,
     }));
     const result = assignWave({ videos: algoVideos, pairs: algoPairs, seed, history });
-    return { pool, pairViews, waveNo, result, hash: inputsHash(pool, pairViews, videosPerPair) };
+    return { pool, pairViews, capacities, waveNo, result, hash: inputsHash(pool, pairViews, waveDays) };
   });
 }
 
 export async function previewWave(
   seed: string,
-  videosPerPair: number,
+  waveDays: number,
   dataset: Dataset = "live",
 ): Promise<{ ok: true; preview: WavePreview } | { ok: false; error: string }> {
   if (!seed.trim()) return { ok: false, error: "A seed is required (it makes the wave reproducible)." };
-  if (!Number.isInteger(videosPerPair) || videosPerPair < 1 || videosPerPair > 60) {
-    return { ok: false, error: "Videos per pair must be between 1 and 60." };
+  if (!Number.isInteger(waveDays) || waveDays < 1 || waveDays > 20) {
+    return { ok: false, error: "Working days must be between 1 and 20." };
   }
-  const { pool, pairViews, waveNo, result, hash } = await compute(dataset, seed.trim(), videosPerPair);
+  const { pool, pairViews, capacities, waveNo, result, hash } = await compute(dataset, seed.trim(), waveDays);
   if (pairViews.length === 0) return { ok: false, error: "No active pairs — create pairs first." };
   const codeById = new Map(pool.map((v) => [v.id, v.displayCode]));
   return {
@@ -276,7 +324,7 @@ export async function previewWave(
     preview: {
       waveNo,
       seed: seed.trim(),
-      videosPerPair,
+      waveDays,
       poolSize: result.diagnostics.poolSize,
       totalToAssign: result.diagnostics.assigned,
       skippedNoArm: result.diagnostics.skippedNoArm.length,
@@ -286,6 +334,7 @@ export async function previewWave(
         return {
           pairId: p.id,
           label: p.label,
+          capacity: capacities.get(p.id)!,
           count: mine.length,
           arms: result.diagnostics.perPairArmCounts[p.id],
           maxSameSchool: result.diagnostics.perPairMaxSameSchool[p.id],
@@ -300,11 +349,11 @@ export async function previewWave(
 export async function confirmWave(
   actorId: string,
   seed: string,
-  videosPerPair: number,
+  waveDays: number,
   expectedHash: string,
   dataset: Dataset = "live",
 ): Promise<{ ok: true; waveNo: number; assigned: number } | { ok: false; error: string }> {
-  const { pairViews, waveNo, result, hash } = await compute(dataset, seed.trim(), videosPerPair);
+  const { pairViews, waveNo, result, hash } = await compute(dataset, seed.trim(), waveDays);
   if (hash !== expectedHash) {
     return {
       ok: false,
@@ -362,7 +411,7 @@ export async function confirmWave(
         waveNo,
         seed: seed.trim(),
         algorithmVersion: ALGORITHM_VERSION,
-        videosPerPair,
+        waveDays,
         assigned: result.assignments.length,
         skippedNoArm: result.diagnostics.skippedNoArm.length,
       },
@@ -370,4 +419,185 @@ export async function confirmWave(
   });
 
   return { ok: true, waveNo, assigned: result.assignments.length };
+}
+
+/* --------------------------- pair rotation --------------------------- */
+/* Amendment B §19: fixed pairs within a week, new randomised pairings
+   between weeks, preferring combinations that have not worked together. */
+
+function rotationRandom(seedStr: string): () => number {
+  let h = 1779033703 ^ seedStr.length;
+  for (let i = 0; i < seedStr.length; i++) {
+    h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  let a = h >>> 0;
+  return () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+export interface RotationPreview {
+  seed: string;
+  hash: string;
+  proposals: Array<{
+    anchor: { id: string; label: string };
+    enumerator: { id: string; label: string };
+    workedTogetherBefore: number;
+  }>;
+  unmatchedEnumerators: string[];
+}
+
+async function pastPairCounts(dataset: Dataset): Promise<Map<string, number>> {
+  // Every historical pairing (including dissolved), keyed anchor|enumerator.
+  const rows = await db
+    .select({ pairId: pairMembers.pairId, userId: pairMembers.userId })
+    .from(pairMembers)
+    .innerJoin(pairs, eq(pairs.id, pairMembers.pairId))
+    .where(eq(pairs.dataset, dataset));
+  const byPair = new Map<string, string[]>();
+  for (const r of rows) {
+    (byPair.get(r.pairId) ?? byPair.set(r.pairId, []).get(r.pairId)!).push(r.userId);
+  }
+  const counts = new Map<string, number>();
+  for (const members of byPair.values()) {
+    if (members.length !== 2) continue;
+    const key = [...members].sort().join("|");
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function rotationHash(anchorIds: string[], enumeratorIds: string[]): string {
+  const h = createHash("sha256");
+  h.update(anchorIds.sort().join(","));
+  h.update("::");
+  h.update(enumeratorIds.sort().join(","));
+  return h.digest("hex").slice(0, 16);
+}
+
+async function computeRotation(seed: string, dataset: Dataset) {
+  const { anchors, enumerators } = await listPairCandidates();
+  const realEnumerators = enumerators.filter((e) => !e.email.endsWith("@example.invalid"));
+  const vpd = await getVideosPerDayMap([...anchors, ...realEnumerators].map((u) => u.id));
+  const past = await pastPairCounts(dataset);
+  const rand = rotationRandom(seed);
+
+  const availableAnchors = anchors.filter((a) => vpd[a.id] > 0);
+  // Anchor slots proportional to availability: an anchor with 3/day can
+  // hold more pairs than one with 1/day. Every anchor with any capacity
+  // gets at least one slot while enumerators remain.
+  const totalVpd = availableAnchors.reduce((s, a) => s + vpd[a.id], 0);
+  const slots: string[] = [];
+  if (totalVpd > 0) {
+    for (const a of availableAnchors) {
+      const share = Math.max(1, Math.round((realEnumerators.length * vpd[a.id]) / totalVpd));
+      for (let i = 0; i < share; i++) slots.push(a.id);
+    }
+  }
+
+  // Seeded shuffle of enumerators, then greedy matching that prefers
+  // never-before combinations, then fewer repeats.
+  const shuffledEnums = [...realEnumerators];
+  for (let i = shuffledEnums.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [shuffledEnums[i], shuffledEnums[j]] = [shuffledEnums[j], shuffledEnums[i]];
+  }
+  const slotUsed = new Array(slots.length).fill(false);
+  const labelOf = (u: { name: string | null; email: string }) => u.name ?? u.email;
+  const anchorById = new Map(anchors.map((a) => [a.id, a]));
+  const proposals: RotationPreview["proposals"] = [];
+  const unmatched: string[] = [];
+
+  for (const e of shuffledEnums) {
+    let best = -1;
+    let bestKey = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < slots.length; i++) {
+      if (slotUsed[i]) continue;
+      const repeats = past.get([slots[i], e.id].sort().join("|")) ?? 0;
+      if (repeats < bestKey) {
+        bestKey = repeats;
+        best = i;
+        if (repeats === 0) break;
+      }
+    }
+    if (best === -1) {
+      unmatched.push(labelOf(e));
+      continue;
+    }
+    slotUsed[best] = true;
+    const anchor = anchorById.get(slots[best])!;
+    proposals.push({
+      anchor: { id: anchor.id, label: labelOf(anchor) },
+      enumerator: { id: e.id, label: labelOf(e) },
+      workedTogetherBefore: bestKey,
+    });
+  }
+
+  return {
+    proposals,
+    unmatched,
+    hash: rotationHash(
+      availableAnchors.map((a) => a.id),
+      realEnumerators.map((e) => e.id),
+    ),
+  };
+}
+
+export async function previewRotation(
+  seed: string,
+  dataset: Dataset = "live",
+): Promise<{ ok: true; preview: RotationPreview } | { ok: false; error: string }> {
+  if (!seed.trim()) return { ok: false, error: "A seed is required." };
+  const { proposals, unmatched, hash } = await computeRotation(seed.trim(), dataset);
+  if (proposals.length === 0) {
+    return { ok: false, error: "Nothing to rotate: add coders and anchors (with availability) first." };
+  }
+  return { ok: true, preview: { seed: seed.trim(), hash, proposals, unmatchedEnumerators: unmatched } };
+}
+
+/**
+ * Confirm a rotation: soft-dissolve the current active pairs (history and
+ * calibration references stay intact) and form the proposed set.
+ */
+export async function confirmRotation(
+  actorId: string,
+  seed: string,
+  expectedHash: string,
+  dataset: Dataset = "live",
+): Promise<{ ok: true; formed: number } | { ok: false; error: string }> {
+  const { proposals, hash } = await computeRotation(seed.trim(), dataset);
+  if (hash !== expectedHash) {
+    return { ok: false, error: "The team changed since this preview. Preview again before confirming." };
+  }
+  const current = await listPairs(dataset);
+  await db.transaction(async (tx) => {
+    for (const p of current) {
+      await tx
+        .update(pairs)
+        .set({ dissolvedAt: new Date(), dissolvedReason: `Weekly rotation (${seed.trim()})` })
+        .where(eq(pairs.id, p.id));
+    }
+    for (const prop of proposals) {
+      const [pair] = await tx
+        .insert(pairs)
+        .values({ label: `${prop.anchor.label} × ${prop.enumerator.label}`, dataset })
+        .returning({ id: pairs.id });
+      await tx.insert(pairMembers).values([
+        { pairId: pair.id, userId: prop.anchor.id },
+        { pairId: pair.id, userId: prop.enumerator.id },
+      ]);
+    }
+    await tx.insert(auditLog).values({
+      actorId,
+      action: "pairs_rotated",
+      subjectTable: "pairs",
+      details: { seed: seed.trim(), dissolved: current.length, formed: proposals.length },
+    });
+  });
+  return { ok: true, formed: proposals.length };
 }

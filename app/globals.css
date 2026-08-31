@@ -262,6 +262,18 @@
   }
 }
 
+/* Route-change page enter (app/template.tsx): 280ms fade + 6px rise. */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: page-enter 280ms var(--clobs-ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter { animation: none; }
+}
+
 /* The score-guidance callout's 150ms opacity reveal (DESIGN_SYSTEM §4/§5:
    near-imperceptible, opacity only, no slide). motion-safe guards it. */
 @keyframes anchor-reveal {

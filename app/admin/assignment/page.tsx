@@ -13,8 +13,9 @@ import {
   listPairCandidates,
   listPairs,
 } from "@/lib/db/admin-assignment";
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { CreatePairForm, DissolveButton } from "./pair-forms";
+import { RotationRunner } from "./rotation-runner";
 import { WaveRunner } from "./wave-runner";
 
 export default async function AssignmentPage() {
@@ -39,14 +40,12 @@ export default async function AssignmentPage() {
   );
 
   return (
-    <main className="mx-auto min-h-screen max-w-[1440px] bg-paper p-8">
-      <AppHeader
-        email={session.user.email}
-        role={session.user.role}
-        isChiefCoder={session.user.isChiefCoder}
-      />
-
-      <div className="mx-auto mt-10 max-w-[980px] space-y-10">
+    <AppShell
+      email={session.user.email}
+      role={session.user.role}
+      isChiefCoder={session.user.isChiefCoder}
+    >
+      <div className="mx-auto mt-2 max-w-[980px] space-y-10">
         <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
           <Link href="/" className="rounded-sm text-lake underline underline-offset-4">
             Home
@@ -121,12 +120,13 @@ export default async function AssignmentPage() {
               No pairs yet — form the first one below.
             </p>
           )}
+          <RotationRunner />
           <CreatePairForm anchors={candidates.anchors} enumerators={enumerators} />
         </section>
 
         {/* Waves */}
         <WaveRunner nextWaveNo={nextWaveNo} poolSize={Number(pool.n)} />
       </div>
-    </main>
+    </AppShell>
   );
 }

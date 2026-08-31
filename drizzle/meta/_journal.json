@@ -29,6 +29,13 @@
       "when": 1788151835921,
       "tag": "0003_score-lock-allow-sandbox-purge",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788196923903,
+      "tag": "0004_availability-videos-per-day",
+      "breakpoints": true
     }
   ]
 }

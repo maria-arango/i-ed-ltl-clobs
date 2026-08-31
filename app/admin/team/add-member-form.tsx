@@ -80,7 +80,7 @@ export function AddMemberForm() {
           {result && !result.ok && <span className="text-clay">{result.error}</span>}
           {result?.ok && (
             <span style={{ color: "var(--clobs-forest)" }}>
-              Added — they can sign in now.
+              Added. They can sign in now.
             </span>
           )}
         </div>

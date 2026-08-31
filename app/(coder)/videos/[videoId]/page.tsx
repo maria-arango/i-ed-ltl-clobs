@@ -54,7 +54,7 @@ export default async function VideoWorkspace({
   const note = workspace.notes[0] ?? null;
 
   return (
-    <main className="mx-auto max-w-[1440px] space-y-6 bg-paper p-8">
+    <main className="mx-auto min-h-screen max-w-[1440px] space-y-6 bg-paper p-8">
       <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
         <Link href="/" className="rounded-sm text-lake underline underline-offset-4">
           Home
@@ -90,7 +90,7 @@ export default async function VideoWorkspace({
             </>
           ) : (
             <p className="text-[14px] text-graphite">
-              Drive link not attached yet — an admin will add it.
+              Drive link not attached yet. An admin will add it.
             </p>
           )}
         </div>
