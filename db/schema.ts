@@ -551,39 +551,57 @@ export const fieldHelp = pgTable("field_help", {
 /* §4.6 Calibration                                                    */
 /* ------------------------------------------------------------------ */
 
-export const calibrationSessions = pgTable("calibration_sessions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  videoId: uuid("video_id")
-    .notNull()
-    .references(() => videos.id),
-  pairId: uuid("pair_id")
-    .notNull()
-    .references(() => pairs.id),
-  dataset: datasetEnum("dataset").notNull().default("live"),
-  // Moves to 'open' only when both coders have an active presence row —
-  // the server-side gate the blinding tests exercise (§4.6).
-  status: calibrationStatusEnum("status").notNull().default("scheduled"),
-  rubricVersionId: uuid("rubric_version_id").references(() => rubricVersions.id),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  voidedReason: text("voided_reason"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const calibrationSessions = pgTable(
+  "calibration_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    videoId: uuid("video_id")
+      .notNull()
+      .references(() => videos.id),
+    pairId: uuid("pair_id")
+      .notNull()
+      .references(() => pairs.id),
+    dataset: datasetEnum("dataset").notNull().default("live"),
+    // Moves to 'open' only when both coders have an active presence row —
+    // the server-side gate the blinding tests exercise (§4.6).
+    status: calibrationStatusEnum("status").notNull().default("scheduled"),
+    rubricVersionId: uuid("rubric_version_id").references(() => rubricVersions.id),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    voidedReason: text("voided_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("one_open_session_per_video_pair")
+      .on(t.videoId, t.pairId)
+      .where(sql`${t.status} <> 'voided'`),
+  ],
+);
 
-export const calibrationPresence = pgTable("calibration_presence", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  sessionId: uuid("session_id")
-    .notNull()
-    .references(() => calibrationSessions.id),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  joinedAt: timestamp("joined_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  leftAt: timestamp("left_at", { withTimezone: true }),
-});
+export const calibrationPresence = pgTable(
+  "calibration_presence",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => calibrationSessions.id),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    // Heartbeat (migration 0005): presence counts as live while this is
+    // recent. Only the OPENING of a session requires liveness; once open,
+    // the release is permanent (CLAUDE.md §2 wording).
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    leftAt: timestamp("left_at", { withTimezone: true }),
+  },
+  (t) => [uniqueIndex("one_presence_per_user_per_session").on(t.sessionId, t.userId)],
+);
 
 // No escalation path (Amendment B §3): consensus per item is mandatory.
 export const calibrationItems = pgTable(

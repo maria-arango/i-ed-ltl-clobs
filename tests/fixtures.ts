@@ -11,6 +11,10 @@ import {
   assignmentRaters,
   auditLog,
   assignments,
+  calibrationItems,
+  calibrationPresence,
+  calibrationSessions,
+  calibrationSignoffs,
   contextAdults,
   contextCards,
   events,
@@ -32,6 +36,26 @@ import {
 } from "@/db/schema";
 import { like } from "drizzle-orm";
 
+/** Calibration rows hang off sessions; remove them before anything a
+ *  session references (videos, pairs, scores). Test-dataset rows are
+ *  deletable by design (migration 0005 mirrors 0003). */
+async function purgeCalibrationForSessions(sessionIds: string[]) {
+  if (sessionIds.length === 0) return;
+  await db.delete(events).where(inArray(events.sessionId, sessionIds));
+  await db
+    .delete(calibrationSignoffs)
+    .where(inArray(calibrationSignoffs.sessionId, sessionIds));
+  await db
+    .delete(calibrationItems)
+    .where(inArray(calibrationItems.sessionId, sessionIds));
+  await db
+    .delete(calibrationPresence)
+    .where(inArray(calibrationPresence.sessionId, sessionIds));
+  await db
+    .delete(calibrationSessions)
+    .where(inArray(calibrationSessions.id, sessionIds));
+}
+
 export async function purgeFixture(opts: {
   displayCodes: string[];
   emails: string[];
@@ -45,6 +69,11 @@ export async function purgeFixture(opts: {
   const videoIds = videoRows.map((v) => v.id);
 
   if (videoIds.length > 0) {
+    const sessions = await db
+      .select({ id: calibrationSessions.id })
+      .from(calibrationSessions)
+      .where(inArray(calibrationSessions.videoId, videoIds));
+    await purgeCalibrationForSessions(sessions.map((s) => s.id));
     await db.delete(assignmentLog).where(inArray(assignmentLog.videoId, videoIds));
     const obs = await db
       .select({ id: observations.id })
@@ -106,6 +135,16 @@ export async function purgeFixture(opts: {
     .from(pairs)
     .where(inArray(pairs.label, opts.pairLabels));
   if (pairRows.length > 0) {
+    const pairSessions = await db
+      .select({ id: calibrationSessions.id })
+      .from(calibrationSessions)
+      .where(
+        inArray(
+          calibrationSessions.pairId,
+          pairRows.map((p) => p.id),
+        ),
+      );
+    await purgeCalibrationForSessions(pairSessions.map((s) => s.id));
     await db.delete(pairMembers).where(
       inArray(
         pairMembers.pairId,
@@ -186,6 +225,11 @@ export async function purgeFixture(opts: {
       .where(inArray(pairMembers.userId, userIds));
     const memberPairIds = [...new Set(memberships.map((m) => m.pairId))];
     if (memberPairIds.length > 0) {
+      const memberSessions = await db
+        .select({ id: calibrationSessions.id })
+        .from(calibrationSessions)
+        .where(inArray(calibrationSessions.pairId, memberPairIds));
+      await purgeCalibrationForSessions(memberSessions.map((s) => s.id));
       await db.delete(assignmentLog).where(inArray(assignmentLog.toPairId, memberPairIds));
       await db.delete(pairMembers).where(inArray(pairMembers.pairId, memberPairIds));
       await db.delete(pairs).where(inArray(pairs.id, memberPairIds));

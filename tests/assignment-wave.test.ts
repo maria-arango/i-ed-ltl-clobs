@@ -110,7 +110,12 @@ describe("pair rules (Amendment B §2)", () => {
     const a = await createPair(ids.admin, ids.admin, ids.enum1, "test");
     const b = await createPair(ids.admin, ids.chief, ids.enum2, "test");
     expect(a.ok && b.ok).toBe(true);
-    const pairs = await listPairs("test");
+    // Scope to THIS fixture's users: other suites create their own
+    // test-dataset pairs in parallel.
+    const fixtureUserIds = new Set([ids.admin, ids.chief, ids.enum1, ids.enum2]);
+    const pairs = (await listPairs("test")).filter(
+      (p) => fixtureUserIds.has(p.anchor.id) && fixtureUserIds.has(p.enumerator.id),
+    );
     expect(pairs).toHaveLength(2);
     createdPairIds.push(...pairs.map((p) => p.id));
   });
