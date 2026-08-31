@@ -39,6 +39,11 @@ const pool = new Pool({
 
 const coderDb = drizzle(pool);
 
+/** INTERNAL to lib/db/* — the calibration layer (coder-calibration.ts)
+ *  shares this restricted connection. Route handlers must keep using the
+ *  exported functions, never this handle. */
+export { coderDb };
+
 /* ------------------------------------------------------------------ */
 /* Queue                                                               */
 /* ------------------------------------------------------------------ */
@@ -454,12 +459,13 @@ export async function getRubricContent() {
 
 export type Dataset = "live" | "test" | "training";
 
+// No TS parameter property here on purpose: Node's strip-only TS mode
+// (used by the .mts scripts) cannot run that syntax.
 class CoderError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-  ) {
+  status: number;
+  constructor(message: string, status: number) {
     super(message);
+    this.status = status;
   }
 }
 export { CoderError };

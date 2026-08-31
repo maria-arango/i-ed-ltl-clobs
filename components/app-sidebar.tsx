@@ -6,11 +6,12 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Film, House, ListChecks, Users } from "lucide-react";
+import { Film, Handshake, House, ListChecks, Users } from "lucide-react";
 
 const coderItems = [
   { href: "/", label: "Home", icon: House, exact: true },
   { href: "/videos", label: "My videos", icon: Film, exact: false },
+  { href: "/calibration", label: "Calibration", icon: Handshake, exact: false },
 ];
 const adminItems = [
   { href: "/admin/team", label: "Team", icon: Users, exact: false },

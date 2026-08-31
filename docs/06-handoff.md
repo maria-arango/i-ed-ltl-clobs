@@ -108,13 +108,41 @@ Team screen editor; wave capacity = min(pair) × working days), seeded pair rota
 left icon sidebar shell + 280ms page transitions, em-dash copy sweep, sign-in ready for
 public/kimanya/ photos (folder README committed; María drops files in Finder).
 
+## Progress (2026-08-31, cont. 4)
+
+PRs #10/#11 merged. Kimanya photos committed (optimized, `public/kimanya/`,
+first-alphabetical shows on sign-in) + `docs/07-later-ideas.md` (parked
+nice-to-haves: weekly calendar, chat, online avatars, cursor effect) on PR #13.
+**Calibration room built (branch feat/calibration-room):** migration 0005
+(presence heartbeat `last_seen_at`, one non-voided session per video+pair,
+DB triggers freezing completed calibration items/sessions — voiding with a
+reason stays possible), `lib/db/coder-calibration.ts` (the ONLY partner-data
+release point; gate: session flips 'open' on first true co-presence and the
+release is then permanent per CLAUDE.md §2 wording), routes under
+`/api/coder/calibration`, queue page `/calibration` + room
+`/calibration/[videoId]` (5s join/heartbeat polling, consensus chips with
+score tokens, rationale required when anyone moved — resolution computed
+server-side, two-step sign-off, second signature completes session +
+assignment + video), partner note HTML sanitized via `lib/sanitize-note.ts`
+(sanitize-html, allowlist mirroring the Tiptap editor). Coder role grants
+updated (calibration_items UPDATE; videos/assignments UPDATE(status) for
+completion) — `setup-coder-role.mts` now PRESERVES the existing password so
+re-running never breaks Vercel. 16 new tests (63 total): co-presence gate,
+lobby leak checks with sentinels, sanitization, resolution matrix, sign-off,
+DB-level immutability. Browser-verified end to end with two Playwright
+contexts on a prod build. `seed-demo.mts` extended: V-DEMO-02 now carries a
+partner-submitted observation + a lobby session whose placeholder presence
+is pinned to 2100, so María can experience the whole room alone (her
+signature completes it); already seeded for her account.
+
 ## Next up
 
-1. **Stage 3 continues:** the calibration room (co-presence gate — the ONLY place partner data
-   is released; sanitize partner note HTML before display), gold set + certification gate,
-   Drive-link attachment step (match combined files by sid_tr_id prefix), reassignment tooling
-   (dissolve pairs with active work), per-pair capacity from coder_availability (waves currently
-   take one videos-per-pair number).
+1. **Stage 3 continues:** gold set + certification gate (María's gold videos pending),
+   Drive-link attachment step (match combined files by sid_tr_id prefix; 3 duplicate-session
+   placeholders need manual matching), reassignment tooling (dissolve pairs with active work,
+   preserving completed work per CLAUDE.md §7). Open question flagged to María on the
+   calibration PR: the final consensus may currently be any of the four values (recorded as
+   both_moved + rationale when it matches neither individual score) — confirm or restrict.
 2. **Stage 2 leftovers:** the confirm/flag read-only second pass on the card after the partner
    submits (Amendment A), events for focus-lost/idle, elapsed-session indicator, small-screen
    fallback for the side-by-side layout, encouragement messages at section completion (docs/05).

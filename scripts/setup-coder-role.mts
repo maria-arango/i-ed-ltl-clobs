@@ -31,8 +31,23 @@ if (!adminUrl) {
   process.exit(1);
 }
 
+// Keep the existing password when one is already configured, so re-running
+// for new grants never invalidates the DATABASE_URL_CODER that production
+// (Vercel) is using. Priority: explicit env > current .env.local > new.
+function existingPassword(): string | undefined {
+  const current = process.env.DATABASE_URL_CODER;
+  if (!current) return undefined;
+  try {
+    const u = new URL(current);
+    return u.password ? decodeURIComponent(u.password) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 const password =
-  process.env.CODER_ROLE_PASSWORD ?? randomBytes(24).toString("base64url");
+  process.env.CODER_ROLE_PASSWORD ??
+  existingPassword() ??
+  randomBytes(24).toString("base64url");
 
 const pool = new Pool({ connectionString: hardenSslMode(adminUrl), max: 1 });
 
@@ -46,9 +61,11 @@ const GRANTS: Array<[string, string]> = [
   ["pair_members", "SELECT"],
   [
     "videos",
-    "SELECT (id, display_code, drive_url, duration_seconds, dataset, status, created_at)",
+    // UPDATE (status) only: completing a calibration marks the video
+    // complete. Status is not disclosure; every other column stays closed.
+    "SELECT (id, display_code, drive_url, duration_seconds, dataset, status, created_at), UPDATE (status)",
   ],
-  ["assignments", "SELECT"],
+  ["assignments", "SELECT, UPDATE (status)"],
   ["assignment_raters", "SELECT"],
   ["observations", "SELECT, INSERT, UPDATE"],
   ["notes", "SELECT, INSERT, UPDATE"],
@@ -60,7 +77,9 @@ const GRANTS: Array<[string, string]> = [
   ["field_help", "SELECT"],
   ["calibration_sessions", "SELECT, INSERT, UPDATE"],
   ["calibration_presence", "SELECT, INSERT, UPDATE"],
-  ["calibration_items", "SELECT, INSERT"],
+  // UPDATE so a pair can revise a consensus before sign-off; after
+  // completion the 0005 trigger refuses changes at the database level.
+  ["calibration_items", "SELECT, INSERT, UPDATE"],
   ["calibration_signoffs", "SELECT, INSERT"],
   ["rubric_versions", "SELECT"],
   ["rubric_concepts", "SELECT"],
