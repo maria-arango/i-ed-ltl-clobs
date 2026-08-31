@@ -5,7 +5,14 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
 import { getCalibrationQueue, type CalibrationStage } from "@/lib/db/coder-calibration";
-import { AppShell } from "@/components/app-shell";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const STAGE_LABEL: Record<CalibrationStage, string> = {
   code_first: "Finish your own scoring first",
@@ -28,11 +35,6 @@ export default async function CalibrationQueue() {
   const ready = queue.filter((q) => q.stage === "ready").length;
 
   return (
-    <AppShell
-      email={session.user.email}
-      role={session.user.role}
-      isChiefCoder={session.user.isChiefCoder}
-    >
       <div className="space-y-6">
         <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
           <Link href="/" className="rounded-sm text-lake underline underline-offset-4">
@@ -73,55 +75,53 @@ export default async function CalibrationQueue() {
         </p>
 
         {queue.length === 0 ? (
-          <div className="rounded-xl border border-hairline bg-card p-6">
+          <div className="rounded-2xl border border-hairline bg-card p-6">
             <p className="text-[15px] text-graphite">
               Nothing to calibrate yet. This list fills as you and your
               partner submit scores for shared videos.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-hairline">
-            <table className="w-full border-collapse text-left text-[14px]">
-              <thead>
-                <tr className="bg-sunken text-[12px] text-graphite">
-                  <th className="px-4 py-2 font-semibold">Video</th>
-                  <th className="px-4 py-2 font-semibold">Partner</th>
-                  <th className="px-4 py-2 font-semibold">Stage</th>
-                  <th className="px-4 py-2 font-semibold" />
-                </tr>
-              </thead>
-              <tbody>
-                {queue.map((row) => (
-                  <tr
-                    key={row.videoId}
-                    className="h-10 border-t border-hairline transition-colors duration-[90ms] hover:bg-card"
-                  >
-                    <td className="px-4">
-                      <span className="video-code text-[14px] text-ink">
-                        {row.displayCode}
-                      </span>
-                    </td>
-                    <td className="px-4 text-graphite">{row.partnerName ?? "—"}</td>
-                    <td className={`px-4 ${STAGE_CLASS[row.stage]}`}>
-                      {STAGE_LABEL[row.stage]}
-                    </td>
-                    <td className="px-4 text-right">
-                      {(row.stage === "ready" || row.stage === "completed") && (
-                        <Link
-                          href={`/calibration/${row.videoId}`}
-                          className="rounded-sm text-[14px] text-lake underline-offset-4 hover:underline"
-                        >
-                          {row.stage === "ready" ? "Enter room" : "View record"}
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow header>
+                <TableHead>Video</TableHead>
+                <TableHead>Partner</TableHead>
+                <TableHead>Stage</TableHead>
+                <TableHead className="text-right">
+                  <span className="sr-only">Open</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {queue.map((row) => (
+                <TableRow key={row.videoId}>
+                  <TableCell>
+                    <span className="video-code text-[14px] text-ink">
+                      {row.displayCode}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-graphite">
+                    {row.partnerName ?? "—"}
+                  </TableCell>
+                  <TableCell className={STAGE_CLASS[row.stage]}>
+                    {STAGE_LABEL[row.stage]}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {(row.stage === "ready" || row.stage === "completed") && (
+                      <Link
+                        href={`/calibration/${row.videoId}`}
+                        className="rounded-sm text-[14px] text-lake underline-offset-4 hover:underline"
+                      >
+                        {row.stage === "ready" ? "Enter room" : "View record"}
+                      </Link>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
       </div>
-    </AppShell>
   );
 }

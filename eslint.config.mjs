@@ -20,7 +20,12 @@ const eslintConfig = defineConfig([
   {
     // Blinding boundary (docs/03-data-model.md §3): coder-facing code may
     // only reach the database through the restricted query layer.
-    files: ["app/api/coder/**", "app/(coder)/**"],
+    files: [
+      "app/api/coder/**",
+      "app/(coder)/**",
+      "app/(shell)/videos/**",
+      "app/(shell)/calibration/**",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",

@@ -8,7 +8,6 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getAdminHomeStats } from "@/lib/db/admin";
-import { AppShell } from "@/components/app-shell";
 import { StatusPill } from "@/components/ui/status-pill";
 
 function formatToday(): string {
@@ -40,7 +39,6 @@ export default async function Home() {
   const adminStats = user.role === "admin" ? await getAdminHomeStats() : null;
 
   return (
-    <AppShell email={user.email} role={user.role} isChiefCoder={user.isChiefCoder}>
       <div className="mx-auto mt-2 max-w-[880px] space-y-12">
         {/* Greeting */}
         <section className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
@@ -193,6 +191,5 @@ export default async function Home() {
         )}
 
       </div>
-    </AppShell>
   );
 }
