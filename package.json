@@ -10,9 +10,11 @@
     "ui": "PATH=\"$PWD/scripts/shadcn-npm-shim:$PATH\" shadcn"
   },
   "dependencies": {
+    "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.37.0",
+    "motion": "^13.1.1",
     "next": "16.3.3",
     "radix-ui": "^1.6.7",
     "react": "19.2.8",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
