@@ -28,6 +28,7 @@ import { count, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "../db/schema.ts";
+import { hardenSslMode } from "../lib/pg-url.ts";
 
 config({ path: ".env.local" });
 
@@ -220,7 +221,7 @@ if (dryRun) {
   process.exit(0);
 }
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
+const pool = new Pool({ connectionString: hardenSslMode(process.env.DATABASE_URL), max: 1 });
 const db = drizzle(pool, { schema });
 
 const [{ value: existingCount }] = await db
