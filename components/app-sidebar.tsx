@@ -6,7 +6,15 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Film, Handshake, House, ListChecks, Users } from "lucide-react";
+import {
+  Award,
+  Clapperboard,
+  Film,
+  Handshake,
+  House,
+  ListChecks,
+  Users,
+} from "lucide-react";
 
 const coderItems = [
   { href: "/", label: "Home", icon: House, exact: true },
@@ -16,6 +24,8 @@ const coderItems = [
 const adminItems = [
   { href: "/admin/team", label: "Team", icon: Users, exact: false },
   { href: "/admin/assignment", label: "Assignment", icon: ListChecks, exact: false },
+  { href: "/admin/videos", label: "Video library", icon: Clapperboard, exact: false },
+  { href: "/admin/gold", label: "Gold set", icon: Award, exact: false },
 ];
 
 export function AppSidebar({ isAdmin }: { isAdmin: boolean }) {

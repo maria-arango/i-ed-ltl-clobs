@@ -8,7 +8,6 @@ import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getAdminHomeStats } from "@/lib/db/admin";
-import { AppShell } from "@/components/app-shell";
 import { StatusPill } from "@/components/ui/status-pill";
 
 function formatToday(): string {
@@ -40,7 +39,6 @@ export default async function Home() {
   const adminStats = user.role === "admin" ? await getAdminHomeStats() : null;
 
   return (
-    <AppShell email={user.email} role={user.role} isChiefCoder={user.isChiefCoder}>
       <div className="mx-auto mt-2 max-w-[880px] space-y-12">
         {/* Greeting */}
         <section className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
@@ -60,7 +58,7 @@ export default async function Home() {
         {/* Progress — one composed object, not a card grid */}
         <section aria-label="My progress" className="space-y-3">
           {queue.length === 0 ? (
-            <div className="rounded-xl border border-hairline bg-card p-6">
+            <div className="elev-card rounded-xl border border-hairline bg-card p-6">
               <p
                 className="font-serif text-ink"
                 style={{
@@ -70,7 +68,7 @@ export default async function Home() {
               >
                 Nothing assigned yet.
               </p>
-              <p className="mt-1 max-w-[60ch] text-[14px] leading-[1.55] text-graphite">
+              <p className="mt-1 text-[14px] leading-[1.55] text-graphite">
                 Your queue fills when an assignment wave runs. Until then,
                 there is nothing you need to do here.
               </p>
@@ -118,7 +116,7 @@ export default async function Home() {
               </div>
 
               {worklist.length > 0 ? (
-                <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
+                <ul className="elev-card divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
                   {worklist.map((row) => (
                     <li key={row.videoId}>
                       <Link
@@ -193,6 +191,5 @@ export default async function Home() {
         )}
 
       </div>
-    </AppShell>
   );
 }

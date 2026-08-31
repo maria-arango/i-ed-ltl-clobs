@@ -50,6 +50,7 @@ export async function previewWaveAction(
   await requireAdmin();
   const result = await previewWave(
     String(formData.get("seed") ?? ""),
+    String(formData.get("weekStart") ?? ""),
     Number(formData.get("waveDays")),
   );
   return result.ok ? { ok: true, preview: result.preview } : { ok: false, error: result.error };
@@ -63,6 +64,7 @@ export async function confirmWaveAction(
   const result = await confirmWave(
     session.user.id,
     String(formData.get("seed") ?? ""),
+    String(formData.get("weekStart") ?? ""),
     Number(formData.get("waveDays")),
     String(formData.get("hash") ?? ""),
   );
@@ -107,4 +109,36 @@ export async function confirmRotationAction(
     return { ok: true, confirmed: { formed: result.formed } };
   }
   return { ok: false, error: result.error };
+}
+
+export interface WeekPlanActionResult {
+  ok: boolean;
+  error?: string;
+  changed?: number;
+}
+
+/** Save the week plan: who works that week and at how many videos/day. */
+export async function setWeekPlanAction(
+  _prev: WeekPlanActionResult | null,
+  formData: FormData,
+): Promise<WeekPlanActionResult> {
+  const session = await requireAdmin();
+  const { setWeekPlan } = await import("@/lib/db/admin-assignment");
+  let entries: Array<{ userId: string; videosPerDay: number }>;
+  try {
+    entries = JSON.parse(String(formData.get("entries") ?? "[]"));
+  } catch {
+    return { ok: false, error: "Could not read the plan." };
+  }
+  const result = await setWeekPlan(
+    session.user.id,
+    String(formData.get("weekStart") ?? ""),
+    String(formData.get("weekEnd") ?? ""),
+    entries,
+  );
+  if (result.ok) {
+    revalidatePath("/admin/assignment");
+    return { ok: true, changed: result.changed };
+  }
+  return result;
 }

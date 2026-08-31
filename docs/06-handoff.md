@@ -135,6 +135,54 @@ partner-submitted observation + a lobby session whose placeholder presence
 is pinned to 2100, so María can experience the whole room alone (her
 signature completes it); already seeded for her account.
 
+## Progress (2026-08-31, cont. 5 — María's calibration review)
+
+On PR #14's branch: wave-number race fixed (wave numbers count only
+assignedBy-stamped assignments; waveNo + week in the preview hash), wave-test
+audit cleanup scoped to its own seeds, calibration polish (presence initial-
+bubbles in the room header, rationale/save-button aligned, copy at full
+measure). On feat/week-plan-and-shell (stacked): **Amendments 22–25**
+(training set 6 = 2/2/2; gold set 6 = 2/2/2, list in `data/gold-set.md`,
+3 chosen; third-value consensus PROVISIONAL pending her admin meeting;
+week-based availability planning). **Assignment screen is now the weekly
+flow**: 1) pick week dates, 2) roster with working-checkbox + videos/day
+(writes week-scoped coder_availability entries, append-only), 3) seeded
+wave preview→confirm using that week's availability (previewWave/confirmWave
+take weekStartIso). Team screen: availability column removed, Actions column
+with pill buttons. **Shell restructure**: app/(shell) route group holds
+Home/My videos/Calibration/admin pages; sidebar+topbar live in its
+layout.tsx and template.tsx animates ONLY the content pane (this is what
+makes the 280ms transition actually visible between sidebar items); the
+ESLint blinding boundary now also covers app/(shell)/videos and
+app/(shell)/calibration; workspace stays standalone under app/(coder).
+Shared table primitives (components/ui/table.tsx) + PillButton restyle all
+tables (videos, calibration, team, pairs, wave preview); My videos shows
+the partner per video.
+
+## Progress (2026-08-31, cont. 6 — merge fix, depth pass, gold/cert/Drive)
+
+**Merge mishap found:** PR #15 merged into feat/calibration-room but PR #16
+carried only older commits to main → the deployed site never got round 3.
+Branch feat/design-depth-and-gold re-bases everything on main; ONE merge
+delivers it all. **Depth pass (Amendment §27 + DESIGN_SYSTEM §3 elevation
+amendment):** shadow tokens --clobs-shadow-card/-hover, .elev-card on all
+cards/tables, .card-lift hover (reduced-motion safe), route transition is
+now the documented side-by-side SLIDE (28px, content pane only), ALL
+paragraph width caps removed outside the workspace rubric pane, manual
+"Form a pair" card removed (Amendment §26 — rotation is THE pairing
+mechanism; dissolve + data-layer createPair remain). **Gold set +
+certification (/admin/gold):** search-and-flag videos gold (un-gold refused
+once master scores exist), 8-item master-score entry with rationales under
+the active rubric (upsert, audited), trainee agreement (exact/adjacent per
+ordinal §9) computed against gold, certify=promote-to-live / record-fail
+with attempt history (decideCertification). **Video library
+(/admin/videos):** link coverage stats, bulk Drive-link attach by
+sid_tr_id-prefix matching with preview→confirm (exact rawFilename match
+first so ~2 duplicates resolve; ambiguous files get a per-file picker),
+single attach by display code, Google-Drive-only URL validation.
+purgeFixture handles gold/cert rows. 72 tests (9 new). Sidebar: Video
+library + Gold set. Screens browser-verified.
+
 ## Next up
 
 1. **Stage 3 continues:** gold set + certification gate (María's gold videos pending),

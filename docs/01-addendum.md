@@ -502,3 +502,31 @@ Additions of 2026-08-31 (platform review, second round):
     miss. Route changes get the 280ms page transition from the design system. UI copy avoids
     em dashes (reads as AI); instrument text is untouched. Kimanya photographs are approved for
     the sign-in/landing page.
+
+Additions of 2026-08-31 (calibration review, third round):
+
+22. **Training set is 6 videos** (2 good, 2 neutral, 2 bad classroom practices). Supersedes the
+    "~4" in §9 of this addendum and Amendment B §9.
+23. **Gold set is 6 videos** (2 good, 2 neutral, 2 bad). Three are chosen so far; the list lives
+    in `data/gold-set.md` (raw IDs and Drive links never enter the repository). Master scores are
+    entered after the rubric is final (recode plan agreed with Arya).
+24. **Consensus may land on a third value** — a score neither coder chose individually — recorded
+    as resolution "both moved" with a mandatory rationale. PROVISIONAL: María confirms with the
+    admin team; if reversed, the room will restrict the final to one of the two submitted scores.
+25. **Availability is planned per week on the Assignment screen** (supersedes the Team-screen
+    editor of §18; the §18 data model stands). The weekly flow: pick the week's dates, tick who
+    is working and set each person's videos/day, save (writes week-scoped availability entries;
+    append-only), then preview and confirm the wave for that week — capacities use that week's
+    plan. Coders see who their partner is per video on My videos and on the Calibration screen.
+    The Team screen keeps accounts/roles only, with actions as labelled pill buttons.
+
+Additions of 2026-08-31 (platform review, fourth round):
+
+26. **Manual pair formation is removed from the interface.** Rotation (seeded, availability-aware,
+    §19) is THE pairing mechanism; dissolving an empty pair remains for corrections, and the
+    data-layer `createPair` stays for tests and emergencies. Refines §19's "manual pair formation
+    stays".
+27. **Depth and visible motion.** Cards, tables and form sections carry a soft resting shadow and
+    interactive cards lift on hover; route changes use the design system's side-by-side slide
+    (content pane only). Paragraph copy is never width-capped below its container. Recorded in
+    DESIGN_SYSTEM §3 (elevation amendment) — the scoring grid stays flat and motionless.

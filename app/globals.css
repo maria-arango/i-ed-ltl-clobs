@@ -86,6 +86,12 @@
   /* Elevation — the only shadow in the system */
   --clobs-shadow-float: 0 1px 2px rgba(35, 32, 26, 0.04),
                         0 8px 24px rgba(35, 32, 26, 0.08);
+  /* Amendment (María, 2026-08-31): cards, tables and form sections carry a
+     soft resting shadow, and interactive cards lift on hover. */
+  --clobs-shadow-card: 0 1px 2px rgba(35, 32, 26, 0.05),
+                       0 4px 14px rgba(35, 32, 26, 0.05);
+  --clobs-shadow-card-hover: 0 2px 4px rgba(35, 32, 26, 0.06),
+                             0 14px 32px rgba(35, 32, 26, 0.10);
 
   /* Motion */
   --clobs-dur-instant: 90ms;
@@ -230,6 +236,7 @@
   --ease-inout-clobs: var(--clobs-ease-inout);
 
   --shadow-float: var(--clobs-shadow-float);
+  --shadow-card: var(--clobs-shadow-card);
 }
 
 @layer base {
@@ -264,12 +271,37 @@
 
 /* Route-change page enter (app/template.tsx): 280ms fade + 6px rise. */
 @keyframes page-enter {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 .page-enter {
-  animation: page-enter 280ms var(--clobs-ease-out);
+  /* DESIGN_SYSTEM §4: route changes are a side-by-side slide at
+     --clobs-dur-page. The content pane enters from the right; the shell
+     (sidebar, top bar) never moves. */
+  animation: page-enter var(--clobs-dur-page) var(--clobs-ease-out);
 }
+
+/* Depth utilities (Amendment 2026-08-31): resting elevation for cards and
+   table containers, and a hover lift for interactive surfaces. Transform
+   and box-shadow only — motion never delays input. */
+.elev-card {
+  box-shadow: var(--clobs-shadow-card);
+}
+.card-lift {
+  transition:
+    transform var(--clobs-dur-fast) var(--clobs-ease-out),
+    box-shadow var(--clobs-dur-fast) var(--clobs-ease-out),
+    border-color var(--clobs-dur-fast) var(--clobs-ease-out);
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--clobs-shadow-card-hover);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-lift { transition: none; }
+  .card-lift:hover { transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-enter { animation: none; }
 }

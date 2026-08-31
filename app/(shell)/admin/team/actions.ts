@@ -72,21 +72,5 @@ export async function deleteMemberAction(userId: string): Promise<ActionResult> 
   return result;
 }
 
-export async function setAvailabilityAction(
-  userId: string,
-  videosPerDay: number,
-  from: string,
-  to: string | null,
-): Promise<ActionResult> {
-  const session = await requireAdmin();
-  const { setAvailability } = await import("@/lib/db/admin");
-  const result = await setAvailability(
-    session.user.id,
-    userId,
-    videosPerDay,
-    new Date(from + "T00:00:00Z"),
-    to ? new Date(to + "T00:00:00Z") : null,
-  );
-  if (result.ok) revalidatePath("/admin/team");
-  return result;
-}
+// Availability is planned per week on the Assignment screen (Amendment B
+// §25); the per-member editor that lived here was removed with it.

@@ -177,13 +177,17 @@ export async function dissolvePair(
 /* --------------------------- availability ---------------------------- */
 
 /**
- * Effective videos/day per user for a wave starting now (Amendment B §18):
- * the newest availability entry whose range covers the wave start.
- * No entry = full time (3/day).
+ * Effective videos/day per user AT a given date (Amendment B §18/§25):
+ * the newest availability entry whose range covers that date. A week plan
+ * saved on the Assignment screen inserts entries scoped to the week, and
+ * "newest wins" makes them govern that week without touching the rest of
+ * the record. No entry = full time (3/day).
  */
-async function getVideosPerDayMap(userIds: string[]): Promise<Record<string, number>> {
+async function getVideosPerDayMap(
+  userIds: string[],
+  at: Date,
+): Promise<Record<string, number>> {
   if (userIds.length === 0) return {};
-  const now = new Date();
   const rows = await db
     .select({
       userId: coderAvailability.userId,
@@ -196,17 +200,98 @@ async function getVideosPerDayMap(userIds: string[]): Promise<Record<string, num
   const map: Record<string, number> = {};
   for (const r of rows) {
     if (map[r.userId] !== undefined) continue;
-    if (r.effectiveFrom > now) continue; // starts later (e.g. back on Sept 16)
-    if (r.effectiveTo && r.effectiveTo < now) continue;
+    if (r.effectiveFrom > at) continue; // starts later (e.g. back on Sept 16)
+    if (r.effectiveTo && r.effectiveTo < at) continue;
     map[r.userId] = r.videosPerDay;
   }
   for (const id of userIds) map[id] ??= 3;
   return map;
 }
 
+/** Parse a yyyy-mm-dd string to a UTC noon Date (immune to timezones). */
+function parseDay(iso: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const d = new Date(`${iso}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+export interface WeekRosterRow {
+  userId: string;
+  name: string | null;
+  email: string;
+  role: string;
+  isChiefCoder: boolean;
+  videosPerDay: number;
+}
+
+/** The active team with each person's effective videos/day at a date. */
+export async function getWeekRoster(weekStartIso: string): Promise<WeekRosterRow[]> {
+  const at = parseDay(weekStartIso) ?? new Date();
+  const team = await db
+    .select({
+      userId: users.id,
+      name: users.name,
+      email: users.email,
+      role: users.role,
+      isChiefCoder: users.isChiefCoder,
+    })
+    .from(users)
+    .where(and(eq(users.isActive, true), eq(users.datasetScope, "live")))
+    .orderBy(asc(users.email));
+  const visible = team.filter((t) => !t.email.endsWith("@example.invalid"));
+  const vpd = await getVideosPerDayMap(visible.map((t) => t.userId), at);
+  return visible.map((t) => ({ ...t, videosPerDay: vpd[t.userId] }));
+}
+
+/**
+ * Save a week plan (Amendment B §25): one availability entry per person
+ * scoped to [weekStart, weekEnd], written only where the value actually
+ * changes. History is append-only; nothing is edited or removed.
+ */
+export async function setWeekPlan(
+  actorId: string,
+  weekStartIso: string,
+  weekEndIso: string,
+  entries: Array<{ userId: string; videosPerDay: number }>,
+): Promise<{ ok: true; changed: number } | { ok: false; error: string }> {
+  const from = parseDay(weekStartIso);
+  const to = parseDay(weekEndIso);
+  if (!from || !to) return { ok: false, error: "Both week dates are required." };
+  if (to < from) return { ok: false, error: "The week ends before it starts." };
+  for (const e of entries) {
+    if (!(e.videosPerDay >= 0 && e.videosPerDay <= 6)) {
+      return { ok: false, error: "Videos per day must be between 0 and 6." };
+    }
+  }
+  const current = await getVideosPerDayMap(entries.map((e) => e.userId), from);
+  let changed = 0;
+  for (const e of entries) {
+    if (current[e.userId] === e.videosPerDay) continue;
+    await db.insert(coderAvailability).values({
+      userId: e.userId,
+      videosPerDay: e.videosPerDay,
+      fteFraction: Math.round((e.videosPerDay / 3) * 100),
+      effectiveFrom: from,
+      effectiveTo: to,
+    });
+    changed++;
+  }
+  await db.insert(auditLog).values({
+    actorId,
+    action: "week_plan_set",
+    subjectTable: "coder_availability",
+    details: {
+      week: `${weekStartIso}..${weekEndIso}`,
+      entries: Object.fromEntries(entries.map((e) => [e.userId, e.videosPerDay])),
+      changed,
+    },
+  });
+  return { ok: true, changed };
+}
+
 /* ------------------------------- waves ------------------------------- */
 
-async function getWaveInputs(dataset: Dataset) {
+async function getWaveInputs(dataset: Dataset, weekStart: Date) {
   const pool = await db
     .select({ id: videos.id, sid: videoProvenance.sid, arm: videoProvenance.arm, displayCode: videos.displayCode })
     .from(videos)
@@ -250,7 +335,7 @@ async function getWaveInputs(dataset: Dataset) {
   const waveNo = (waveRow.maxWave ?? 0) + 1;
 
   const memberIds = pairViews.flatMap((p) => [p.anchor.id, p.enumerator.id]);
-  const vpd = await getVideosPerDayMap(memberIds);
+  const vpd = await getVideosPerDayMap(memberIds, weekStart);
 
   return {
     pool,
@@ -266,9 +351,10 @@ function inputsHash(
   pairViews: PairView[],
   waveDays: number,
   waveNo: number,
+  weekStartIso: string,
 ): string {
   const h = createHash("sha256");
-  h.update(`${waveDays}#${waveNo}`);
+  h.update(`${waveDays}#${waveNo}#${weekStartIso}`);
   h.update(pool.map((v) => v.id).sort().join(","));
   h.update(pairViews.map((p) => p.id).sort().join(","));
   return h.digest("hex").slice(0, 16);
@@ -277,6 +363,7 @@ function inputsHash(
 export interface WavePreview {
   waveNo: number;
   seed: string;
+  weekStart: string;
   waveDays: number;
   poolSize: number;
   totalToAssign: number;
@@ -294,8 +381,10 @@ export interface WavePreview {
   }>;
 }
 
-function compute(dataset: Dataset, seed: string, waveDays: number) {
-  return getWaveInputs(dataset).then(({ pool, pairViews, vpd, history, waveNo }) => {
+function compute(dataset: Dataset, seed: string, weekStartIso: string, waveDays: number) {
+  const weekStart = parseDay(weekStartIso);
+  if (!weekStart) throw new Error("weekStart must be a yyyy-mm-dd date");
+  return getWaveInputs(dataset, weekStart).then(({ pool, pairViews, vpd, history, waveNo }) => {
     const algoVideos: AlgoVideo[] = pool.map((v) => ({ id: v.id, sid: v.sid, arm: v.arm }));
     // A pair moves at the pace of its slower member (Amendment B §18).
     const capacities = new Map(
@@ -311,20 +400,22 @@ function compute(dataset: Dataset, seed: string, waveDays: number) {
       capacity: capacities.get(p.id)!,
     }));
     const result = assignWave({ videos: algoVideos, pairs: algoPairs, seed, history });
-    return { pool, pairViews, capacities, waveNo, result, hash: inputsHash(pool, pairViews, waveDays, waveNo) };
+    return { pool, pairViews, capacities, waveNo, result, hash: inputsHash(pool, pairViews, waveDays, waveNo, weekStartIso) };
   });
 }
 
 export async function previewWave(
   seed: string,
+  weekStartIso: string,
   waveDays: number,
   dataset: Dataset = "live",
 ): Promise<{ ok: true; preview: WavePreview } | { ok: false; error: string }> {
   if (!seed.trim()) return { ok: false, error: "A seed is required (it makes the wave reproducible)." };
+  if (!parseDay(weekStartIso)) return { ok: false, error: "Pick the week's start date first." };
   if (!Number.isInteger(waveDays) || waveDays < 1 || waveDays > 20) {
     return { ok: false, error: "Working days must be between 1 and 20." };
   }
-  const { pool, pairViews, capacities, waveNo, result, hash } = await compute(dataset, seed.trim(), waveDays);
+  const { pool, pairViews, capacities, waveNo, result, hash } = await compute(dataset, seed.trim(), weekStartIso, waveDays);
   if (pairViews.length === 0) return { ok: false, error: "No active pairs — create pairs first." };
   const codeById = new Map(pool.map((v) => [v.id, v.displayCode]));
   return {
@@ -332,6 +423,7 @@ export async function previewWave(
     preview: {
       waveNo,
       seed: seed.trim(),
+      weekStart: weekStartIso,
       waveDays,
       poolSize: result.diagnostics.poolSize,
       totalToAssign: result.diagnostics.assigned,
@@ -357,11 +449,12 @@ export async function previewWave(
 export async function confirmWave(
   actorId: string,
   seed: string,
+  weekStartIso: string,
   waveDays: number,
   expectedHash: string,
   dataset: Dataset = "live",
 ): Promise<{ ok: true; waveNo: number; assigned: number } | { ok: false; error: string }> {
-  const { pairViews, waveNo, result, hash } = await compute(dataset, seed.trim(), waveDays);
+  const { pairViews, waveNo, result, hash } = await compute(dataset, seed.trim(), weekStartIso, waveDays);
   if (hash !== expectedHash) {
     return {
       ok: false,
@@ -419,6 +512,7 @@ export async function confirmWave(
         waveNo,
         seed: seed.trim(),
         algorithmVersion: ALGORITHM_VERSION,
+        weekStart: weekStartIso,
         waveDays,
         assigned: result.assignments.length,
         skippedNoArm: result.diagnostics.skippedNoArm.length,
@@ -491,7 +585,7 @@ function rotationHash(anchorIds: string[], enumeratorIds: string[]): string {
 async function computeRotation(seed: string, dataset: Dataset) {
   const { anchors, enumerators } = await listPairCandidates();
   const realEnumerators = enumerators.filter((e) => !e.email.endsWith("@example.invalid"));
-  const vpd = await getVideosPerDayMap([...anchors, ...realEnumerators].map((u) => u.id));
+  const vpd = await getVideosPerDayMap([...anchors, ...realEnumerators].map((u) => u.id), new Date());
   const past = await pastPairCounts(dataset);
   const rand = rotationRandom(seed);
 
