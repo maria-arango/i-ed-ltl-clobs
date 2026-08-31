@@ -24,7 +24,7 @@ export function AddMemberForm() {
     <form
       ref={formRef}
       action={formAction}
-      className="rounded-xl border border-hairline bg-card p-6"
+      className="elev-card rounded-xl border border-hairline bg-card p-6"
     >
       <h2
         className="font-sans font-medium text-ink"
@@ -36,7 +36,7 @@ export function AddMemberForm() {
       >
         Add a teammate
       </h2>
-      <p className="mt-1 max-w-[60ch] text-[13px] leading-[1.5] text-graphite">
+      <p className="mt-1 text-[13px] leading-[1.5] text-graphite">
         From the moment you add them, this email can sign in with a one-time
         code. There is no other way in.
       </p>

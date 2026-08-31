@@ -35,11 +35,11 @@ export function RotationRunner() {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-hairline bg-card p-6">
+      <div className="elev-card rounded-xl border border-hairline bg-card p-6">
         <h3 className="text-[15px] font-medium text-ink">
           Rotate pairs for a new week
         </h3>
-        <p className="mt-1 max-w-[62ch] text-[13px] leading-[1.5] text-graphite">
+        <p className="mt-1 text-[13px] leading-[1.5] text-graphite">
           Randomised pairings that prefer people who have not worked together
           yet, sized by each anchor&apos;s availability. Current pairs are
           retired (their history and calibrations stay intact) and the new
@@ -79,7 +79,7 @@ export function RotationRunner() {
       </div>
 
       {preview && (
-        <div className="space-y-3 rounded-xl border border-hairline-strong bg-paper p-5">
+        <div className="elev-card space-y-3 rounded-xl border border-hairline-strong bg-paper p-5">
           <h4 className="text-[15px] font-medium text-ink">
             Proposed pairs (<span className="mono text-[13px]">{preview.seed}</span>)
           </h4>

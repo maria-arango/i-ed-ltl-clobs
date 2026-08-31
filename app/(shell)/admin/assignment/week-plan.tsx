@@ -121,7 +121,7 @@ export function WeekPlan({
       </h2>
 
       {/* 1 · the week */}
-      <div className="rounded-2xl border border-hairline bg-card p-6">
+      <div className="elev-card rounded-2xl border border-hairline bg-card p-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-smoke">
           1 · Choose the week
         </p>
@@ -156,7 +156,7 @@ export function WeekPlan({
       </div>
 
       {/* 2 · the people */}
-      <div className="rounded-2xl border border-hairline bg-card p-6">
+      <div className="elev-card rounded-2xl border border-hairline bg-card p-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-smoke">
           2 · Who codes this week
         </p>
@@ -248,7 +248,7 @@ export function WeekPlan({
       </div>
 
       {/* 3 · the wave */}
-      <div className="rounded-2xl border border-hairline bg-card p-6">
+      <div className="elev-card rounded-2xl border border-hairline bg-card p-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.05em] text-smoke">
           3 · Deal the videos
         </p>
@@ -311,7 +311,7 @@ export function WeekPlan({
       )}
 
       {preview && (
-        <div className="space-y-3 rounded-2xl border border-hairline-strong bg-paper p-6">
+        <div className="elev-card space-y-3 rounded-2xl border border-hairline-strong bg-paper p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h4 className="text-[15px] font-medium text-ink">
               Preview: wave {preview.waveNo}, week of {preview.weekStart},{" "}

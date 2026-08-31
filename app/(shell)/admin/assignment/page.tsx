@@ -9,11 +9,7 @@ import { and, count, eq } from "drizzle-orm";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { videos } from "@/db/schema";
-import {
-  getWeekRoster,
-  listPairCandidates,
-  listPairs,
-} from "@/lib/db/admin-assignment";
+import { getWeekRoster, listPairs } from "@/lib/db/admin-assignment";
 import {
   Table,
   TableBody,
@@ -22,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CreatePairForm, DissolveButton } from "./pair-forms";
+import { DissolveButton } from "./pair-forms";
 import { RotationRunner } from "./rotation-runner";
 import { WeekPlan } from "./week-plan";
 
@@ -38,19 +34,14 @@ function nextMondayIso(): string {
 export default async function AssignmentPage() {
   await requireAdmin();
   const defaultWeekStart = nextMondayIso();
-  const [pairs, candidates, roster, [pool]] = await Promise.all([
+  const [pairs, roster, [pool]] = await Promise.all([
     listPairs(),
-    listPairCandidates(),
     getWeekRoster(defaultWeekStart),
     db
       .select({ n: count() })
       .from(videos)
       .where(and(eq(videos.dataset, "live"), eq(videos.status, "pool"))),
   ]);
-  const enumerators = candidates.enumerators.filter(
-    (c) => !c.email.endsWith("@example.invalid"),
-  );
-
   return (
     <div className="mx-auto mt-2 max-w-[980px] space-y-10">
       <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
@@ -72,7 +63,7 @@ export default async function AssignmentPage() {
         >
           Assignment
         </h1>
-        <p className="max-w-[68ch] text-[15px] text-graphite">
+        <p className="text-[15px] text-graphite">
           Each week: set the pairs, plan who is working and at what pace, then
           let the platform deal the videos: seeded, arm-balanced, schools
           spread, card duty split. You always preview before anything is
@@ -129,7 +120,6 @@ export default async function AssignmentPage() {
           </p>
         )}
         <RotationRunner />
-        <CreatePairForm anchors={candidates.anchors} enumerators={enumerators} />
       </section>
 
       {/* The week: availability + wave */}

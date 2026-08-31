@@ -159,6 +159,30 @@ Shared table primitives (components/ui/table.tsx) + PillButton restyle all
 tables (videos, calibration, team, pairs, wave preview); My videos shows
 the partner per video.
 
+## Progress (2026-08-31, cont. 6 — merge fix, depth pass, gold/cert/Drive)
+
+**Merge mishap found:** PR #15 merged into feat/calibration-room but PR #16
+carried only older commits to main → the deployed site never got round 3.
+Branch feat/design-depth-and-gold re-bases everything on main; ONE merge
+delivers it all. **Depth pass (Amendment §27 + DESIGN_SYSTEM §3 elevation
+amendment):** shadow tokens --clobs-shadow-card/-hover, .elev-card on all
+cards/tables, .card-lift hover (reduced-motion safe), route transition is
+now the documented side-by-side SLIDE (28px, content pane only), ALL
+paragraph width caps removed outside the workspace rubric pane, manual
+"Form a pair" card removed (Amendment §26 — rotation is THE pairing
+mechanism; dissolve + data-layer createPair remain). **Gold set +
+certification (/admin/gold):** search-and-flag videos gold (un-gold refused
+once master scores exist), 8-item master-score entry with rationales under
+the active rubric (upsert, audited), trainee agreement (exact/adjacent per
+ordinal §9) computed against gold, certify=promote-to-live / record-fail
+with attempt history (decideCertification). **Video library
+(/admin/videos):** link coverage stats, bulk Drive-link attach by
+sid_tr_id-prefix matching with preview→confirm (exact rawFilename match
+first so ~2 duplicates resolve; ambiguous files get a per-file picker),
+single attach by display code, Google-Drive-only URL validation.
+purgeFixture handles gold/cert rows. 72 tests (9 new). Sidebar: Video
+library + Gold set. Screens browser-verified.
+
 ## Next up
 
 1. **Stage 3 continues:** gold set + certification gate (María's gold videos pending),

@@ -519,3 +519,14 @@ Additions of 2026-08-31 (calibration review, third round):
     append-only), then preview and confirm the wave for that week — capacities use that week's
     plan. Coders see who their partner is per video on My videos and on the Calibration screen.
     The Team screen keeps accounts/roles only, with actions as labelled pill buttons.
+
+Additions of 2026-08-31 (platform review, fourth round):
+
+26. **Manual pair formation is removed from the interface.** Rotation (seeded, availability-aware,
+    §19) is THE pairing mechanism; dissolving an empty pair remains for corrections, and the
+    data-layer `createPair` stays for tests and emergencies. Refines §19's "manual pair formation
+    stays".
+27. **Depth and visible motion.** Cards, tables and form sections carry a soft resting shadow and
+    interactive cards lift on hover; route changes use the design system's side-by-side slide
+    (content pane only). Paragraph copy is never width-capped below its container. Recorded in
+    DESIGN_SYSTEM §3 (elevation amendment) — the scoring grid stays flat and motionless.

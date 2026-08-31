@@ -59,7 +59,7 @@ export default async function MyVideos() {
       </header>
 
       {queue.length === 0 ? (
-        <div className="rounded-2xl border border-hairline bg-card p-6">
+        <div className="elev-card rounded-2xl border border-hairline bg-card p-6">
           <p className="text-[15px] text-graphite">
             No videos assigned yet. Your queue fills when an admin runs an
             assignment wave. Check back, or ask your admin.

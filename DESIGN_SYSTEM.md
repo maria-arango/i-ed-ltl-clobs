@@ -224,9 +224,14 @@ genuinely float above the page and can be dismissed:
 ```
 
 Allowed on: popovers, dropdown menus, tooltips, modals, toasts, the floating video panel in theatre
-mode, and the dock. **Forbidden on cards, tables, form sections, dashboard tiles and the rubric pane** —
-those are defined by `1px solid var(--clobs-hairline)` and a radius. No blurs, no glows, no gradients
-on UI chrome.
+mode, and the dock.
+
+> **Amended by María, 2026-08-31 (platform review round 4).** The original rule forbade shadows on
+> cards and tables; María asked for visible depth ("tridimensionality"). Cards, table containers and
+> form sections now carry a soft RESTING shadow (`--clobs-shadow-card`), and interactive cards lift
+> 2px on hover (`--clobs-shadow-card-hover`, `.card-lift`, transform+shadow only, 150ms, reduced-motion
+> collapses it). Hairline + radius still define every edge. Still no blurs, no glows, no gradients on
+> UI chrome, and the scoring grid stays perfectly flat and motionless (§4 frequency gate).
 
 ### Focus
 

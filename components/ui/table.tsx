@@ -16,10 +16,9 @@ export function Table({
   return (
     <div
       className={cn(
-        "overflow-x-auto rounded-xl border border-hairline bg-paper",
+        "elev-card overflow-x-auto rounded-xl border border-hairline bg-paper",
         className,
       )}
-      style={{ boxShadow: "0 1px 2px rgba(58, 47, 36, 0.04)" }}
     >
       <table className="w-full border-collapse text-left text-[14px]">
         {children}

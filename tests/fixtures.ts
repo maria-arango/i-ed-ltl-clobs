@@ -15,8 +15,10 @@ import {
   calibrationPresence,
   calibrationSessions,
   calibrationSignoffs,
+  certifications,
   contextAdults,
   contextCards,
+  goldScores,
   events,
   notes,
   observations,
@@ -126,6 +128,7 @@ export async function purgeFixture(opts: {
       );
       await db.delete(assignments).where(inArray(assignments.videoId, videoIds));
     }
+    await db.delete(goldScores).where(inArray(goldScores.videoId, videoIds));
     await db.delete(videoProvenance).where(inArray(videoProvenance.videoId, videoIds));
     await db.delete(videos).where(inArray(videos.id, videoIds));
   }
@@ -237,6 +240,8 @@ export async function purgeFixture(opts: {
   }
 
   for (const u of userRows) {
+    await db.delete(certifications).where(eq(certifications.userId, u.id));
+    await db.delete(goldScores).where(eq(goldScores.enteredBy, u.id));
     await db.delete(events).where(eq(events.userId, u.id));
     // Fixture users may have authored audit/assignment-log rows.
     await db.delete(auditLog).where(eq(auditLog.actorId, u.id));

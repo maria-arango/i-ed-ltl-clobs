@@ -58,7 +58,7 @@ export default async function Home() {
         {/* Progress — one composed object, not a card grid */}
         <section aria-label="My progress" className="space-y-3">
           {queue.length === 0 ? (
-            <div className="rounded-xl border border-hairline bg-card p-6">
+            <div className="elev-card rounded-xl border border-hairline bg-card p-6">
               <p
                 className="font-serif text-ink"
                 style={{
@@ -68,7 +68,7 @@ export default async function Home() {
               >
                 Nothing assigned yet.
               </p>
-              <p className="mt-1 max-w-[60ch] text-[14px] leading-[1.55] text-graphite">
+              <p className="mt-1 text-[14px] leading-[1.55] text-graphite">
                 Your queue fills when an assignment wave runs. Until then,
                 there is nothing you need to do here.
               </p>
@@ -116,7 +116,7 @@ export default async function Home() {
               </div>
 
               {worklist.length > 0 ? (
-                <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
+                <ul className="elev-card divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
                   {worklist.map((row) => (
                     <li key={row.videoId}>
                       <Link

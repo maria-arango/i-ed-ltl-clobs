@@ -78,7 +78,7 @@ export default async function TeamPage() {
         >
           Team
         </h1>
-        <p className="max-w-[68ch] text-[15px] text-graphite">
+        <p className="text-[15px] text-graphite">
           Everyone who can sign in, and as what. Deactivating blocks sign-in
           but keeps all work; deleting is only possible for accounts with
           nothing on record. Weekly availability lives on the{" "}

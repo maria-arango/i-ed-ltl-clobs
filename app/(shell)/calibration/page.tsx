@@ -75,7 +75,7 @@ export default async function CalibrationQueue() {
         </p>
 
         {queue.length === 0 ? (
-          <div className="rounded-2xl border border-hairline bg-card p-6">
+          <div className="elev-card rounded-2xl border border-hairline bg-card p-6">
             <p className="text-[15px] text-graphite">
               Nothing to calibrate yet. This list fills as you and your
               partner submit scores for shared videos.

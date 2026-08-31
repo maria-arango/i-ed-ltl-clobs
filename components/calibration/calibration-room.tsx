@@ -384,13 +384,13 @@ export function CalibrationRoom({
       <div className="space-y-6">
         {header}
         {joinError ? (
-          <div className="rounded-xl border border-hairline bg-card p-6">
+          <div className="elev-card rounded-xl border border-hairline bg-card p-6">
             <p role="alert" className="text-[15px] text-clay">
               {joinError}
             </p>
           </div>
         ) : (
-          <div className="rounded-xl border border-hairline bg-card p-6">
+          <div className="elev-card rounded-xl border border-hairline bg-card p-6">
             <p className="text-[15px] leading-[1.6] text-graphite">
               You are in the room. As soon as{" "}
               <span className="font-medium text-ink">
@@ -458,7 +458,7 @@ export function CalibrationRoom({
           return (
             <div
               key={itemNo}
-              className="rounded-xl border border-hairline bg-card p-5"
+              className="elev-card rounded-xl border border-hairline bg-card p-5"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h3 className="text-[15px] font-medium text-ink">
@@ -483,7 +483,7 @@ export function CalibrationRoom({
                     <ScoreBadge score={mine} />
                   </div>
                   {mine?.justification && (
-                    <p className="mt-2 max-w-[48ch] text-[13px] leading-[1.5] text-graphite">
+                    <p className="mt-2 text-[13px] leading-[1.5] text-graphite">
                       {mine.justification}
                     </p>
                   )}
@@ -496,7 +496,7 @@ export function CalibrationRoom({
                     <ScoreBadge score={theirs} />
                   </div>
                   {theirs?.justification && (
-                    <p className="mt-2 max-w-[48ch] text-[13px] leading-[1.5] text-graphite">
+                    <p className="mt-2 text-[13px] leading-[1.5] text-graphite">
                       {theirs.justification}
                     </p>
                   )}
@@ -540,7 +540,7 @@ export function CalibrationRoom({
                           setRationales((r) => ({ ...r, [itemNo]: e.target.value }))
                         }
                         placeholder="One or two sentences on what convinced you both."
-                        className="block min-w-64 max-w-[64ch] flex-1 resize-none rounded-md border border-hairline bg-paper px-3 py-2 text-[14px] text-ink focus:border-hairline-strong"
+                        className="block min-w-64 flex-1 resize-none rounded-md border border-hairline bg-paper px-3 py-2 text-[14px] text-ink focus:border-hairline-strong"
                       />
                       <button
                         type="button"
@@ -558,12 +558,12 @@ export function CalibrationRoom({
                   consensus &&
                   !pendingNum &&
                   consensus.consensusRationale && (
-                    <p className="mt-2 max-w-[64ch] text-[13px] leading-[1.5] text-graphite">
+                    <p className="mt-2 text-[13px] leading-[1.5] text-graphite">
                       {consensus.consensusRationale}
                     </p>
                   )}
                 {completed && consensus?.consensusRationale && (
-                  <p className="mt-2 max-w-[64ch] text-[13px] leading-[1.5] text-graphite">
+                  <p className="mt-2 text-[13px] leading-[1.5] text-graphite">
                     {consensus.consensusRationale}
                   </p>
                 )}
@@ -578,7 +578,7 @@ export function CalibrationRoom({
         })}
       </section>
 
-      <details className="rounded-xl border border-hairline bg-card p-5" open>
+      <details className="elev-card rounded-xl border border-hairline bg-card p-5" open>
         <summary className="cursor-pointer rounded-sm text-[14px] font-medium text-ink">
           Notes, side by side
         </summary>
@@ -594,7 +594,7 @@ export function CalibrationRoom({
       {!completed && (
         <section
           aria-label="Sign off"
-          className="rounded-xl border border-hairline bg-card p-5"
+          className="elev-card rounded-xl border border-hairline bg-card p-5"
         >
           <h2 className="text-[15px] font-medium text-ink">Sign off</h2>
           <p className="mt-1 text-[13px] leading-[1.5] text-graphite">
