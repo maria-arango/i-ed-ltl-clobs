@@ -146,6 +146,56 @@ function ConsensusChips({
   );
 }
 
+/** Overlapping initial bubbles: you and your partner. The partner's
+ *  bubble fills in (forest ring) while they are live in the room. */
+function PresenceBubbles({
+  myName,
+  partnerName,
+  partnerPresent,
+}: {
+  myName: string;
+  partnerName: string;
+  partnerPresent: boolean;
+}) {
+  const initials = (s: string) =>
+    s
+      .split(/[\s.@_-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]!.toUpperCase())
+      .join("");
+  const bubble = (name: string, present: boolean, z: string) => (
+    <span
+      title={present ? `${name} is here` : `${name} is not here yet`}
+      className={`mono relative flex size-9 items-center justify-center rounded-full border-2 text-[12px] ${z}`}
+      style={{
+        background: present ? "var(--clobs-forest-wash)" : "var(--clobs-sunken)",
+        borderColor: present ? "var(--clobs-forest)" : "var(--clobs-hairline-strong)",
+        color: present ? "var(--clobs-ink)" : "var(--clobs-smoke)",
+        opacity: present ? 1 : 0.7,
+      }}
+    >
+      {initials(name)}
+      {present && (
+        <span
+          aria-hidden
+          className="absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2"
+          style={{
+            background: "var(--clobs-forest)",
+            borderColor: "var(--clobs-paper)",
+          }}
+        />
+      )}
+    </span>
+  );
+  return (
+    <span className="flex items-center -space-x-2" aria-hidden>
+      {bubble(myName, true, "z-10")}
+      {bubble(partnerName, partnerPresent, "z-0")}
+    </span>
+  );
+}
+
 function NotePane({ title, html }: { title: string; html: string | null }) {
   return (
     <div className="min-w-0 rounded-lg border border-hairline bg-paper p-4">
@@ -172,10 +222,12 @@ export function CalibrationRoom({
   videoId,
   conceptNames,
   initial,
+  myName,
 }: {
   videoId: string;
   conceptNames: Record<number, string>;
   initial: RoomStateJson;
+  myName: string;
 }) {
   const [room, setRoom] = useState<RoomStateJson>(initial);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -308,15 +360,11 @@ export function CalibrationRoom({
           {room.displayCode}
         </h1>
       </div>
-      <div className="flex items-center gap-2 text-[14px]">
-        <span
-          aria-hidden
-          className="size-2.5 rounded-full"
-          style={{
-            background: room.partnerPresent
-              ? "var(--clobs-forest)"
-              : "var(--clobs-ash)",
-          }}
+      <div className="flex items-center gap-3 text-[14px]">
+        <PresenceBubbles
+          myName={myName}
+          partnerName={room.partnerName ?? "Partner"}
+          partnerPresent={room.partnerPresent || completed}
         />
         <span className={room.partnerPresent ? "text-ink" : "text-graphite"}>
           {completed
@@ -343,7 +391,7 @@ export function CalibrationRoom({
           </div>
         ) : (
           <div className="rounded-xl border border-hairline bg-card p-6">
-            <p className="max-w-[60ch] text-[15px] leading-[1.6] text-graphite">
+            <p className="text-[15px] leading-[1.6] text-graphite">
               You are in the room. As soon as{" "}
               <span className="font-medium text-ink">
                 {room.partnerName ?? "your partner"}
@@ -483,25 +531,27 @@ export function CalibrationRoom({
                     >
                       Why did the score move?
                     </label>
-                    <textarea
-                      id={`rationale-${itemNo}`}
-                      rows={2}
-                      value={rationales[itemNo] ?? ""}
-                      onChange={(e) =>
-                        setRationales((r) => ({ ...r, [itemNo]: e.target.value }))
-                      }
-                      placeholder="One or two sentences on what convinced you both."
-                      className="mt-1 w-full max-w-[64ch] rounded-md border border-hairline bg-paper px-3 py-2 text-[14px] text-ink focus:border-hairline-strong"
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void saveItem(itemNo, pendingNum, rationales[itemNo] ?? "")
-                      }
-                      className="mt-2 rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[14px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
-                    >
-                      Save consensus
-                    </button>
+                    <div className="mt-1 flex flex-wrap items-end gap-2">
+                      <textarea
+                        id={`rationale-${itemNo}`}
+                        rows={2}
+                        value={rationales[itemNo] ?? ""}
+                        onChange={(e) =>
+                          setRationales((r) => ({ ...r, [itemNo]: e.target.value }))
+                        }
+                        placeholder="One or two sentences on what convinced you both."
+                        className="block min-w-64 max-w-[64ch] flex-1 resize-none rounded-md border border-hairline bg-paper px-3 py-2 text-[14px] text-ink focus:border-hairline-strong"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void saveItem(itemNo, pendingNum, rationales[itemNo] ?? "")
+                        }
+                        className="shrink-0 rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[14px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+                      >
+                        Save consensus
+                      </button>
+                    </div>
                   </div>
                 )}
                 {!completed &&
@@ -547,10 +597,10 @@ export function CalibrationRoom({
           className="rounded-xl border border-hairline bg-card p-5"
         >
           <h2 className="text-[15px] font-medium text-ink">Sign off</h2>
-          <p className="mt-1 max-w-[60ch] text-[13px] leading-[1.5] text-graphite">
-            Both of you sign once all eight consensus scores are recorded.
-            After the second signature, the calibration is final and can
-            never be edited.
+          <p className="mt-1 text-[13px] leading-[1.5] text-graphite">
+            Both of you sign once all eight consensus scores are recorded;
+            after the second signature the calibration is final and can never
+            be edited.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {room.mySignedAt ? (

@@ -5,7 +5,7 @@
  * and the changed-inputs (hash) guard.
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   assignmentLog,
@@ -87,7 +87,17 @@ afterAll(async () => {
   // purgeFixture first: it clears assignment_log rows that reference pairs.
   await purgeFixture(FIXTURE);
   await cleanPairs();
-  await db.delete(auditLog).where(eq(auditLog.action, "assignment_wave_confirmed"));
+  // Scope to THIS suite's seeds — a blanket delete on the action would
+  // erase the audit trail of real (live) wave confirmations when the
+  // tests run locally against the shared database.
+  await db
+    .delete(auditLog)
+    .where(
+      and(
+        eq(auditLog.action, "assignment_wave_confirmed"),
+        sql`${auditLog.details}->>'seed' IN ('test-wave-seed', 'second-seed')`,
+      ),
+    );
 });
 
 describe("pair rules (Amendment B §2)", () => {

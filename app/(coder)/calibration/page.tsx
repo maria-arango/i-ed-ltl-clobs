@@ -65,11 +65,11 @@ export default async function CalibrationQueue() {
           </p>
         </header>
 
-        <p className="max-w-[64ch] text-[14px] leading-[1.6] text-graphite">
-          Once you and your partner have both submitted your individual
-          scores for a video, meet (in person or on a call), open its room
-          below at the same time, and agree on a final score for each
-          concept. Your individual scores are locked and stay on record.
+        <p className="text-[14px] leading-[1.6] text-graphite">
+          Once you and your partner have both submitted individual scores for
+          a video, open its room below at the same time (in person or on a
+          call) and agree on a final score for each concept. Your submitted
+          scores stay locked on record.
         </p>
 
         {queue.length === 0 ? (

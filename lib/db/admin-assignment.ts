@@ -7,7 +7,7 @@
  * with its seed (addendum §6: reproducible and reportable).
  */
 import { createHash } from "node:crypto";
-import { and, asc, count, desc, eq, isNull, max, ne } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, isNull, max, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   assignmentLog,
@@ -240,10 +240,13 @@ async function getWaveInputs(dataset: Dataset) {
     if (r.fills) entry.filled += Number(r.n);
   }
 
+  // Only assignments created by a confirmed wave carry assignedBy; counting
+  // those (not demo/fixture rows inserted directly) keeps wave numbering
+  // stable — and deterministic when test suites run in parallel.
   const [waveRow] = await db
     .select({ maxWave: max(assignments.waveNo) })
     .from(assignments)
-    .where(eq(assignments.dataset, dataset));
+    .where(and(eq(assignments.dataset, dataset), isNotNull(assignments.assignedBy)));
   const waveNo = (waveRow.maxWave ?? 0) + 1;
 
   const memberIds = pairViews.flatMap((p) => [p.anchor.id, p.enumerator.id]);
@@ -258,9 +261,14 @@ async function getWaveInputs(dataset: Dataset) {
   };
 }
 
-function inputsHash(pool: { id: string }[], pairViews: PairView[], waveDays: number): string {
+function inputsHash(
+  pool: { id: string }[],
+  pairViews: PairView[],
+  waveDays: number,
+  waveNo: number,
+): string {
   const h = createHash("sha256");
-  h.update(String(waveDays));
+  h.update(`${waveDays}#${waveNo}`);
   h.update(pool.map((v) => v.id).sort().join(","));
   h.update(pairViews.map((p) => p.id).sort().join(","));
   return h.digest("hex").slice(0, 16);
@@ -303,7 +311,7 @@ function compute(dataset: Dataset, seed: string, waveDays: number) {
       capacity: capacities.get(p.id)!,
     }));
     const result = assignWave({ videos: algoVideos, pairs: algoPairs, seed, history });
-    return { pool, pairViews, capacities, waveNo, result, hash: inputsHash(pool, pairViews, waveDays) };
+    return { pool, pairViews, capacities, waveNo, result, hash: inputsHash(pool, pairViews, waveDays, waveNo) };
   });
 }
 
