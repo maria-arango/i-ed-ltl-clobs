@@ -57,7 +57,7 @@ export default async function TeamPage() {
         isChiefCoder={session.user.isChiefCoder}
       />
 
-      <div className="mt-10 max-w-[880px] space-y-10">
+      <div className="mx-auto mt-10 max-w-[880px] space-y-10">
         <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
           <Link href="/" className="rounded-sm text-lake underline underline-offset-4">
             Home
