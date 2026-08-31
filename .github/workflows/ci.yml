@@ -8,16 +8,38 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: clobs_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:ci@localhost:5432/clobs_ci
+      DATABASE_URL_CODER: postgresql://clobs_coder:ci@localhost:5432/clobs_ci
+      CODER_ROLE_PASSWORD: ci
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # 24 LTS: the .mts scripts rely on Node's built-in TypeScript support
+          node-version: 24
           cache: npm
       - run: npm ci
       - name: Lint
         run: npm run lint
       - name: Typecheck and build
         run: npm run build
-      - name: Tests
+      - name: Migrate schema into the CI database
+        run: npx drizzle-kit migrate
+      - name: Create the restricted coder role
+        run: node scripts/setup-coder-role.mts
+      - name: Tests (unit + API-layer blinding suite)
         run: npm test

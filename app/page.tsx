@@ -26,6 +26,12 @@ export default async function Home() {
       </p>
       <div className="flex items-center gap-6">
         <Link
+          href="/videos"
+          className="rounded-md px-1 text-lake underline underline-offset-4"
+        >
+          My videos
+        </Link>
+        <Link
           href="/styleguide"
           className="rounded-md px-1 text-lake underline underline-offset-4"
         >

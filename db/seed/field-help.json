@@ -1,0 +1,22 @@
+{
+  "form": "context_card",
+  "fields": {
+    "subject": "The subject taught. Names the vocabulary domain so technical words are heard correctly.",
+    "composition": "all_boys | all_girls | mixed",
+    "approx_count": "How many students are visible to the camera. A number, a range, or 'unknown'.",
+    "uniforms": "What students wear, INCLUDING variations. If some dress differently, say so, or they may be mistaken for adults.",
+    "appearance_caveats": "What may NOT resolve about the students at this recording's quality — anything that could make one look like a different kind of person.",
+    "room": "The room and its features: layout, board(s), desks, windows.",
+    "camera": "Where the camera is and which way it faces, AND where the key places appear in the picture (board, teacher's usual spot, any doorway) so the AI knows where to look. Say what a person looks like when they are there. If it pans, say so and where things move to.",
+    "notes": "Anything else: background sounds, lighting, a second board, objects students use, how presentations are given, whether anyone could be mistaken for an extra adult. FACTS only — never what was said, never opinions about the teaching.",
+    "adult_role": "teacher | camera_operator | other",
+    "adult_sex": "male | female | unknown. Use 'unknown' only for someone never in view; it is treated as no information, never as a hint.",
+    "adult_clothing": "What they wear, top to bottom. Leave BLANK for someone never in view.",
+    "adult_clothing_caveats": "What may not resolve on camera. Stops the AI inventing a second person when a detail does not show.",
+    "adult_features": "Build, height, hair, glasses.",
+    "adult_behavior": "Where this person usually is and what they do. This is who they are — NOT what happens when (that is the timeline).",
+    "adult_speaks": "yes | no. 'no' means no utterance may ever be attributed to them.",
+    "timeline": "GIVEN FACTS — one per line, each anchored to a video time. For example: \"12:30 group task set\" or \"34:00 groups report back\". (NOTE for María: the redacted sample cut this instruction off after \"Two forms:\" — please restore the original wording from the real context_cards_v3.xlsx.)",
+    "setting_change": "Usually empty. Fill ONLY if the recording setting changes mid-video (different room, different class): say when and what changed, e.g. \"recording pauses at 21:40 and resumes in a different room; from there the board is on the left\"."
+  }
+}

@@ -78,6 +78,20 @@ because of a hairline and a radius, not because they float.
 **Bark is rationed to one filled button per view.** If a screen has two brown buttons, one of them is
 wrong — demote it to the outline variant.
 
+### Content markers (added 2026-08-31 — highlight colors in the notes editor)
+
+Coders highlight their own notes with a marker pen, like on paper. Five marker fills, stored as
+hex in the note HTML so exports are self-contained. These color *coder content*, never UI chrome,
+and never encode a study category.
+
+| Name | Value | Token | Note |
+|------|-------|-------|------|
+| Marker Yellow | `#F5E9B8` | `--clobs-marker-yellow` | New value, added for this purpose. |
+| Marker Blue | `#DCE6F1` | `--clobs-marker-blue` | Same value as Lake Wash. |
+| Marker Green | `#DEEADF` | `--clobs-marker-green` | Same value as Forest Wash. |
+| Marker Pink | `#F4D9E7` | `--clobs-marker-pink` | New value, a true pink (Clay Wash read as salmon). |
+| Marker Purple | `#E7DDF2` | `--clobs-marker-purple` | New value, added at María's request 2026-08-31. |
+
 ### The score ramp — the most important color decision in the product
 
 The four options are **ordinal, not good-and-bad**. Column A Very Accurate means *the practice was
@@ -307,7 +321,7 @@ that is not listed without adding it here first.
 | Video panel | hand-rolled + Drive embed | Theatre mode top, collapsible, resizable. Falls back to a link card if embedding fails. |
 | Video link card | `transitions-dev` → `24-learn-more-hover` | The darker rectangle with display code and Drive link from the brief. |
 | Copy link button | `amicro` → btn-4 | Copy-state feedback. |
-| Notes editor | hand-rolled | Timestamped entries. Mono timestamp, sans body. **No motion.** |
+| Notes editor | **Tiptap** (@tiptap/react + starter-kit, text-align, highlight) | One rich-text note per observation (addendum §17 Amendment B §16). Toolbar: bold, highlight (lake-wash mark), size, alignment, bullet/numbered/dashed lists. Sans body at 17px. **No motion.** *Added 2026-08-31: the original "timestamped entries" plan was superseded by María's review; Tiptap is the boring, dominant rich-text editor and exports clean HTML.* |
 | Rubric pane | hand-rolled, serif | Sticky beside the scoring grid. Importance / Indicators / Special Note always visible. |
 | Score chips | hand-rolled, score ramp | Numeral + label + fill. Selected = 2px ramp border. Instant. |
 | Score guidance callout | `transitions-dev` → `18-texts-reveal` at 150ms | Appears under the selected chip with that option's anchor text. |

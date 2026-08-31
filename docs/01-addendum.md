@@ -440,6 +440,22 @@ Additions of 2026-08-30 (second review):
 13. **Anchor roster (provisional).** Confirmed anchors: María, Aggrey, Justine. Probable chief-coders:
     Hamlet, Simon, Shaily (to be confirmed; profiles added later via the Team screen).
 
+Additions of 2026-08-31 (workspace review, after María tried the demo):
+
+16. **Notes are ONE rich-text document per observation** (supersedes the entry-list reading of
+    §5 and refines Amendment B §15). No minute field. The editor offers a small formatting bar —
+    bold, highlight, text size, alignment (left/center/justify), bulleted, numbered and dashed
+    lists — "almost a Word page" — and the content is stored as HTML in `notes.body`
+    (`clobs_notes` exports both the HTML and a derived plain-text column). The optional
+    note→justification citation machinery remains in the schema but is not surfaced in v1.
+17. **Workspace polish decisions.** Tab badges are live (scores count up 1/8…8/8 as items are
+    scored; the notes tab shows a check once the note has content). Submitting scores shows a
+    positive-reinforcement message (docs/05 pool) with the completion moment. The selected score
+    chip is emphasised strongly but WITHOUT motion (DESIGN_SYSTEM §4 frequency gate stands):
+    edge-colored numeral badge, bolder label, check mark, non-selected options dimmed.
+    Within-video navigation stays as horizontal tabs; the app-level left sidebar arrives with
+    the Stage 3 shell. Durations auto-fill during the Stage 3 Drive-link attachment step.
+
 Additions of 2026-08-31 (video-unit decision and import findings):
 
 14. **The coding unit is the teacher session, not the video file.** The mapping file is one row per

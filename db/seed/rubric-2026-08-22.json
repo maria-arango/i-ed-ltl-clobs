@@ -1,0 +1,435 @@
+{
+  "versionLabel": "2026-08-22",
+  "sourceRef": "docs/rubric/20260822_CLOBS.tex",
+  "guidance": [
+    {
+      "kind": "guiding_rule",
+      "position": 1,
+      "label": "The scale",
+      "text": "Four options, lowest to highest: Column A Very Accurate (the practice is clearly absent), Column A Somewhat Accurate, Column B Somewhat Accurate, Column B Very Accurate (the practice is strongly present). Column B is always the positive end. Decide the column first, then the option within it."
+    },
+    {
+      "kind": "guiding_rule",
+      "position": 2,
+      "label": "Start at Column A, Very Accurate",
+      "text": "Assume the practice is not occurring and move off that assumption only for something you actually saw or heard. Where the evidence is missing, ambiguous, or off-camera, the score is Column A. Do not fill the gap with an assumption."
+    },
+    {
+      "kind": "guiding_rule",
+      "position": 3,
+      "label": "Evidence for any Column B score",
+      "text": "Every Column B score needs one concrete moment in your notes: the time, and what was said or done. No moment, no Column B. A Very Accurate score in Column B needs the practice to recur across the lesson, never a single moment however strong."
+    },
+    {
+      "kind": "guiding_rule",
+      "position": 4,
+      "label": "Read the Special Note first",
+      "text": "Each item's Special Note lists what does not count towards it. If the lesson offers only things on that list, the score stays in Column A regardless of how good the rest of the lesson looks."
+    },
+    {
+      "kind": "guiding_rule",
+      "position": 5,
+      "label": "Score each concept on its own",
+      "text": "Do not look at your other scores, and do not let a strong impression of the teacher carry across. A warm, orderly, energetic class can be Column A on every concept in this manual. Where two concepts look similar — concepts 2 and 3 especially — score concept 3 first, and score it on what the pupils did regardless of how the teacher responded."
+    },
+    {
+      "kind": "guiding_rule",
+      "position": 6,
+      "label": "Look for what would lower the score",
+      "text": "Before settling on Column B, name what would have made it Column A: the teacher stepping out, the answer being supplied, the check never happening. Write it in your notes even when you still score Column B."
+    },
+    {
+      "kind": "guiding_rule",
+      "position": 7,
+      "label": "Indicators are not a checklist",
+      "text": "The indicators are examples of what the practice looks like, not a list to tick off. This is not an exhaustive list, and an observer is not expected to find all of the indicators in an observation period. A lesson may show none of them and still earn the option; a lesson may show several and still miss it. Judge the concept."
+    },
+    {
+      "kind": "guiding_rule",
+      "position": 8,
+      "label": "Examples are illustrative only",
+      "text": "The examples in the scoring table are possible manifestations of an option, not templates. Do not require a lesson to match an example, and do not penalise it for looking different."
+    },
+    {
+      "kind": "guiding_rule",
+      "position": 9,
+      "label": "Language and recording",
+      "text": "Audio may move between English, Luganda, and Lusoga, and the transcript may be garbled. Never mark a teacher down for speech-recognition errors, but do not credit a practice because the record is unclear either. The teacher has left the room only if you see them go out through the door: walking to the back of the room, or out of frame, is still present. Brief absences of a minute or two do not count as leaving."
+    },
+    {
+      "kind": "reach_band",
+      "position": 0,
+      "label": "How to judge reach",
+      "text": "One reach scale is used throughout this manual. Where an item refers to how much of the class was involved, it uses one of these four phrases and nothing else. Judge reach by counting distinct pupils in your notes as you watch and converting at the end: a count can be checked afterwards, an impression cannot. A group the teacher genuinely worked with counts as its members reached."
+    },
+    {
+      "kind": "reach_band",
+      "position": 1,
+      "label": "Almost no one",
+      "text": "One or two pupils while the rest of the class watches, or the same single pupil returned to repeatedly."
+    },
+    {
+      "kind": "reach_band",
+      "position": 2,
+      "label": "A few of the same pupils",
+      "text": "A small group carries it throughout — the same voices, or the same corner of the room. You could name them."
+    },
+    {
+      "kind": "reach_band",
+      "position": 3,
+      "label": "A good share of the class",
+      "text": "Clearly beyond the same few. Pupils from different parts of the room take part, though still well short of everyone. In a class of 60, roughly 15 pupils or more."
+    },
+    {
+      "kind": "reach_band",
+      "position": 4,
+      "label": "Most of the class",
+      "text": "You would struggle to point to many pupils who were left out. Includes methods designed to cover everyone — all pupils writing, all groups visited, most participating."
+    }
+  ],
+  "concepts": [
+    {
+      "itemNo": 1,
+      "name": "Cooperative and collective learning",
+      "statement": "Teacher creates opportunities for cooperative and collective learning.",
+      "importance": "Learning together means that pupils and teacher are in genuine conversation about the substance of the lesson. Two arrangements qualify equally. Pupils may work with and from one another in pairs or groups, explaining, comparing, and building on each other's thinking. Or the class and the teacher may hold a sustained exchange in which many different pupils contribute and the teacher works with what they offer rather than accepting it and moving on. Neither arrangement is worth much on its own. What makes collaboration productive is the teacher facilitating it: telling pupils how to work with one another, modelling what a good explanation, question, or response looks like, moving among them while they work, and drawing their contributions together. A heavily teacher-directed lesson can therefore still show this practice at its fullest, provided the teacher is in real conversation with pupils and the questions build on one another.",
+      "specialNote": "Choral reading and call-and-response, pupils seated in groups but working through the task individually, and a pupil presenting or writing at the board with no exchange around it do not count as cooperative or collective learning, however much of the lesson they occupy.",
+      "indicators": [
+        "Teacher tells pupils how to work with one another — compare your answers, explain your method to your partner, check each other's work — and not only what task to do",
+        "Teacher demonstrates the exchange itself before pupils attempt it, modeling how to question a partner or respond to a classmate",
+        "Teacher moves among the pairs or groups while they work, leaning in, questioning, and looking at what they are producing",
+        "Pupils are prompted to build on, respond to, or give feedback on a classmate's answer",
+        "Teacher takes a pupil's contribution in whole-class exchange and works with it, probing it, linking it to another pupil's, or turning it back to the class",
+        "Teacher questions, or opens discussion around, a pupil who is presenting or working at the board"
+      ],
+      "anchors": {
+        "1": "No opportunity is created. The lesson runs on lecture, individual work, choral answering, or one pupil at a time answering the teacher. Where a pupil presents or works at the board, the teacher asks nothing and opens no discussion around it.",
+        "2": "An opportunity is mentioned but not built: no clear objective, no real time given, or only a few of the same pupils carry every exchange while the rest stay passive, so that fewer than a good share of the class ever gets a chance to contribute.",
+        "3": "A real exchange occurs and a good share of the class is drawn in, but the teacher sets it up and then withdraws: little guidance on how to work together, little follow-up on what pupils produce, little moving among the groups, only one group engaged, or the teacher out of the room for much of it without a purpose that serves the activity.",
+        "4": "A real exchange, a good share of the class involved, and the teacher facilitating throughout. Pupils are told, and shown where needed, how to work with one another; the teacher reaches more than one group at more than one point; and contributions are built on rather than accepted and passed over."
+      },
+      "examples": {
+        "1": [
+          "The lesson runs on choral reading and call-and-response drills throughout.",
+          "A pupil is sent to the board to write an answer. The teacher asks nothing, invites no response from the class, and calls the next pupil.",
+          "Pupils work through an exercise individually while the teacher marks at the desk."
+        ],
+        "2": [
+          "The teacher tells pupils to discuss a question with the person next to them, allows a few seconds, then announces the answer himself.",
+          "Each group reads out its answer in turn. The teacher thanks each one and calls the next, never asking the class to compare or question them.",
+          "A discussion runs well, but the same three pupils supply every contribution."
+        ],
+        "3": [
+          "Pupils work together as told, but the teacher stays with one group throughout and never visits the others.",
+          "Many pupils contribute to a whole-class exchange, but each answer is accepted and passed over.",
+          "The teacher sets the groups working and leaves the room for a significant part of the activity, returning only to collect answers."
+        ],
+        "4": [
+          "\"Compare your answers, then explain your method to your partner\" — the teacher moves between groups, leans in, and later weaves pupils' answers into the discussion.",
+          "The teacher demonstrates how to question a partner's method, then visits several pairs while they work.",
+          "In discussion the teacher asks one pupil to respond to another's answer, then asks a third whether they agree and why."
+        ]
+      }
+    },
+    {
+      "itemNo": 2,
+      "name": "Teacher creates opportunities for intellectual agency",
+      "statement": "Teacher creates opportunities for pupils to exercise intellectual agency, and pupils take them up.",
+      "importance": "A teacher that puts intellectual decisions in pupil's hands gives This concept looks at what the teacher does to put real intellectual decisions in pupils' hands, and at whether those attempts work. A teacher creating agency sets questions and tasks that have more than one defensible answer or approach, gives pupils enough time to think about them without rushing, and then draws pupils in: inviting them to share the approach they took, asking others to respond to it, probing for more rather than supplying the answer. Asking pupils to supply examples of a category the teacher has already defined, or to apply the procedure just demonstrated, is not a real intellectual decision, however willingly pupils comply. Creating the opportunity is not enough on its own. The teacher must actively promote it, and pupils must actually take it up. An attempt that falls flat, or one extended to only one or two pupils while the rest watch, has not yet become this practice; how much of the class is enabled to exercise agency is what distinguishes its fullest form.",
+      "specialNote": "Choral reading and unison answering are never evidence of agency, however energetic, but in moderation they are not a fault; they place a lesson in Column A only when they dominate it. Where the evidence falls between the two Somewhat Accurate options, score Column A.",
+      "indicators": [
+        "Teacher sets a question or task with more than one defensible answer or approach, and allows time to think before taking answers",
+        "Teacher invites pupils to share the approach they took, and then works with what they offer",
+        "Teacher asks other pupils to comment on, add to, or evaluate a classmate's answer",
+        "Teacher prompts and rephrases without supplying the answer when the class goes quiet",
+        "Teacher follows a pupil's question where it leads instead of returning to a fixed agenda",
+        "Teacher looks at what pupils produced during the activity rather than setting it and moving on"
+      ],
+      "anchors": {
+        "1": "No opportunity is created. The task is fully teacher-directed, with one expected method or response and no space for pupils to generate ideas, or the lesson is dominated by choral reading and unison answering with little time anywhere for independent thinking.",
+        "2": "An opportunity is offered but does not succeed. The teacher asks for ideas or sets pupils to try different approaches, but gives no thinking time, offers no support while they work, keeps the task too constrained for real exploration, or extends the opportunity to only one or two pupils while the rest watch. Opportunities that only ask pupils to supply examples of a category the teacher has defined, or to apply the procedure just taught, also belong here.",
+        "3": "Agency opportunities are clear and sustained, the teacher promotes them by encouraging pupils to share their thinking and by asking questions and making comments that push them further, and pupils take them up — but fewer than a good share of the class is enabled to exercise agency. It makes no difference whether the opportunities are concentrated in one phase of the lesson or spread through it.",
+        "4": "Agency opportunities are clear and sustained, and a good share of the class is enabled to exercise agency. The teacher encourages pupils to share their thinking and supports that sharing, asking questions and making comments that push them further, and brings pupils into responding to and evaluating one another's answers."
+      },
+      "examples": {
+        "1": [
+          "Every question has one expected answer, and the lesson runs on group reading and choral response from start to finish.",
+          "The teacher asks only closed questions and answers several of them himself.",
+          "A pupil copies answers from a book onto the board. Neither the teacher nor the class engages with what he wrote."
+        ],
+        "2": [
+          "The teacher gives some background and then asks for examples of the topic. Pupils supply them and the lesson moves on.",
+          "Pupils copy the teacher's procedure step by step and never work a problem for themselves.",
+          "The teacher tells pupils to work together but is absent while they do. He later asks whether anyone took a different approach, no one answers, and he moves on without looking at what they wrote."
+        ],
+        "3": [
+          "The teacher sets a problem on the board and encourages pupils to attempt it, supporting each one who comes up, but only a handful come up across the whole lesson.",
+          "A whole-class discussion draws genuine contributions with the teacher's encouragement, but from well under a good share of the class.",
+          "The teacher asks pupils to suggest their own methods. Two do so with his support while the rest copy the result."
+        ],
+        "4": [
+          "\"What are the challenges of work today?\" The teacher waits, prompts by referring to pupils' own communities without supplying answers, asks \"how?\" when a pupil says \"insecurity\", and different pupils build on each other's points.",
+          "Several pupils attempt parts of a problem at the board with the teacher's encouragement; he then sets group work and moves among the groups, so that between the two a good share of the class takes part.",
+          "After a pupil presents, the teacher asks the class what they would question about it, and several pupils do."
+        ]
+      }
+    },
+    {
+      "itemNo": 3,
+      "name": "Pupils independently exercise intellectual agency",
+      "statement": "Pupils independently exercise intellectual agency.",
+      "importance": "Intellectual initiative taken by pupils themselves shows what they are willing and able to contribute when nothing obliges them to — an idea, a question, an alternative method or representation, a connection, or a challenge to what has been said. The pupil's action counts even when the teacher ignores it, rejects it, or moves past it. Initiative of this kind can appear in many forms; the three seen most often are a single pupil taking initiative, pupils exchanging and testing ideas with one another, and a class eager to take part when an opportunity opens. Any one of them is enough, and initiative that resembles none of them still counts, provided it is the pupil's own contribution and is relevant and thoughtful. Throughout, what matters is who started it. A pupil who raises a hand unasked, or who brings up a point nobody invited, is taking initiative. A pupil who answers because the teacher called their name has done what was asked of them, which is not evidence for this concept.",
+      "specialNote": "Correct answers, rewording an expected answer, and choral responses are not initiative. Noise and animation are not peer dialogue: you must be able to point to a pupil engaging with another pupil's idea. The same few confident pupils answering repeatedly is not eagerness.",
+      "indicators": [
+        "A pupil asks a substantive question that nobody invited",
+        "A pupil offers an interpretation, method, or solution different from the one being presented",
+        "A pupil challenges or questions a point the teacher or another pupil has made",
+        "Pupils build on, question, or disagree with each other's ideas and give reasons for doing so",
+        "Many hands go up, or several pupils volunteer for the board, when an opportunity opens",
+        "Pupils pursue an implication beyond what was asked of them"
+      ],
+      "anchors": {
+        "1": "No pupil-generated intellectual contribution is observed. Pupils recall, repeat, copy, and follow a teacher-supplied procedure, answering closed questions with short answers. Peer interaction is absent, or limited to logistics, sharing materials, or working independently while seated in groups.",
+        "2": "An isolated or weak instance of initiative occurs. A pupil volunteers an unprompted comment or question, but it is minor and procedural rather than about the ideas in the lesson.",
+        "3": "At least one clear instance of independent intellectual agency occurs. A pupil introduces a substantive unprompted idea, question, solution, or extension, or one of the routes shows a moderate degree of agency, though the evidence is isolated rather than repeated.",
+        "4": "Several clear instances of independent intellectual agency occur, or fewer but strong ones: unprompted substantive questions, or pupils suggesting ideas that challenge or question the teacher. It may also show as pupils engaging with one another's thinking in group work, asking the teacher several questions, and participating eagerly and offering answers liberally. Pupils quickly volunteering, or getting up to go to the board to solve a problem when the teacher asks, is also evidence."
+      },
+      "examples": {
+        "1": [
+          "Pupils answer the teacher's closed questions with short answers and copy the notes from the board or from his dictation.",
+          "Pupils take turns reading assigned sentences in chorus, asking nothing and offering no unprompted comment.",
+          "Pupils share equipment, but each completes the worksheet independently using the teacher's instructions."
+        ],
+        "2": [
+          "A pupil asks whether the class may use a calculator, or to go to the bathroom.",
+          "Pupils decide who will write and who will present a group task, but not how to solve or interpret it.",
+          "A pupil asks the teacher to repeat the last sentence so that they can finish copying it."
+        ],
+        "3": [
+          "The teacher states something and a pupil responds \"But I thought…\", questioning the point he has made.",
+          "A group notices an unusual measurement and asks about it.",
+          "After a group activity, several pupils eagerly volunteer to go to the board to present their answers once the teacher opens the opportunity."
+        ],
+        "4": [
+          "Reviewing a past paper in biology, pupils freely ask about twins, zygotes, and chromosomes. One pushes back — \"I thought it was the same sperm\" — and most of the class disagrees, gesturing that it takes two.",
+          "A pupil asks, unprompted, a substantive question the teacher had not invited; another offers an interpretation different from the one being presented, and the direction of the lesson shifts to engage with it.",
+          "Pupils propose and compare solutions and pursue implications beyond the original prompt, sharing ideas liberally throughout the lesson."
+        ]
+      }
+    },
+    {
+      "itemNo": 4,
+      "name": "Critical thinking and deeper learning",
+      "statement": "Teacher develops critical thinking and deeper learning.",
+      "importance": "Deeper learning is happening when the class does genuine intellectual work with the content rather than restating it. That work most often takes one or a combination of six forms: reasoning a claim through, applying an idea to a new context, breaking information down and interpreting it, connecting one concept to another so that it explains something, weighing alternatives with reasons, and giving pupils tools to structure their own thinking. The claims, methods, and examples being worked on may come from the teacher or from a pupil, and either may do more of the talking, provided the class is genuinely working on them together. Two things are needed together: the work must happen on more than one occasion, since an isolated episode is not enough, and pupils must be part of it, since a one-way explanation, however clear, is not deeper learning. Pupils are part of it when they contribute audibly, share approaches from their own understanding, are drawn in to have their thinking tested, or when a pupil's question sparked it. Definitions given and examples collected are recall, not depth.",
+      "specialNote": "Recall and closed questions do no harm: a lesson with many of them can still be scored in Column B, provided deeper learning also occurs. But questions alone are not critical thinking, and repeating a pupil's words is not extending them.",
+      "indicators": [
+        "A claim is justified or worked through rather than simply stated — \"why is that?\", \"how do you know?\", \"you said X, but how could that be if Y?\"",
+        "Something already learned is used on a new example or situation not discussed before",
+        "Information is broken into parts and the class discusses what pupils understand from it",
+        "One concept is used to explain another, and the class engages with the link",
+        "Two answers, methods, or examples are put side by side and compared with reasons",
+        "Pupils write their understanding in their own words, structure their approach, or compare answers with a partner",
+        "A pupil's question triggers an extended explanation, and the teacher checks back with the class as it builds"
+      ],
+      "anchors": {
+        "1": "The interaction between teacher and pupils is primarily one-way; the teacher is the only one speaking. Or the lesson consists of definition-giving and recitation with nothing done with the definitions.",
+        "2": "Deeper-learning prompts occur but are limited, engaging only a few pupils. What the teacher sets up is not spread through the lesson and amounts to only one or two instances. The teacher does not involve pupils enough for them to develop their understanding: no audible pupil contributions, no sharing of approaches, no writing from their own understanding, no checking that pupils are following, and no pupil question that sparked it.",
+        "3": "The teacher promotes some, but limited, critical thinking. Deeper-learning prompts occur — open questions, a request to justify, an application task, a pupil-sparked explanation — but they are brief, engage only a few pupils, are not opened to the class, or the reasoning is curtailed by the teacher supplying the answer.",
+        "4": "Several sustained deeper-learning episodes in which pupils are engaged and the teacher supports the reasoning through to a built-up understanding. The teacher works to involve a good share of the class across the lesson, rather than conducting the episode with one or two pupils while the rest watch. Pupils may contribute audibly, share their thinking, write their own understanding, or compare answers with a partner."
+      },
+      "examples": {
+        "1": [
+          "\"Repeat after me: when it is raining I must use an umbrella, otherwise I will get wet.\" Pupils repeat it again and again. \"Now write down the full answer,\" says the teacher.",
+          "The teacher asks \"what is photosynthesis?\", a pupil recites the definition, the teacher links it to the definition of respiration, and moves on.",
+          "The teacher's only questions finish his own sentences (tag questions) — \"the leaf makes its food in the… what?\" — which pupils complete in chorus."
+        ],
+        "2": [
+          "\"When it is raining you must use an umbrella. Do you know why? Because otherwise you will get wet.\" The teacher points to a pupil: \"Tell me when I must use an umbrella?\" The pupil answers \"when it is raining\". \"I will get wet otherwise — that is the full answer, write it down.\"",
+          "\"Who can give me an example of a mammal?\" Five answers are collected and each is affirmed, but none is explored or contrasted and the lesson moves on.",
+          "Many pupils write answers on the board, but the teacher never probes the reasoning behind them or checks that the rest of the class is following."
+        ],
+        "3": [
+          "\"Your mother asks you to take an umbrella. What does that mean?\" A pupil answers \"because it is raining\". \"Good,\" says the teacher, and puts the same question to another pupil without taking it further.",
+          "The teacher asks a genuine \"why?\" and one pupil reasons it through, but the exchange stays between the two of them and is never opened to the class.",
+          "A pupil's question triggers a genuinely deep explanation, but the teacher never checks back with the questioner or draws the rest of the class into it."
+        ],
+        "4": [
+          "\"If your mother asks you to take an umbrella, what does that tell you about the weather?\" Several pupils respond. One says it is raining; another says it could also be very hot. \"Great point — let us think about the uses of an umbrella,\" says the teacher, drawing more pupils in.",
+          "A pupil uses an imprecise word in a comment. The teacher takes it up with the whole class, explains a better word the pupil could have used and why it fits, and works through the difference.",
+          "\"Is agriculture a business?\" Pupils say no. Instead of correcting them the teacher asks \"do the cows take themselves to the garden?\", and has pupils work out how manure reaches the crops until the class can explain why agriculture involves work and cost like any business."
+        ]
+      }
+    },
+    {
+      "itemNo": 5,
+      "name": "Scaffolding",
+      "statement": "Teacher provides scaffolding to support pupil understanding.",
+      "importance": "Scaffolding is the support that makes a lesson build on itself. The teacher sets out what is to be learned, explains the concept or method in language pupils can follow, draws them in to check they are following, anticipates the points they will find hard, and leaves room for them to ask questions — and then supports them while they apply it. Explanation alone is not scaffolding, however fluent and accurate, and neither is setting a task and withdrawing from it. The lesson should build: the teacher prepares pupils for what they are about to attempt, pupils then attempt it, and the teacher is present and responsive while they do — breaking things into steps, prompting, guiding, targeting the particular point where pupils are stuck, and changing the approach when the first attempt does not land. A lecture-style opening, including one with choral responses, is a normal way to begin and is not a fault. What matters is what happens once pupils start applying.",
+      "specialNote": "A pupil at the board is evidence about this concept only through what the teacher does with it: working through the error with them, asking questions during the work, or opening it to the class. Watching and then making a superficial correction is not scaffolding.",
+      "indicators": [
+        "Teacher explains what is to be learned and how the method works, in language pupils can follow",
+        "Teacher breaks a concept, method, or problem into steps that are named and explained",
+        "Teacher builds on knowledge pupils already have, saying which earlier work is relevant and how",
+        "Teacher offers hints, cues, analogies, or guiding questions while pupils are working",
+        "Teacher works initial examples with the class to check pupils can manage parts of the problem",
+        "Teacher elaborates on the part pupils find difficult and connects it back to the larger concept",
+        "Teacher changes the explanation, example, or representation when pupils remain confused",
+        "Teacher reduces assistance so pupils apply, explain, or give each other feedback more independently"
+      ],
+      "anchors": {
+        "1": "The teacher provides no meaningful scaffold. Content, procedures, or definitions are stated, demonstrated, or dictated without making the reasoning accessible to all. Observable confusion is ignored, or the same explanation is repeated unchanged. Important language may be left unexplained. Or the lesson is a sequence of disconnected activities with no stated purpose and no visible build.",
+        "2": "The teacher may lecture, provide definitions, or ask pupils to supply some definitions and information, and then, after some more general explanation, give pupils a problem to solve. If the teacher does not support pupils through the problem-solving phase, it is not scaffolding.",
+        "3": "The teacher provides clear and evident support to prepare pupils to solve a problem or complete an activity, and works through examples as a class that are quite teacher-driven — but then does not allow them much space to try for themselves or to ask questions. The teacher checks whether pupils can solve parts of a problem, for example by running through initial examples on the board together.",
+        "4": "The teacher is present and around, so support is readily available. He gives clear and evident support to prepare pupils, then allows them space to try and to ask questions, and supports them through that process, adjusting the approach if it does not land. Where the sequence permits, assistance is reduced so pupils apply, explain, or give each other feedback more independently; equipping pupils to support one another counts as scaffolding."
+      },
+      "examples": {
+        "1": [
+          "The teacher demonstrates double-digit multiplication on the board but never explains the steps or gives pupils a chance to work through them.",
+          "The teacher dictates the definitions of \"equilateral\" and \"right-angled\" triangle without explaining or illustrating the terms.",
+          "Pupils show they are confused, but the teacher repeats exactly the same explanation and continues."
+        ],
+        "2": [
+          "The teacher demonstrates double-digit multiplication with little elaboration. When pupils ask questions he points at the example and says \"do that step correctly\", or \"look at how it is broken down on the board\".",
+          "\"Think about what we did yesterday,\" the teacher tells a struggling pupil, without saying which part of the earlier lesson is relevant or how it helps here.",
+          "The teacher gives a fluent, accurate lecture, sets a problem, and is then absent or sitting disengaged for most of the time pupils spend working on it."
+        ],
+        "3": [
+          "The teacher demonstrates double-digit multiplication. \"I have broken it into three steps, and each must be completed in order.\" When pupils have questions, he repeats the same explanation of all three steps.",
+          "A pupil solves at the board and the teacher works through the error with them substantively at the end — but asked no questions during the work and did not open it to the class.",
+          "The teacher connects the concept to a previous lesson and uses guiding questions, but gives pupils no opportunity to apply the connection themselves."
+        ],
+        "4": [
+          "The teacher demonstrates double-digit multiplication. \"I have broken it into three steps.\" When pupils have questions he focuses on the step each one needs, reminds the class of problem areas to watch out for, and encourages pupils to help each other.",
+          "\"Here is a spot where some pupils have difficulty — let us go through it,\" says the teacher, and then goes through it.",
+          "The teacher calls a pupil to the board, asks \"what are you missing here?\" while they work, guides the revision, then invites the class to comment on each other's solutions."
+        ]
+      }
+    },
+    {
+      "itemNo": 6,
+      "name": "Checks for understanding",
+      "statement": "Teacher checks for understanding.",
+      "importance": "Checking for understanding means using methods that actually reveal what pupils have understood. The test for any method is: did it provide information about the level of understanding of pupils? An action a pupil could carry out without understanding — chanting, copying, repeating a definition — reveals nothing and does not count towards this concept. A lively class may give a sense of engagement, but participation alone is not enough. Two things are needed together: the methods must reveal what specific pupils know rather than leaving a general impression, and they must reach a substantial part of the class rather than only the two or three individuals who happen to answer. Checking should also happen at more than one point in the lesson, not in a single isolated moment. Strong evidence comes from the teacher who checks, finds a gap, an error, or a confusion, and acts on it — clarifying, explaining it differently, asking further questions, turning it into a teaching moment.",
+      "specialNote": "Choral and call-and-response work, notebooks inspected while pupils copy from the board, answers written or presented at the board without explanation, and definitions repeated do not count as, checking, however many pupils take part. A lively class is not a check: the teacher must learn what particular pupils know.",
+      "indicators": [
+        "Teacher asks pupils to explain a concept in their own terms, or to say why they did what they did",
+        "Teacher circulates during application work and engages — leaning in, questioning, correcting, looking at what pupils have written",
+        "Teacher has pupils write down what they have understood in their own words, and reviews it",
+        "Teacher inspects worked problems as pupils apply a method, rather than while they copy",
+        "Teacher sends several pupils to the board to work independently, and questions them while they are there",
+        "Teacher questions a group's spokesperson, or has other pupils question them, and gets an answer",
+        "Teacher re-explains, rephrases the question, or changes the example on seeing that pupils are not following"
+      ],
+      "anchors": {
+        "1": "The teacher does not ask any questions, give any prompts, or use any strategies to find out whether pupils understand what is being taught. He lectures or assigns work with no attempt to gauge comprehension. Any question asked is rhetorical, or takes a choral yes or no that is accepted without further checking. Call-and-response drilling, however energetic, belongs here when it is the only mode.",
+        "2": "The teacher makes minimal attempts to check understanding, but the methods yield information about a small section of the class, or he accepts choral and surface-level responses without probing further. The checking is perfunctory rather than diagnostic. Notebooks inspected while pupils copy from the board or dication, answers written at the board without explanation, definitions repeated, and a teacher who circulates without engaging or leaves the class for extended periods all belong here.",
+        "3": "The teacher uses questions, prompts, or other strategies that are effective at determining a few/some pupils' level of understanding, but not most. He calls on individuals or asks for volunteers, gaining information about those who respond, while most pupils' understanding remains unknown. A few independent/confident pupils presenting at the front, genuinely explaining what they did, is one of the minimum forms of this score. Group work left mostly unmonitored with only some groups later checked, also sits here.",
+        "4": "The teacher's methods, taken together, reach most of the class, counting checked groups as covered: all pupils writing their understanding and the teacher reviewing it; held-up work scanned; circulation during application engaging several pupils or groups; spokespersons presenting, combined with the teacher's questioning and his circulation during the work. In the strongest form, the teacher finds a gap and acts on it, clarifying, explaining it differently, or teaching into it."
+      },
+      "examples": {
+        "1": [
+          "The teacher explains how to identify types of angles, asks \"do you all understand?\", the class answers \"yes\" in unison, and he moves on without asking anyone to identify one.",
+          "The teacher lectures and sets written work, asking nothing about whether pupils have followed.",
+          "The class chants sentences in unison for several minutes, and no other method is used all lesson."
+        ],
+        "2": [
+          "After explaining angles the teacher asks \"who can tell me what type of angle this is?\" One pupil raises a hand and answers. \"Good,\" says the teacher, and moves on.",
+          "A few confident pupils write answers at the board with little or no explanation while the teacher watches.",
+          "The teacher walks between the desks while pupils copy notes from the board, glancing at books without asking anything."
+        ],
+        "3": [
+          "\"Who can give me an example of a reflex angle, or an obtuse angle?\" A few hands go up and the teacher calls on two. Their answers are discussed, but the rest of the class is not checked.",
+          "The teacher asks three pupils in sequence to explain a concept at the board, gaining information about those three but not about the rest.",
+          "Groups work without the teacher monitoring them, and only the presenting groups' understanding is ever revealed."
+        ],
+        "4": [
+          "The teacher asks all pupils to draw a reflex angle on their slates and hold them up, scans the room to see who has drawn it correctly and who is confused, and questions individuals about their books.",
+          "During group work the teacher circulates and questions several groups, then each spokesperson presents while he probes, so that the class is checked through its groups.",
+          "A check reveals that pupils are confused about the second step. The teacher stops, re-explains with a new example, and checks again."
+        ]
+      }
+    },
+    {
+      "itemNo": 7,
+      "name": "Specific feedback",
+      "statement": "Teacher provides specific feedback to facilitate learning.",
+      "importance": "Specific feedback allows the teacher to gauge the level of understanding of each pupil as well as the class as a whole. Without it, pupils may be guessing about how they are doing and how their work can be improved. Feedback of this kind responds to whatever a pupil offers — an answer, an idea, a piece of work, a presentation — and not only to mistakes. What separates feedback that facilitates learning from feedback that does not is whether it moves the pupil towards understanding. A bare verdict does not: telling a pupil \"yes\", \"no\", or \"correct\" settles that one answer but leaves them nothing to think with, and nothing they could use on a different question tomorrow. Feedback that names the rule or reason behind the answer, or that asks pupils what they did and why before building on what they say, gives them something they can carry forward. On an incorrect answer it redirects pupil thinking to the correct process; on a correct answer it reinforces the thinking that got them there.",
+      "specialNote": "Praise and applause are not specific feedback: they neither add to nor take away from this concept.",
+      "indicators": [
+        "Teacher explains why an answer is wrong, or why it is right, in terms of a rule, method, or reason",
+        "Teacher targets the correction to the point where the pupil made a wrong turn, and redirects from there",
+        "Teacher asks the pupil what they did and why before responding providing the correct answer or building on what they said",
+        "The pupil's thinking is surfaced first and the teacher's input visibly builds on it",
+        "Teacher works through a correction with the pupil rather than supplying it",
+        "Teacher gives substantive comments after a presentation, or while moving among pupils at work"
+      ],
+      "anchors": {
+        "1": "No feedback is offered during the lesson, or the feedback given is inappropriate. Score here also when the teacher never elicits pupils' work or answers: with nothing offered, there is nothing to give feedback on.",
+        "2": "Feedback occurs but stays at the level of a verdict: the answer is marked right or wrong and nothing more is added. Frequently leaving pupils' questions unanswered belongs here.",
+        "3": "One clear instance of specific feedback — a verdict/response/reaction to a pupil that participated with the reasoning behind it, or a substantive explanation of where an error came from. The teacher is actively eliciting pupils' work or answers so that there is something to respond to.",
+        "4": "Several clear instances, two or more, of specific feedback, with the teacher actively eliciting pupils' input in varied ways so that there are opportunities to give it. At least two of these are full exchanges: the teacher asks what the pupil did and why, clarifies their understanding of the pupil's work, builds on it — offering insight, supporting the pupil through the thinking, or drawing other pupils into the conversation — and the exchange ends in a clarification that is clear and understood, with the class brought along when it is public."
+      },
+      "examples": {
+        "1": [
+          "The teacher reads the answers to a quiz aloud, without any explanation, for pupils to check against.",
+          "\"How many times do I have to tell you it is the wrong answer?\"",
+          "The teacher lectures throughout and never asks pupils to produce work or answers, so nothing is ever offered to respond to."
+        ],
+        "2": [
+          "\"No, 5 is the wrong answer\" and the lesson moves on.",
+          "The teacher walks the rows issuing corrections saying \"full stop here\", \"capital letter\", \"wrong sign\", with no reasoning asked for or given"
+        ],
+        "3": [
+          "\"The answer is 8, not 5 — remember, addition comes before subtraction here,\" and the teacher moves on.",
+          "The teacher reviews the most difficult questions on a quiz with the class, showing where common errors were made."
+        ],
+        "4": [
+          "\"No, 5 is still not correct, but you are on the right track. Think about the rules — does addition come before subtraction?\" and the teacher works it through with the pupil.",
+          "\"Why did you put the full stop there? Is anything missing?\" The teacher listens, works the correction through, then asks the class what changed and why."
+        ]
+      }
+    },
+    {
+      "itemNo": 8,
+      "name": "Connects learning to everyday life",
+      "statement": "Teacher connects learning to pupils' everyday life.",
+      "importance": "A strong connection between the lesson and pupils' real-life experiences helps pupils understand what they are studying and see its relevance beyond their time in the classroom. Connecting a concept to something familiar makes it easier to grasp: a pupil who has seen an idea at work in the market, in the garden, or on the walk to school has something concrete to attach it to. What matters is how far the connection is taken. A concept may simply be mentioned alongside something familiar; it may be stated to be connected; it may be explained and developed by the teacher; or pupils may explore it themselves. These are not equally valuable. The connection has to be built rather than gestured at: naming something that exists locally, or setting a problem among local names and prices, leaves the pupil with nothing new to understand. Connections are also not limited to subject content. A lesson may connect just as genuinely to friendship, to handling stressful events, or to skills pupils use outside school.",
+      "specialNote": "Using local names, prices, or market items as the setting of a problem is not a connection, and neither is naming something that exists locally. A practical activity is not by itself a connection to everyday life unless the link to pupils' own experience is made explicit.",
+      "indicators": [
+        "Teacher explains how the concept works in a setting pupils know, with enough local detail that the link is unmistakable",
+        "Pupils are asked about their own experience of the topic under discussion, they answer and the class works with their contributions",
+        "Teacher relates the lesson to experiences pupils are facing, such as how to deal with stressful events",
+        "Teacher has pupils carry out in practice the activity being discussed, such as lifting objects of different weights",
+        "Teacher directs pupils to talk with one another about a specific experience of their own",
+        "Teacher applies the lesson to a skill pupils use outside school",
+        "Teacher uses local community examples instead of, or in addition to, examples from the book",
+        "Teacher returns to the connection later in the lesson rather than mentioning it once"
+      ],
+      "anchors": {
+        "1": "An object or concept that could relate to pupils' lives is mentioned, but no connection is drawn to their experience. Local names, prices, or market items used as the setting of a problem sit here: familiar props, with no link built.",
+        "2": "A connection is made in passing. Pupils might infer it, but the teacher does not make it explicit or develop it, and does not come back to it.",
+        "3": "A genuine, developed connection is articulated by the teacher: the link between the concept and pupils' lives, community, or family is explained clearly and with local detail that pupils could not miss it — but pupils are given no opportunity or time to discuss, use, or reflect on it themselves.",
+        "4": "The connection is made and pupils get to work with it: discussing it, giving their own examples from everyday life, or practicing it in an activity the teacher organizes. In the strongest form pupils bring up their own experiences and the class explores how the concept relates to them."
+      },
+      "examples": {
+        "1": [
+          "\"A tree is a living organism.\" \"A chemical is a substance.\"",
+          "A mathematics problem uses pupils' names and local prices for pens and counter books."
+        ],
+        "2": [
+          "\"Chemicals are produced in a factory.\" \"Trees are found in the forest.\"",
+          "A grammar topic opens with \"you talk to your friends every day\" and is never returned to."
+        ],
+        "3": [
+          "To explain work, the teacher uses a boy walking to the borehole with a jerrycan and a local flyover the pupils know, then moves on.",
+          "Percentages are explained through market bargaining with local detail, but pupils never use the connection."
+        ],
+        "4": [
+          "\"The forest you walk through on the way to school — what was that like?\" and pupils answer.",
+          "After learning about vegetables, the teacher asks which pupils grow, eat, or sell at home and what else they might do with them."
+        ]
+      }
+    }
+  ]
+}
