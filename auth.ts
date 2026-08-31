@@ -51,10 +51,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // No self-signup: unknown emails get no code and no user row.
     async signIn({ user }) {
       if (!user.email) return false;
-      const existing = await db.query.users.findFirst({
-        where: eq(users.email, user.email.toLowerCase()),
-      });
-      return canSignIn(existing);
+      try {
+        // Explicit columns: never depends on grants beyond what any role has,
+        // and a database problem logs loudly instead of looking like an
+        // unknown email.
+        const rows = await db
+          .select({ isActive: users.isActive })
+          .from(users)
+          .where(eq(users.email, user.email.toLowerCase()))
+          .limit(1);
+        return canSignIn(rows[0]);
+      } catch (e) {
+        console.error(
+          "signIn callback: database lookup failed (check DATABASE_URL):",
+          e instanceof Error ? e.message : e,
+        );
+        return false;
+      }
     },
     // Expose role and account facts to server components via the session.
     async session({ session, user }) {

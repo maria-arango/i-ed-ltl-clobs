@@ -20,6 +20,7 @@
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { hardenSslMode } from "@/lib/pg-url";
 import {
   assignmentRaters,
   assignments,
@@ -32,7 +33,7 @@ import {
 } from "@/db/schema";
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL_CODER,
+  connectionString: hardenSslMode(process.env.DATABASE_URL_CODER),
   max: 5,
 });
 

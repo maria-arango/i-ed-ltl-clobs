@@ -21,6 +21,7 @@ import { randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { config } from "dotenv";
 import { Pool } from "pg";
+import { hardenSslMode } from "../lib/pg-url.ts";
 
 config({ path: ".env.local" });
 
@@ -33,7 +34,7 @@ if (!adminUrl) {
 const password =
   process.env.CODER_ROLE_PASSWORD ?? randomBytes(24).toString("base64url");
 
-const pool = new Pool({ connectionString: adminUrl, max: 1 });
+const pool = new Pool({ connectionString: hardenSslMode(adminUrl), max: 1 });
 
 // Tables the coder layer may touch, with the verbs it needs. Nothing is
 // ever DELETEd by a coder (CLAUDE.md §7 — nothing is destructive); soft

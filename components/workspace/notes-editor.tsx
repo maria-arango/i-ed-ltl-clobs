@@ -3,10 +3,10 @@
  * ONE rich-text note per observation (Amendment B §16), with a proper
  * Tiptap toolbar: undo/redo · text style (Heading/Subheading/Normal) ·
  * bold/italic/strike/underline · multicolor highlighter (5 markers) ·
- * alignment · bulleted/dashed/numbered lists. No tables (María,
- * 2026-08-31: a table inside the export table would make notes harder to
- * process). Content is stored as self-contained HTML (highlight colors
- * are hex, not CSS variables, so exports render anywhere). No motion.
+ * alignment · bulleted/numbered lists. No tables and no dashed list
+ * (María, 2026-08-31). The note HTML is SELF-CONTAINED: heading sizes
+ * and highlight colors are inline styles, so rendering never depends on
+ * a stylesheet — in the app, in exports, anywhere. No motion.
  *
  * Grounded in tiptap v3 (.reference/tiptap*): StarterKit already includes
  * bold/italic/strike/underline, undo-redo and the list extensions;
@@ -17,7 +17,8 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
-import { BulletList } from "@tiptap/extension-list";
+import { Heading } from "@tiptap/extension-heading";
+import { mergeAttributes } from "@tiptap/core";
 import { Placeholder } from "@tiptap/extensions";
 import {
   AlignCenter,
@@ -47,35 +48,26 @@ const MARKERS = [
   { name: "Purple", hex: "#E7DDF2" },
 ] as const;
 
-// Bullet list with a 'dash' variant so coders get dashed lists too.
-const VariantBulletList = BulletList.extend({
-  addAttributes() {
-    return {
-      variant: {
-        default: "disc",
-        parseHTML: (el) => el.getAttribute("data-variant") ?? "disc",
-        renderHTML: (attrs) => ({ "data-variant": attrs.variant }),
-      },
-    };
-  },
-});
+// Headings carry their styling INLINE in the stored HTML (type scale:
+// heading 26px, heading-sm 20px). Immune to stylesheet caching/build
+// quirks, and exports render correctly with no CSS at all.
+const HEADING_STYLE: Record<number, string> = {
+  2: "font-size:26px;line-height:1.25;font-weight:600;margin:0.6em 0 0.4em",
+  3: "font-size:20px;line-height:1.3;font-weight:600;margin:0.6em 0 0.4em",
+};
 
-function DashListIcon() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      aria-hidden
-    >
-      <path d="M4 6h2M4 12h2M4 18h2M10 6h10M10 12h10M10 18h10" />
-    </svg>
-  );
-}
+const StyledHeading = Heading.extend({
+  renderHTML({ node, HTMLAttributes }) {
+    const level: number = this.options.levels.includes(node.attrs.level)
+      ? node.attrs.level
+      : this.options.levels[0];
+    return [
+      `h${level}`,
+      mergeAttributes(HTMLAttributes, { style: HEADING_STYLE[level] ?? "" }),
+      0,
+    ];
+  },
+}).configure({ levels: [2, 3] });
 
 function ToolButton({
   title,
@@ -135,8 +127,8 @@ export function NotesEditor({
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ bulletList: false }),
-      VariantBulletList,
+      StarterKit.configure({ heading: false }),
+      StyledHeading,
       TextAlign.configure({
         types: ["heading", "paragraph"],
         alignments: ["left", "center", "right", "justify"],
@@ -188,18 +180,6 @@ export function NotesEditor({
   if (!editor) return null;
 
   const chain = () => editor.chain().focus();
-
-  const toggleList = (variant: "disc" | "dash") => {
-    const isBullet = editor.isActive("bulletList");
-    const currentVariant = editor.getAttributes("bulletList").variant;
-    if (isBullet && currentVariant === variant) {
-      chain().toggleBulletList().run();
-    } else if (isBullet) {
-      chain().updateAttributes("bulletList", { variant }).run();
-    } else {
-      chain().toggleBulletList().updateAttributes("bulletList", { variant }).run();
-    }
-  };
 
   const textStyle = editor.isActive("heading", { level: 2 })
     ? "h2"
@@ -364,17 +344,10 @@ export function NotesEditor({
 
           <ToolButton
             title="Bulleted list"
-            active={editor.isActive("bulletList", { variant: "disc" })}
-            onClick={() => toggleList("disc")}
+            active={editor.isActive("bulletList")}
+            onClick={() => chain().toggleBulletList().run()}
           >
             <List size={16} />
-          </ToolButton>
-          <ToolButton
-            title="Dashed list"
-            active={editor.isActive("bulletList", { variant: "dash" })}
-            onClick={() => toggleList("dash")}
-          >
-            <DashListIcon />
           </ToolButton>
           <ToolButton
             title="Numbered list"

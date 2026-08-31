@@ -286,14 +286,6 @@
 }
 .note-editor ul, .note-editor ol { padding-left: 1.4em; margin: 0 0 0.6em; }
 .note-editor ul { list-style: disc; }
-.note-editor ul[data-variant="dash"] { list-style: none; }
-.note-editor ul[data-variant="dash"] > li { position: relative; }
-.note-editor ul[data-variant="dash"] > li::before {
-  content: "–";
-  position: absolute;
-  left: -1.1em;
-  color: var(--clobs-graphite);
-}
 .note-editor ol { list-style: decimal; }
 .note-editor mark {
   /* multicolor highlight sets background-color inline (hex, self-contained) */
