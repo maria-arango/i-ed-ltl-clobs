@@ -34,7 +34,7 @@ export async function PUT(req: Request, { params }: Params) {
     );
   }
   try {
-    const note = await saveNote(who.coderId, videoId, who.dataset, {
+    const note = await saveNote(who.coderId, videoId, {
       noteId: typeof body.noteId === "string" ? body.noteId : undefined,
       body: body.body,
       videoTimestampSeconds: ts,
@@ -54,7 +54,7 @@ export async function DELETE(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   try {
-    await deleteNote(who.coderId, videoId, who.dataset, body.noteId);
+    await deleteNote(who.coderId, videoId, body.noteId);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return coderErrorResponse(e);

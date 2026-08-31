@@ -246,6 +246,13 @@
   }
 }
 
+/* The score-guidance callout's 150ms opacity reveal (DESIGN_SYSTEM §4/§5:
+   near-imperceptible, opacity only, no slide). motion-safe guards it. */
+@keyframes anchor-reveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Mono with tabular figures for video codes, timestamps, numeric columns. */
 .mono,
 td.num,

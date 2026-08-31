@@ -21,7 +21,7 @@ export async function POST(
   const { videoId } = await params;
   if (!isUuid(videoId)) return NextResponse.json({ error: "Not found" }, { status: 404 });
   try {
-    const result = await submitObservation(who.coderId, videoId, who.dataset);
+    const result = await submitObservation(who.coderId, videoId);
     return NextResponse.json(result);
   } catch (e) {
     return coderErrorResponse(e);

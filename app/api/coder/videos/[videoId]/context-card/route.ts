@@ -63,7 +63,7 @@ export async function PUT(
   };
 
   try {
-    const result = await saveContextCard(who.coderId, videoId, who.dataset, input);
+    const result = await saveContextCard(who.coderId, videoId, input);
     return NextResponse.json(result);
   } catch (e) {
     return coderErrorResponse(e);

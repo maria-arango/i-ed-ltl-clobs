@@ -27,7 +27,7 @@ export async function PUT(
     body.justification == null ? null : String(body.justification);
 
   try {
-    const saved = await saveScore(who.coderId, videoId, who.dataset, {
+    const saved = await saveScore(who.coderId, videoId, {
       itemNo: Number(body.itemNo),
       scoreNum: Number(body.scoreNum),
       justification,

@@ -465,7 +465,10 @@ export { CoderError };
 
 async function assertAssigned(coderId: string, videoId: string) {
   const rows = await coderDb
-    .select({ fillsContextCard: assignmentRaters.fillsContextCard })
+    .select({
+      fillsContextCard: assignmentRaters.fillsContextCard,
+      dataset: assignments.dataset,
+    })
     .from(assignmentRaters)
     .innerJoin(assignments, eq(assignments.id, assignmentRaters.assignmentId))
     .where(
@@ -504,6 +507,7 @@ async function getOwnObservation(coderId: string, videoId: string) {
       id: observations.id,
       status: observations.status,
       rubricVersionId: observations.rubricVersionId,
+      dataset: observations.dataset,
     })
     .from(observations)
     .where(
@@ -514,12 +518,11 @@ async function getOwnObservation(coderId: string, videoId: string) {
 }
 
 /** Get-or-create the coder's observation for an assigned video. */
-export async function ensureObservation(
-  coderId: string,
-  videoId: string,
-  dataset: Dataset,
-) {
-  await assertAssigned(coderId, videoId);
+export async function ensureObservation(coderId: string, videoId: string) {
+  // dataset follows the ASSIGNMENT, not the account: an admin working a
+  // training video writes training rows, never contaminating live data.
+  // Stamped server-side either way — the client has no say.
+  const { dataset } = await assertAssigned(coderId, videoId);
   const existing = await getOwnObservation(coderId, videoId);
   if (existing) return existing;
 
@@ -540,6 +543,7 @@ export async function ensureObservation(
       id: observations.id,
       status: observations.status,
       rubricVersionId: observations.rubricVersionId,
+      dataset: observations.dataset,
     });
   await logEvent(coderId, dataset, "observation_started", {
     videoId,
@@ -552,10 +556,10 @@ export async function ensureObservation(
 export async function saveNote(
   coderId: string,
   videoId: string,
-  dataset: Dataset,
   input: { noteId?: string; body: string; videoTimestampSeconds?: number | null },
 ) {
-  const observation = await ensureObservation(coderId, videoId, dataset);
+  const observation = await ensureObservation(coderId, videoId);
+  const dataset = observation.dataset;
 
   if (input.noteId) {
     const updated = await coderDb
@@ -597,11 +601,11 @@ export async function saveNote(
 export async function deleteNote(
   coderId: string,
   videoId: string,
-  dataset: Dataset,
   noteId: string,
 ) {
   const observation = await getOwnObservation(coderId, videoId);
   if (!observation) throw new CoderError("Not found", 404);
+  const dataset = observation.dataset;
   const updated = await coderDb
     .update(notes)
     .set({ deletedAt: new Date() })
@@ -618,14 +622,14 @@ export async function deleteNote(
 export async function saveScore(
   coderId: string,
   videoId: string,
-  dataset: Dataset,
   input: { itemNo: number; scoreNum: number; justification: string | null },
 ) {
   if (!Number.isInteger(input.itemNo) || input.itemNo < 1 || input.itemNo > 8) {
     throw new CoderError("itemNo must be 1–8", 400);
   }
   const triple = tripleFromNum(input.scoreNum); // throws on anything not 1–4
-  const observation = await ensureObservation(coderId, videoId, dataset);
+  const observation = await ensureObservation(coderId, videoId);
+  const dataset = observation.dataset;
   if (observation.status === "submitted") {
     throw new CoderError("Scores are locked after submission", 409);
   }
@@ -683,13 +687,10 @@ export async function saveScore(
 }
 
 /** Submit the observation: requires all 8 items scored; locks the scores. */
-export async function submitObservation(
-  coderId: string,
-  videoId: string,
-  dataset: Dataset,
-) {
+export async function submitObservation(coderId: string, videoId: string) {
   const observation = await getOwnObservation(coderId, videoId);
   if (!observation) throw new CoderError("Not found", 404);
+  const dataset = observation.dataset;
   if (observation.status === "submitted") {
     throw new CoderError("Already submitted", 409);
   }
@@ -753,10 +754,9 @@ export interface ContextCardInput {
 export async function saveContextCard(
   coderId: string,
   videoId: string,
-  dataset: Dataset,
   input: ContextCardInput,
 ) {
-  const { fillsContextCard } = await assertAssigned(coderId, videoId);
+  const { fillsContextCard, dataset } = await assertAssigned(coderId, videoId);
   if (!fillsContextCard) {
     throw new CoderError("The context card for this video is not yours to fill", 403);
   }
@@ -766,7 +766,7 @@ export async function saveContextCard(
       throw new CoderError("adultNo must be 1–6", 400);
     }
   }
-  await ensureObservation(coderId, videoId, dataset);
+  await ensureObservation(coderId, videoId);
 
   const fields = {
     subject: input.subject ?? null,
@@ -864,11 +864,8 @@ export async function saveContextCard(
 }
 
 /** Submit the context card (author only; becomes read-only). */
-export async function submitContextCard(
-  coderId: string,
-  videoId: string,
-  dataset: Dataset,
-) {
+export async function submitContextCard(coderId: string, videoId: string) {
+  const { dataset } = await assertAssigned(coderId, videoId);
   const existing = await coderDb
     .select({
       id: contextCards.id,
