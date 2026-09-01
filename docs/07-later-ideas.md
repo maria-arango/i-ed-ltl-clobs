@@ -102,3 +102,18 @@ Where María's referenced libraries/skills landed. IN = live on the platform.
 | beui file-tree (as a browser) | PARKED | Could browse the video library by school prefix (admin-only) in Stage 4+ |
 | rareui fluid-orb | IN (since scaffold) | Sign-in canvas |
 | beautifului records-table | REFERENCE | Full pattern kept in `.reference/beautifului/` for the Stage 4 export/records screens |
+
+## Taste-skill audit note (2026-09-01)
+
+Ran impeccable, emil-design-eng and design-taste-frontend over the platform.
+Applied (all additive): badge pop-in starts at scale 0.6 not 0 (nothing real
+appears from nothing), hover lift gated behind (hover:hover)+(pointer:fine),
+skeleton loaders shimmer with a light sweep (reduced-motion falls back to
+pulse), scrollbars themed to the palette (the cheapest built-not-assembled
+signal). Verified: contrast (smoke ≥4.8:1 on its real surfaces), focus rings,
+selection/caret theming, active-press scale on buttons, easing tokens.
+Rejected with reasons: design-taste-frontend's premium-consumer palette ban
+and serif discipline (our cream/brown + Newsreader is the APPROVED brand —
+the brief wins), impeccable's kicker/eyebrow ban (María approved the kicker
+style; numbered step labels carry real sequence), and every suggestion that
+would reduce motion (per María's standing instruction).

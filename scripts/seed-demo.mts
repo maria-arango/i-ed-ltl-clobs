@@ -28,6 +28,11 @@ if (!email) {
 const pool = new Pool({ connectionString: hardenSslMode(process.env.DATABASE_URL), max: 1 });
 const db = drizzle(pool, { schema });
 
+// Per-account demo codes (V-DEMO-MARIA-01…) so every admin can have their
+// own sandbox set. María's original V-DEMO-01/02 predate this and stay.
+const short = (email ?? "").split("@")[0].replace(/[^a-z]/gi, "").slice(0, 5).toUpperCase();
+const demoCode = (n: string) => `V-DEMO-${short}-${n}`;
+
 const user = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
 if (!user) {
   console.error(`No account for ${email}. Create it first (npm run admin:create).`);
@@ -69,7 +74,7 @@ for (const [suffix, fills] of [
   ["01", true],
   ["02", false],
 ] as const) {
-  const displayCode = `V-DEMO-${suffix}`;
+  const displayCode = demoCode(suffix);
   let video = await db.query.videos.findFirst({
     where: eq(schema.videos.displayCode, displayCode),
   });
@@ -115,7 +120,7 @@ for (const [suffix, fills] of [
 /* ------------------------------------------------------------------ */
 
 const demoVideo = await db.query.videos.findFirst({
-  where: eq(schema.videos.displayCode, "V-DEMO-02"),
+  where: eq(schema.videos.displayCode, demoCode("02")),
 });
 if (demoVideo) {
   const existingSession = await db.query.calibrationSessions.findFirst({
@@ -210,7 +215,7 @@ if (demoVideo) {
         userAgent: "seed-demo",
       });
       console.log(
-        "Calibration demo ready: score and submit V-DEMO-02, then open Calibration in the sidebar.",
+        `Calibration demo ready: score and submit ${demoCode("02")}, then open Calibration in the sidebar.`,
       );
     }
   }

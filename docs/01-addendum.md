@@ -530,3 +530,29 @@ Additions of 2026-08-31 (platform review, fourth round):
     interactive cards lift on hover; route changes use the design system's side-by-side slide
     (content pane only). Paragraph copy is never width-capped below its container. Recorded in
     DESIGN_SYSTEM §3 (elevation amendment) — the scoring grid stays flat and motionless.
+
+Additions of 2026-09-01 (training round):
+
+28. **Language-subject sessions are INCLUDED after all.** The team reversed the exclusion of
+    Arabic / French / Kiswahili / Lusoga / Luganda lessons: all 28 sessions returned to the pool
+    (script `scripts/include-language-videos.mts`, audited). **Codable count is now 538.**
+    Supersedes the language clauses of §7 and Amendment B §11 (the `(-666)`/`NO_TEACHER` rule
+    stands). Older documents citing 510/511 describe the pre-reversal state.
+29. **Training space.** Trainee accounts are disposable coder accounts scoped to
+    dataset='training' (most will not survive training). Their "training pack" is THE GOLD SET
+    (6 videos: 2 good, 2 neutral, 2 bad — confirms §22/§23), assigned as single-rater
+    training-dataset assignments: full coding experience (card, notes, scores, locking submit),
+    NO calibration surface. The admin Training screen manages accounts, shows per-trainee
+    progress, opens each trainee's full responses (scores + justifications + notes beside the
+    gold score), and carries the gold-comparison dashboard: per-video matrices (gold column,
+    one column per trainee, exact/adjacent/off color-coding) and per-trainee reliability
+    (exact %, adjacent %, quadratic-weighted agreement, mean signed deviation, A/B column
+    flips). **Survival bar: ≥90% exact agreement with the gold pack — PROVISIONAL.** Admins can
+    assign THEMSELVES the same pack ("sandbox") to live the enumerator experience end to end.
+30. **The consensus rationale is ONE shared text per item, not two.** During calibration either
+    member of the pair types the reasoning while they talk; both see it and both sign the
+    record. Confirmed as the intended design (it already worked this way) — justifying twice
+    would be double work for no evidentiary gain.
+31. **Pre-submission score review.** Before scores lock, the coder reviews all eight
+    score+justification pairs in a single table (also reachable any time via "See all my scores
+    as a table"), with a prompt to check once more. The table remains viewable after submission.

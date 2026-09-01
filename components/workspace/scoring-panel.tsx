@@ -9,6 +9,14 @@
  */
 import { useMemo, useRef, useState } from "react";
 import { AutosaveIndicator } from "@/components/workspace/autosave-indicator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { encouragement } from "@/lib/encouragement";
 import { useAutosave } from "@/lib/use-autosave";
 
@@ -159,6 +167,7 @@ export function ScoringPanel({
   const [currentItem, setCurrentItem] = useState(1);
   const [submitted, setSubmitted] = useState(initialSubmitted);
   const [confirming, setConfirming] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [moment, setMoment] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<number, ScoreState>>(() => {
@@ -225,6 +234,7 @@ export function ScoringPanel({
     }
     setSubmitted(true);
     setConfirming(false);
+    setReviewOpen(false);
     setMoment(encouragement.scoresSubmitted());
     onProgress?.(8, true);
     // The full completion moment (DESIGN_SYSTEM §4) — never under reduced motion.
@@ -237,6 +247,114 @@ export function ScoringPanel({
   const anchorText = current.scoreNum != null ? concept.anchors[String(current.scoreNum)] : null;
   const reachBands = useMemo(() => guidance.filter((g) => g.kind === "reach_band"), [guidance]);
   const rules = useMemo(() => guidance.filter((g) => g.kind === "guiding_rule"), [guidance]);
+
+  if (reviewOpen) {
+    const labelOf = (n: number) => SCORE_META[n - 1].label;
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h3 className="text-[16px] font-medium text-ink">
+            {submitted ? "Your submitted scores" : "Your scores at a glance"}
+          </h3>
+          <button
+            type="button"
+            onClick={() => {
+              setReviewOpen(false);
+              setConfirming(false);
+            }}
+            className="rounded-md border border-hairline bg-paper px-3 py-1.5 text-[13px] font-medium text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+          >
+            {submitted ? "Back to the items" : "Keep editing"}
+          </button>
+        </div>
+
+        {confirming && !submitted && (
+          <div
+            className="elev-card rounded-xl border border-hairline p-4"
+            style={{ background: "var(--clobs-lake-wash)" }}
+          >
+            <p className="text-[14px] leading-[1.6] text-ink">
+              One last look before it locks. Read each score against its
+              justification: does every pair still feel right? Careful
+              checking here is what makes the data trustworthy.
+            </p>
+          </div>
+        )}
+
+        <Table>
+          <TableHeader>
+            <TableRow header>
+              <TableHead>Item</TableHead>
+              <TableHead>Concept</TableHead>
+              <TableHead>Score</TableHead>
+              <TableHead>Justification</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {concepts.map((c) => {
+              const entry = scores[c.itemNo];
+              return (
+                <TableRow key={c.itemNo}>
+                  <TableCell className="num text-graphite">{c.itemNo}</TableCell>
+                  <TableCell className="text-ink">{c.name}</TableCell>
+                  <TableCell>
+                    {entry.scoreNum != null ? (
+                      <span
+                        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium text-ink"
+                        style={{
+                          background: SCORE_META[entry.scoreNum - 1].fill,
+                          border: `1px solid ${SCORE_META[entry.scoreNum - 1].edge}`,
+                        }}
+                      >
+                        <span
+                          className="mono flex size-4.5 items-center justify-center rounded-full text-[11px]"
+                          style={{
+                            background: SCORE_META[entry.scoreNum - 1].edge,
+                            color: "var(--clobs-paper)",
+                          }}
+                        >
+                          {entry.scoreNum}
+                        </span>
+                        {labelOf(entry.scoreNum)}
+                      </span>
+                    ) : (
+                      <span className="text-[13px] text-clay">not scored yet</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-[13px] leading-[1.5] text-graphite">
+                    {entry.justification.trim() || <span className="text-smoke">—</span>}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+
+        {confirming && !submitted && (
+          <div className="flex items-center justify-end gap-3">
+            {submitError && (
+              <p role="alert" className="text-[13px] text-clay">{submitError}</p>
+            )}
+            <button
+              type="button"
+              onClick={submit}
+              className="rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
+            >
+              Everything checks out. Submit and lock
+            </button>
+          </div>
+        )}
+        {submitted && (
+          <p
+            className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[12px] font-medium"
+            style={{ background: "var(--clobs-forest-wash)", color: "var(--clobs-forest)" }}
+          >
+            Submitted and locked ✓
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-6 xl:grid-cols-[13rem_minmax(0,1fr)_20rem]">
@@ -271,6 +389,15 @@ export function ScoringPanel({
           <p className="text-[12px] text-smoke">
             <span className="mono">{scoredCount}</span> of <span className="mono">8</span> scored
           </p>
+          {scoredCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className="mt-2 w-full rounded-md border border-hairline bg-paper px-3 py-2 text-[13px] font-medium text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+            >
+              See all my scores as a table
+            </button>
+          )}
           {!submitted && scoredCount === 8 && (
             <div className="mt-3 space-y-2">
               {emptyJustifications > 0 && (
@@ -282,10 +409,13 @@ export function ScoringPanel({
               {!confirming ? (
                 <button
                   type="button"
-                  onClick={() => setConfirming(true)}
+                  onClick={() => {
+                    setConfirming(true);
+                    setReviewOpen(true);
+                  }}
                   className="w-full rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
                 >
-                  Submit scores
+                  Review and submit
                 </button>
               ) : (
                 <button

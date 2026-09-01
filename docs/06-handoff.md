@@ -205,6 +205,29 @@ confirmation; 6 new tests. **Stage 4 begun**: /admin/progress — insight
 cards + per-video stage table (pool → assigned → one submitted → ready →
 calibrated), lib/db/admin-progress.ts. Sidebar: Progress item added.
 
+## Progress (2026-09-01 — training space, sandbox, taste audit)
+
+**Data ops (live Neon):** 28 language-subject sessions RE-INCLUDED (Amendment
+§28, scripts/include-language-videos.mts, audited; codable = 538). Arya's
+demo seeded (seed-demo.mts now makes per-account codes: V-DEMO-ARYAS-01/02,
+calibration demo included). **Training space (Amendment §29,
+/admin/training):** add-trainee (auto-assigns the training pack = the gold
+set as single-rater training-dataset assignments via
+lib/db/admin-training.ts), progress table, per-trainee response viewer
+(/admin/training/[userId], scores+justifications+notes beside gold), sliding
+Accounts/Dashboard switch, gold-comparison dashboard (per-video matrices +
+exact/adjacent/quadratic-weighted/mean-signed/A-B-flips; provisional 90%
+exact bar), admin SANDBOX button (assign the pack to yourself). Trainees
+never see the Calibration nav item. **Score review (Amendment §31):**
+"See all my scores as a table" + review-before-lock step with a check
+prompt in the scoring panel. **§30 recorded:** consensus rationale is one
+shared text (already built that way). **Taste audit** (impeccable +
+emil-design-eng + design-taste-frontend): badge pop no longer scales from
+0, hover lift gated to fine pointers, skeletons shimmer (reduced-motion →
+pulse), scrollbars themed to the palette; rejected (brief wins): removing
+kickers/eyebrows, serif/palette bans, any motion reduction. purgeFixture
+now clears pair-scoped assignments (training packs). 81 tests.
+
 ## Next up
 
 1. **Stage 3 continues:** gold set + certification gate (María's gold videos pending),

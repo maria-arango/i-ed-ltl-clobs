@@ -260,6 +260,26 @@
   }
   /* Browser surfaces carry the design too: selection and caret in the
      palette instead of the browser defaults. */
+  /* Scrollbars in the palette (WebKit + Firefox). */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--clobs-hairline-strong) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--clobs-hairline-strong);
+    border-radius: 999px;
+    border: 3px solid var(--clobs-paper);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--clobs-ash);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
   ::selection {
     background: var(--clobs-lake-wash);
     color: var(--clobs-ink);
@@ -293,13 +313,39 @@
     box-shadow var(--clobs-dur-fast) var(--clobs-ease-out),
     border-color var(--clobs-dur-fast) var(--clobs-ease-out);
 }
-.card-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--clobs-shadow-card-hover);
+@media (hover: hover) and (pointer: fine) {
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--clobs-shadow-card-hover);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .card-lift { transition: none; }
   .card-lift:hover { transform: none; }
+}
+
+/* Skeleton shimmer (transitions-dev 15-skeleton-loader): a light band
+   sweeps across placeholders while a screen loads. */
+@keyframes shimmer-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(251, 248, 241, 0.65),
+    transparent
+  );
+  animation: shimmer-sweep 1.6s var(--clobs-ease-inout) infinite;
 }
 
 /* Success check stroke-draw (transitions-dev 08-success-check), used for
@@ -315,8 +361,8 @@
 
 /* Notification badge pop-in (transitions-dev 04-notification-badge). */
 @keyframes badge-pop {
-  0% { transform: scale(0); opacity: 0; }
-  70% { transform: scale(1.15); opacity: 1; }
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.12); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
 .badge-pop {
@@ -326,6 +372,7 @@
 @media (prefers-reduced-motion: reduce) {
   .page-enter { animation: none; }
   .badge-pop { animation: none; }
+  .shimmer::after { animation: none; }
   .check-draw { stroke-dashoffset: 0; animation: none; }
 }
 
