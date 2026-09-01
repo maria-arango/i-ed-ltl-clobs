@@ -15,6 +15,7 @@ import {
   ChartLine,
   Clapperboard,
   Film,
+  GraduationCap,
   Handshake,
   House,
   ListChecks,
@@ -40,6 +41,7 @@ const adminItems = [
   { href: "/admin/assignment", label: "Assignment", icon: ListChecks, exact: false },
   { href: "/admin/videos", label: "Video library", icon: Clapperboard, exact: false },
   { href: "/admin/gold", label: "Gold set", icon: Award, exact: false },
+  { href: "/admin/training", label: "Training", icon: GraduationCap, exact: false },
   { href: "/admin/progress", label: "Progress", icon: ChartLine, exact: false },
 ];
 
@@ -58,14 +60,20 @@ function Badge({ count }: { count: number }) {
 
 export function AppSidebar({
   isAdmin,
+  showCalibration = true,
   badges,
 }: {
   isAdmin: boolean;
+  /** Trainees code only — no calibration surface (Amendment B §9, §29). */
+  showCalibration?: boolean;
   badges?: SidebarBadges;
 }) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
-  const items = isAdmin ? [...coderItems, ...adminItems] : coderItems;
+  const base = coderItems.filter(
+    (i) => showCalibration || i.href !== "/calibration",
+  );
+  const items = isAdmin ? [...base, ...adminItems] : base;
   const badgeFor = (href: string) =>
     href === "/videos"
       ? (badges?.newVideos ?? 0)

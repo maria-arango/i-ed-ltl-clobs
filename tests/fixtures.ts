@@ -58,6 +58,25 @@ async function purgeCalibrationForSessions(sessionIds: string[]) {
     .where(inArray(calibrationSessions.id, sessionIds));
 }
 
+/** Remove the assignments hanging off a set of pairs (a training pack may
+ *  reference videos outside the fixture's displayCodes). */
+async function purgeAssignmentsForPairs(pairIds: string[]) {
+  if (pairIds.length === 0) return;
+  const assn = await db
+    .select({ id: assignments.id })
+    .from(assignments)
+    .where(inArray(assignments.pairId, pairIds));
+  if (assn.length > 0) {
+    await db.delete(assignmentRaters).where(
+      inArray(
+        assignmentRaters.assignmentId,
+        assn.map((a) => a.id),
+      ),
+    );
+    await db.delete(assignments).where(inArray(assignments.pairId, pairIds));
+  }
+}
+
 export async function purgeFixture(opts: {
   displayCodes: string[];
   emails: string[];
@@ -148,6 +167,13 @@ export async function purgeFixture(opts: {
         ),
       );
     await purgeCalibrationForSessions(pairSessions.map((s) => s.id));
+    await db.delete(assignmentLog).where(
+      inArray(
+        assignmentLog.toPairId,
+        pairRows.map((p) => p.id),
+      ),
+    );
+    await purgeAssignmentsForPairs(pairRows.map((p) => p.id));
     await db.delete(pairMembers).where(
       inArray(
         pairMembers.pairId,
@@ -234,6 +260,7 @@ export async function purgeFixture(opts: {
         .where(inArray(calibrationSessions.pairId, memberPairIds));
       await purgeCalibrationForSessions(memberSessions.map((s) => s.id));
       await db.delete(assignmentLog).where(inArray(assignmentLog.toPairId, memberPairIds));
+      await purgeAssignmentsForPairs(memberPairIds);
       await db.delete(pairMembers).where(inArray(pairMembers.pairId, memberPairIds));
       await db.delete(pairs).where(inArray(pairs.id, memberPairIds));
     }

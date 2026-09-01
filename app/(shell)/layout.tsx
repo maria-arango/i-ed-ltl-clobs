@@ -28,6 +28,7 @@ export default async function ShellLayout({
       email={session.user.email}
       role={session.user.role}
       isChiefCoder={session.user.isChiefCoder}
+      showCalibration={session.user.datasetScope !== "training"}
       badges={badges}
     >
       {children}
