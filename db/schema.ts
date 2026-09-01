@@ -101,6 +101,12 @@ export const certificationStatusEnum = pgEnum("certification_status", [
   "passed",
   "failed",
 ]);
+export const accessRequestStatusEnum = pgEnum("access_request_status", [
+  "pending",
+  "approved_training",
+  "approved_live",
+  "declined",
+]);
 export const guidanceKindEnum = pgEnum("guidance_kind", [
   "guiding_rule",
   "reach_band",
@@ -820,6 +826,21 @@ export const events = pgTable(
   },
   (t) => [index("events_by_time").on(t.occurredAt)],
 );
+
+// Self-service "request permission to enter" (Amendment §35): the PUBLIC
+// sign-in page collects name+email; admins grant training or live access.
+// Never creates a user by itself — no self-signup.
+export const accessRequests = pgTable("access_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  status: accessRequestStatusEnum("status").notNull().default("pending"),
+  requestedAt: timestamp("requested_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  decidedBy: uuid("decided_by").references(() => users.id),
+  decidedAt: timestamp("decided_at", { withTimezone: true }),
+});
 
 export const auditLog = pgTable("audit_log", {
   id: uuid("id").primaryKey().defaultRandom(),

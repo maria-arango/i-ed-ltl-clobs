@@ -3,13 +3,15 @@
  * path pool → assigned → scored twice → calibrated. Feeds the Progress
  * dashboard's insight cards and its filterable table.
  */
-import { and, asc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   assignments,
   calibrationSessions,
+  coderAvailability,
   observations,
   pairs,
+  users,
   videoProvenance,
   videos,
 } from "@/db/schema";
@@ -28,6 +30,10 @@ export interface ProgressRow {
   waveNo: number | null;
   submittedCount: number;
   stage: ProgressStage;
+  /** Unblinded fields — this is an ADMIN surface (§3). */
+  sid: string;
+  arm: string | null;
+  teacher: string | null;
 }
 
 export interface ProgressOverview {
@@ -41,6 +47,9 @@ export async function getProgressOverview(): Promise<ProgressOverview> {
       videoId: videos.id,
       displayCode: videos.displayCode,
       status: videos.status,
+      sid: videoProvenance.sid,
+      arm: videoProvenance.arm,
+      teacher: videoProvenance.trId,
     })
     .from(videos)
     .innerJoin(videoProvenance, eq(videoProvenance.videoId, videos.id))
@@ -127,6 +136,9 @@ export async function getProgressOverview(): Promise<ProgressOverview> {
       waveNo: assn?.waveNo ?? null,
       submittedCount: submitted,
       stage,
+      sid: v.sid,
+      arm: v.arm,
+      teacher: v.teacher,
     };
   });
 
@@ -140,4 +152,83 @@ export async function getProgressOverview(): Promise<ProgressOverview> {
   };
   for (const r of rows) totals[r.stage]++;
   return { totals, rows };
+}
+
+/* --------------------------- weekly outlook --------------------------- */
+
+export interface WeekOutlook {
+  weekLabel: string;
+  weekStart: string; // yyyy-mm-dd (Monday)
+  /** Videos the team could complete: Σ availability (videos/day × 5 working
+   *  days) across active live coders, halved because every video takes two. */
+  expected: number;
+  /** Calibrations signed within the week. */
+  actual: number;
+}
+
+/** The study's weeks from now (or Sept 1) to the Oct 30 deadline. */
+export async function getWeeklyOutlook(): Promise<WeekOutlook[]> {
+  const team = await db
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .where(and(eq(users.isActive, true), eq(users.datasetScope, "live")));
+  const members = team.filter((t) => !t.email.endsWith("@example.invalid"));
+  const memberIds = members.map((m) => m.id);
+
+  const avail = await db
+    .select({
+      userId: coderAvailability.userId,
+      videosPerDay: coderAvailability.videosPerDay,
+      effectiveFrom: coderAvailability.effectiveFrom,
+      effectiveTo: coderAvailability.effectiveTo,
+      createdAt: coderAvailability.createdAt,
+    })
+    .from(coderAvailability)
+    .orderBy(desc(coderAvailability.createdAt));
+
+  const completed = await db
+    .select({ completedAt: calibrationSessions.completedAt })
+    .from(calibrationSessions)
+    .where(
+      and(
+        eq(calibrationSessions.dataset, "live"),
+        eq(calibrationSessions.status, "completed"),
+      ),
+    );
+
+  const vpdAt = (userId: string, at: Date): number => {
+    for (const a of avail) {
+      if (a.userId !== userId) continue;
+      if (a.effectiveFrom > at) continue;
+      if (a.effectiveTo && a.effectiveTo < at) continue;
+      return a.videosPerDay;
+    }
+    return 3;
+  };
+
+  // Mondays from the study window start to the deadline week.
+  const start = new Date("2026-08-31T12:00:00Z"); // Monday of the first week
+  const deadline = new Date("2026-10-30T12:00:00Z");
+  const weeks: WeekOutlook[] = [];
+  for (
+    let monday = new Date(start);
+    monday <= deadline;
+    monday.setUTCDate(monday.getUTCDate() + 7)
+  ) {
+    const midWeek = new Date(monday);
+    midWeek.setUTCDate(midWeek.getUTCDate() + 2);
+    const capacity = memberIds.reduce((sum, id) => sum + vpdAt(id, midWeek) * 5, 0);
+    const weekEnd = new Date(monday);
+    weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+    const actual = completed.filter(
+      (c) => c.completedAt && c.completedAt >= monday && c.completedAt < weekEnd,
+    ).length;
+    weeks.push({
+      weekLabel: monday.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+      weekStart: monday.toISOString().slice(0, 10),
+      expected: Math.round(capacity / 2),
+      actual,
+    });
+  }
+  return weeks;
 }

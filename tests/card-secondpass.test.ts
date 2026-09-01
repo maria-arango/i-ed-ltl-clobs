@@ -66,7 +66,7 @@ async function scoreAndSubmit(coderId: string) {
     await saveScore(coderId, videoId, {
       itemNo: i,
       scoreNum: ((i - 1) % 4) + 1,
-      justification: null,
+      justification: `item ${i}: seen in the middle third`,
     });
   }
   await submitObservation(coderId, videoId);
@@ -115,6 +115,7 @@ describe("the card second pass", () => {
   it("author fills and submits the card", async () => {
     await saveContextCard(authorId, videoId, {
       subject: "Mathematics",
+      composition: "mixed",
       approxCount: "42",
       adults: [{ adultNo: 1, role: "teacher", sex: "female", speaks: "yes" }],
     });
@@ -168,6 +169,7 @@ describe("the card second pass", () => {
     });
     await saveContextCard(authorId, videoId, {
       subject: "Mathematics",
+      composition: "mixed",
       approxCount: "42",
       adults: [
         { adultNo: 1, role: "teacher", sex: "female", speaks: "yes" },

@@ -144,7 +144,7 @@ afterAll(async () => {
 describe("gold set", () => {
   it("refuses master scores for a video that is not gold-flagged", async () => {
     const r = await saveGoldScores(adminId, goldVideoId, [
-      { itemNo: 1, scoreNum: 1, rationale: null },
+      { itemNo: 1, scoreNum: 1, rationale: "clear group work" },
     ]);
     expect(r).toEqual({ ok: false, error: expect.stringMatching(/not in the gold set/i) });
   });
@@ -154,7 +154,7 @@ describe("gold set", () => {
     const items = GOLD.map((n, i) => ({
       itemNo: i + 1,
       scoreNum: n,
-      rationale: i === 0 ? "Clear group work throughout." : null,
+      rationale: `Anchored on the rubric's band ${n} example (item ${i + 1}).`,
     }));
     expect(await saveGoldScores(adminId, goldVideoId, items)).toEqual({
       ok: true,
@@ -167,9 +167,14 @@ describe("gold set", () => {
 
   it("rejects illegal scores and revises by upsert", async () => {
     const bad = await saveGoldScores(adminId, goldVideoId, [
-      { itemNo: 3, scoreNum: 7, rationale: null },
+      { itemNo: 3, scoreNum: 7, rationale: "impossible score" },
     ]);
     expect(bad.ok).toBe(false);
+    // A missing rationale is refused too (Amendment §32).
+    const noWhy = await saveGoldScores(adminId, goldVideoId, [
+      { itemNo: 3, scoreNum: 4, rationale: "  " },
+    ]);
+    expect(noWhy.ok).toBe(false);
     const revise = await saveGoldScores(adminId, goldVideoId, [
       { itemNo: 3, scoreNum: 4, rationale: "Revised after team discussion." },
     ]);
@@ -180,7 +185,7 @@ describe("gold set", () => {
     });
     // put it back for the agreement test
     await saveGoldScores(adminId, goldVideoId, [
-      { itemNo: 3, scoreNum: 3, rationale: null },
+      { itemNo: 3, scoreNum: 3, rationale: "Back to the original band." },
     ]);
   });
 

@@ -186,8 +186,24 @@ export default async function Home() {
               ))}
             </dl>
             <p className="text-[12px] text-smoke">
-              Reliability statistics and exports arrive in stage 4.
+              Study progress and charts live under{" "}
+              <Link
+                href="/admin/progress"
+                className="rounded-sm text-lake underline underline-offset-4"
+              >
+                Progress
+              </Link>
+              ; reliability statistics and the AI-training exports are the
+              next build.
             </p>
+            {user.email?.toLowerCase() === "maria_oteroarango@gse.harvard.edu" && (
+              <Link
+                href="/admin/preview"
+                className="inline-flex items-center gap-2 rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[13px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+              >
+                What Arya can see →
+              </Link>
+            )}
           </section>
         )}
 

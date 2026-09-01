@@ -6,9 +6,9 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { getProgressOverview } from "@/lib/db/admin-progress";
+import { getProgressOverview, getWeeklyOutlook } from "@/lib/db/admin-progress";
 import { NumberTicker } from "@/components/ui/number-ticker";
-import { ProgressTable } from "./progress-table";
+import { ProgressDashboard } from "./progress-dashboard";
 
 const CARDS: Array<{
   key: "codable" | "assigned" | "one_submitted" | "ready_to_calibrate" | "calibrated";
@@ -17,14 +17,17 @@ const CARDS: Array<{
 }> = [
   { key: "codable", label: "Codable videos" },
   { key: "assigned", label: "Out with pairs", accent: "var(--clobs-lake)" },
-  { key: "one_submitted", label: "One score in", accent: "var(--clobs-score-2-edge)" },
+  { key: "one_submitted", label: "1 of 2 scores in", accent: "var(--clobs-score-2-edge)" },
   { key: "ready_to_calibrate", label: "Ready to calibrate", accent: "var(--clobs-score-3-edge)" },
   { key: "calibrated", label: "Calibrated", accent: "var(--clobs-forest)" },
 ];
 
 export default async function ProgressPage() {
   await requireAdmin();
-  const { totals, rows } = await getProgressOverview();
+  const [{ totals, rows }, weeks] = await Promise.all([
+    getProgressOverview(),
+    getWeeklyOutlook(),
+  ]);
 
   return (
     <div className="mx-auto mt-2 max-w-[980px] space-y-8">
@@ -71,7 +74,7 @@ export default async function ProgressPage() {
         ))}
       </section>
 
-      <ProgressTable rows={rows} />
+      <ProgressDashboard rows={rows} weeks={weeks} />
     </div>
   );
 }

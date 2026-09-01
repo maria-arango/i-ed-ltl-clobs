@@ -4,6 +4,7 @@
  * coder's scoring grid (and the same rule: selection is instant, no
  * motion). One save button writes all completed items.
  */
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { saveGoldScoresAction } from "../actions";
 
@@ -46,27 +47,94 @@ export function GoldScoreForm({
   const nameOf = (n: number) =>
     concepts.find((c) => c.itemNo === n)?.name ?? `Concept ${n}`;
 
+  const [saved, setSaved] = useState<number | null>(null);
+
   function save() {
     startTransition(async () => {
       setMessage(null);
-      const payload = Object.entries(items)
-        .filter(([, v]) => v.scoreNum !== null)
-        .map(([k, v]) => ({
-          itemNo: Number(k),
-          scoreNum: v.scoreNum!,
-          rationale: v.rationale.trim() || null,
-        }));
+      const entries = Object.entries(items).filter(([, v]) => v.scoreNum !== null);
+      const missing = entries
+        .filter(([, v]) => v.rationale.trim() === "")
+        .map(([k]) => k);
+      if (missing.length > 0) {
+        setMessage({
+          kind: "error",
+          text: `Every master score needs its rationale. Missing on item${missing.length > 1 ? "s" : ""} ${missing.join(", ")}.`,
+        });
+        return;
+      }
+      const payload = entries.map(([k, v]) => ({
+        itemNo: Number(k),
+        scoreNum: v.scoreNum!,
+        rationale: v.rationale.trim(),
+      }));
       const r = await saveGoldScoresAction(videoId, payload);
-      setMessage(
-        r.ok
-          ? { kind: "ok", text: `Saved ${payload.length} master score${payload.length === 1 ? "" : "s"}.` }
-          : { kind: "error", text: r.error ?? "Something went wrong" },
-      );
+      if (r.ok) {
+        setSaved(payload.length);
+      } else {
+        setMessage({ kind: "error", text: r.error ?? "Something went wrong" });
+      }
     });
   }
 
   return (
     <div className="space-y-4">
+      {saved !== null && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Gold standard scores saved"
+          className="overlay-fade fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: "rgba(43, 38, 31, 0.45)" }}
+        >
+          <div className="moment-enter elev-card w-full max-w-md rounded-2xl border border-hairline bg-paper p-8 text-center">
+            <span
+              aria-hidden
+              className="mx-auto flex size-14 items-center justify-center rounded-full"
+              style={{ background: "var(--clobs-forest)" }}
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <path
+                  className="check-draw"
+                  d="M5 12.5l4.5 4.5L19 7.5"
+                  stroke="var(--clobs-paper)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <h3
+              className="mt-4 font-serif text-ink"
+              style={{
+                fontSize: "var(--clobs-text-heading-sm)",
+                lineHeight: "var(--clobs-leading-heading-sm)",
+              }}
+            >
+              Gold standard scores have been saved.
+            </h3>
+            <p className="mt-2 text-[14px] leading-[1.6] text-graphite">
+              {saved} master score{saved === 1 ? "" : "s"} recorded with their
+              rationales, under the active rubric.
+            </p>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <Link
+                href="/admin/gold"
+                className="rounded-md bg-bark px-[18px] py-[10px] text-[14px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
+              >
+                Back to the gold set
+              </Link>
+              <button
+                type="button"
+                onClick={() => setSaved(null)}
+                className="rounded-md border border-hairline-strong bg-paper px-[18px] py-[10px] text-[14px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+              >
+                Keep editing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {[1, 2, 3, 4, 5, 6, 7, 8].map((itemNo) => {
         const item = items[itemNo];
         return (
@@ -136,7 +204,7 @@ export function GoldScoreForm({
               htmlFor={`gold-rationale-${itemNo}`}
               className="mt-3 block text-[13px] font-medium text-ink"
             >
-              Rationale (optional, feeds the AI training)
+              Rationale (required — it anchors certification and trains the AI)
             </label>
             <textarea
               id={`gold-rationale-${itemNo}`}

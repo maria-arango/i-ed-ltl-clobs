@@ -556,3 +556,27 @@ Additions of 2026-09-01 (training round):
 31. **Pre-submission score review.** Before scores lock, the coder reviews all eight
     score+justification pairs in a single table (also reachable any time via "See all my scores
     as a table"), with a prompt to check once more. The table remains viewable after submission.
+
+Additions of 2026-09-01 (second review of the day):
+
+32. **Justifications are NEVER optional.** Submitting scores requires a justification on all
+    eight items (server-enforced), and every gold master score requires its rationale. The
+    earlier "expected but not required" softness is gone. Clarifies §31 and supersedes any
+    "optional" wording. (Amendment B §4 still governs note CITATIONS, which stay optional.)
+33. **A context card cannot be submitted empty.** Server-enforced minimum: subject,
+    composition, approximate pupil count, and at least one adult. The refusal names what is
+    missing.
+34. **The score table is the editable view.** "Enter scores as a table" edits scores and
+    justifications directly (same locking rules); "Review and submit" is the same table with
+    the final-check prompt. After item 8, the Next button becomes "Review and submit".
+35. **Self-service access requests.** The sign-in page carries "Request permission to enter"
+    (name + email). Requests never create accounts; admins grant training access (trainee +
+    pack), live coding access, or decline, from the Team screen. No user enumeration; honeypot
+    against bots.
+36. **Dashboards.** Progress gained: clearer stage names ("1 of 2 scores in"), filters by
+    school / arm / teacher (admin-only, unblinded by design), a weekly expected-vs-actual
+    outlook computed from the availability plans (the "what's ahead" view), a pipeline bar and
+    an arm donut (chart palettes validated for color-vision deficiency; the ordinal pipeline
+    uses a one-hue ramp). The Training dashboard gained a clearly-bannered 10-enumerator SAMPLE
+    preview (client-generated, never stored) and a charts view (exact% vs the 90% bar, lean).
+    María-only: a "What Arya can see" mirror page reading through the restricted coder layer.

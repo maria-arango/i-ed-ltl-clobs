@@ -96,7 +96,7 @@ export function AppSidebar({
       </Link>
       <GlideMenu
         className="flex flex-1 flex-row gap-1 md:flex-none md:flex-col"
-        highlightClassName="inset-x-0 rounded-md bg-sunken"
+        highlightClassName="rounded-md bg-sunken"
       >
         {items.map((item) => {
           const active = item.exact

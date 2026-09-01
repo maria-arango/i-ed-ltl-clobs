@@ -208,6 +208,12 @@ export async function saveGoldScores(
     } catch {
       return { ok: false, error: `Item ${item.itemNo}: the score must be 1–4.` };
     }
+    if (!item.rationale?.trim()) {
+      return {
+        ok: false,
+        error: `Item ${item.itemNo} needs its rationale. Justifications are never optional.`,
+      };
+    }
   }
 
   await db.transaction(async (tx) => {
@@ -221,7 +227,7 @@ export async function saveGoldScores(
           scoreNum: triple.scoreNum,
           scoreColumn: triple.scoreColumn,
           scoreDegree: triple.scoreDegree,
-          rationale: item.rationale?.trim() || null,
+          rationale: item.rationale!.trim(),
           rubricVersionId: rubric.id,
           enteredBy: actorId,
         })
@@ -231,7 +237,7 @@ export async function saveGoldScores(
             scoreNum: triple.scoreNum,
             scoreColumn: triple.scoreColumn,
             scoreDegree: triple.scoreDegree,
-            rationale: item.rationale?.trim() || null,
+            rationale: item.rationale!.trim(),
             rubricVersionId: rubric.id,
             enteredBy: actorId,
             enteredAt: new Date(),

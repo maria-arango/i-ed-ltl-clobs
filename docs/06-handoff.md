@@ -228,6 +228,35 @@ pulse), scrollbars themed to the palette; rejected (brief wins): removing
 kickers/eyebrows, serif/palette bans, any motion reduction. purgeFixture
 now clears pair-scoped assignments (training packs). 81 tests.
 
+## Progress (2026-09-01, round 6 — polish, dashboards, access requests)
+
+Amendments §32–36. **Integrity:** justifications required on submit (scores
+AND gold rationales; tests updated), empty context cards refused (subject,
+composition, count, ≥1 adult). **Moments alive everywhere:** shared
+MomentCard (rise-in + drawn check) for card/score submissions, gold-save
+gets a darkened-overlay confirmation modal, submit scrolls back to the top
+so the moment is seen. **Gliding everywhere:** GlideMenu generalized to
+horizontal (left/width), applied to the Tiptap toolbar, workspace tabs,
+scoring rail (with a layoutId active pill), progress filter chips.
+**Score table (§34):** the review view is now the EDITABLE table (chips +
+justification per row, saving directly); after item 8 the Next slot turns
+into "Review and submit". **Workspace ambience:** floating Kimanya tiles
+(float-drift keyframes) beside card + notes on xl screens. **Progress
+dashboard:** weekly expected-vs-actual outlook (getWeeklyOutlook from
+coder_availability; Mondays Sept→Oct 30), pipeline stacked bar (sequential
+lake ramp — dataviz-validated), arm donut (validated trio #2F6BAA/#B4642B/
+#7B4B94), filters school/arm/teacher + clearer stage labels. **Training
+dashboard:** sample preview (10 synthetic enumerators, bannered, client-
+only) + charts view (exact% vs 90% bar, lean) — recharts installed.
+**Access requests (§35):** access_requests table (migration 0006, applied),
+public POST /api/access-request (honeypot, no enumeration), sign-in
+"Request permission to enter" modal, Team screen approval section
+(training/live/decline). **María-only:** /admin/preview ("What Arya can
+see", email-gated) + home button. Home copy now points at Progress.
+purgeFixture unchanged. NOTE: rerun `node scripts/setup-coder-role.mts`
+after pulling? Not needed — access_requests is admin-only and the coder
+role gets no grant (revoke-all covers it on next run).
+
 ## Next up
 
 1. **Stage 3 continues:** gold set + certification gate (María's gold videos pending),

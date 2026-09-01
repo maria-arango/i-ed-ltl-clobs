@@ -749,7 +749,7 @@ export async function submitObservation(coderId: string, videoId: string) {
   }
 
   const scored = await coderDb
-    .select({ itemNo: scores.itemNo })
+    .select({ itemNo: scores.itemNo, justification: scores.justification })
     .from(scores)
     .where(eq(scores.observationId, observation.id));
   const missing = [1, 2, 3, 4, 5, 6, 7, 8].filter(
@@ -757,6 +757,17 @@ export async function submitObservation(coderId: string, videoId: string) {
   );
   if (missing.length > 0) {
     throw new CoderError(`Items not yet scored: ${missing.join(", ")}`, 400);
+  }
+  // Justifications are never optional (Amendment §32).
+  const unjustified = scored
+    .filter((s) => !s.justification?.trim())
+    .map((s) => s.itemNo)
+    .sort((a, b) => a - b);
+  if (unjustified.length > 0) {
+    throw new CoderError(
+      `Every score needs its justification. Missing on item${unjustified.length > 1 ? "s" : ""} ${unjustified.join(", ")}`,
+      400,
+    );
   }
 
   const now = new Date();
@@ -934,6 +945,37 @@ export async function submitContextCard(coderId: string, videoId: string) {
     .limit(1);
   if (!existing[0] || existing[0].authoredBy !== coderId) {
     throw new CoderError("Not found", 404);
+  }
+  // An empty card is not a card (Amendment §33): the essentials must be
+  // filled, and every lesson has at least one adult in the room.
+  const [cardRow] = await coderDb
+    .select({
+      subject: contextCards.subject,
+      composition: contextCards.composition,
+      approxCount: contextCards.approxCount,
+    })
+    .from(contextCards)
+    .where(eq(contextCards.id, existing[0].id));
+  const adultsPresent = await coderDb
+    .select({ id: contextAdults.id })
+    .from(contextAdults)
+    .where(
+      and(
+        eq(contextAdults.contextCardId, existing[0].id),
+        isNull(contextAdults.deletedAt),
+      ),
+    )
+    .limit(1);
+  const gaps: string[] = [];
+  if (!cardRow.subject?.trim()) gaps.push("subject");
+  if (!cardRow.composition) gaps.push("composition");
+  if (!cardRow.approxCount?.trim()) gaps.push("approximate pupil count");
+  if (adultsPresent.length === 0) gaps.push("at least one adult");
+  if (gaps.length > 0) {
+    throw new CoderError(
+      `The card still needs: ${gaps.join(", ")}.`,
+      400,
+    );
   }
   const now = new Date();
   if (existing[0].status === "submitted") {

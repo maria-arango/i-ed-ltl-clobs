@@ -8,6 +8,7 @@
  */
 import { useState } from "react";
 import { AutosaveIndicator } from "@/components/workspace/autosave-indicator";
+import { MomentCard } from "@/components/ui/moment-card";
 import { encouragement } from "@/lib/encouragement";
 import { useAutosave } from "@/lib/use-autosave";
 
@@ -191,6 +192,12 @@ export function ContextCardForm({
     setReview((r) => (r ? { ...r, flagged: false, confirmedAt: null, confirmedByMe: false } : r));
     setConfirming(false);
     setMoment(encouragement.cardSubmitted());
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
   };
 
   return (
@@ -213,27 +220,7 @@ export function ContextCardForm({
           </p>
         </div>
       )}
-      {moment && (
-        <div
-          role="status"
-          className="flex items-center gap-4 rounded-xl border border-hairline p-5"
-          style={{ background: "var(--clobs-forest-wash)" }}
-        >
-          <span
-            aria-hidden
-            className="flex size-10 shrink-0 items-center justify-center rounded-full"
-            style={{ background: "var(--clobs-forest)", color: "var(--clobs-paper)" }}
-          >
-            ✓
-          </span>
-          <p
-            className="font-serif text-ink"
-            style={{ fontSize: "var(--clobs-text-prose)", lineHeight: "var(--clobs-leading-prose)" }}
-          >
-            {moment}
-          </p>
-        </div>
-      )}
+      {moment && <MomentCard>{moment}</MomentCard>}
       {status === "submitted" && mode === "edit" && !moment && (
         <p
           className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium"

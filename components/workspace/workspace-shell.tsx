@@ -17,6 +17,7 @@ import {
   type CardData,
   type CardReview,
 } from "@/components/workspace/context-card-form";
+import { FloatingTiles } from "@/components/workspace/floating-tiles";
 
 export function WorkspaceShell({
   videoId,
@@ -78,20 +79,26 @@ export function WorkspaceShell({
         },
       ]}
     >
-      <ContextCardForm
-        videoId={videoId}
-        initialCard={initialCard}
-        initialStatus={initialCardStatus}
-        initialReview={initialCardReview}
-        fieldHelp={fieldHelp}
-        mode={cardMode}
-        onStatusChange={setCardStatus}
-      />
-      <NotesEditor
-        videoId={videoId}
-        initialNote={initialNote}
-        onContentChange={(_, html) => setNoteHtml(html)}
-      />
+      <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <ContextCardForm
+          videoId={videoId}
+          initialCard={initialCard}
+          initialStatus={initialCardStatus}
+          initialReview={initialCardReview}
+          fieldHelp={fieldHelp}
+          mode={cardMode}
+          onStatusChange={setCardStatus}
+        />
+        <FloatingTiles />
+      </div>
+      <div className="grid gap-10 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <NotesEditor
+          videoId={videoId}
+          initialNote={initialNote}
+          onContentChange={(_, html) => setNoteHtml(html)}
+        />
+        <FloatingTiles />
+      </div>
       <ScoringPanel
         videoId={videoId}
         concepts={concepts}

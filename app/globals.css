@@ -324,6 +324,33 @@
   .card-lift:hover { transform: none; }
 }
 
+/* Moments (DESIGN_SYSTEM §4 amendment, 2026-09-01): a completion moment is
+   NEVER static. The card rises in, its check draws itself. */
+@keyframes moment-enter {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.moment-enter {
+  animation: moment-enter var(--clobs-dur-moment) var(--clobs-ease-out);
+}
+@keyframes overlay-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.overlay-fade {
+  animation: overlay-fade var(--clobs-dur-base) var(--clobs-ease-out);
+}
+
+/* Ambient floating tiles (workspace right rail): a slow vertical drift
+   with a whisper of rotation, staggered per tile. */
+@keyframes float-drift {
+  0%, 100% { transform: translateY(0) rotate(var(--tile-tilt, 0deg)); }
+  50% { transform: translateY(-10px) rotate(calc(var(--tile-tilt, 0deg) * -1)); }
+}
+.float-tile {
+  animation: float-drift 7s var(--clobs-ease-inout) infinite;
+}
+
 /* Skeleton shimmer (transitions-dev 15-skeleton-loader): a light band
    sweeps across placeholders while a screen loads. */
 @keyframes shimmer-sweep {
@@ -373,6 +400,9 @@
   .page-enter { animation: none; }
   .badge-pop { animation: none; }
   .shimmer::after { animation: none; }
+  .moment-enter { animation: none; }
+  .overlay-fade { animation: none; }
+  .float-tile { animation: none; }
   .check-draw { stroke-dashoffset: 0; animation: none; }
 }
 
