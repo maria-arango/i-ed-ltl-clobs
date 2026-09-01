@@ -6,6 +6,7 @@
  * autosave are never lost by switching tabs.
  */
 import { useEffect, useRef, useState } from "react";
+import GlideMenu from "@/components/primitives/GlideMenu";
 
 export interface TabDef {
   id: string;
@@ -36,12 +37,13 @@ export function WorkspaceTabs({
 
   return (
     <div>
-      <div
-        ref={listRef}
+      <GlideMenu
         role="tablist"
         aria-label="Workspace sections"
-        className="relative flex gap-1 border-b border-hairline"
+        className="flex !flex-row gap-1 border-b border-hairline"
+        highlightClassName="rounded-t-md bg-sunken"
       >
+       <div ref={listRef} className="contents">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -51,7 +53,8 @@ export function WorkspaceTabs({
             aria-selected={active === tab.id}
             aria-controls={`panel-${tab.id}`}
             onClick={() => setActive(tab.id)}
-            className={`rounded-t-md px-4 py-2 text-[14px] font-medium ${
+            data-menu-row
+            className={`relative z-10 rounded-t-md px-4 py-2 text-[14px] font-medium ${
               active === tab.id ? "text-ink" : "text-smoke hover:text-graphite"
             }`}
           >
@@ -65,13 +68,14 @@ export function WorkspaceTabs({
         ))}
         <span
           aria-hidden
-          className="absolute bottom-[-1px] h-[2px] bg-lake transition-[transform,width] duration-[220ms] ease-inout-clobs motion-reduce:transition-none"
+          className="absolute bottom-[-1px] z-10 h-[2px] bg-lake transition-[transform,width] duration-[220ms] ease-inout-clobs motion-reduce:transition-none"
           style={{
             width: underline.width,
             transform: `translateX(${underline.left}px)`,
           }}
         />
-      </div>
+       </div>
+      </GlideMenu>
       {tabs.map((tab, i) => (
         <div
           key={tab.id}

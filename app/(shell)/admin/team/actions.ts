@@ -74,3 +74,17 @@ export async function deleteMemberAction(userId: string): Promise<ActionResult> 
 
 // Availability is planned per week on the Assignment screen (Amendment B
 // §25); the per-member editor that lived here was removed with it.
+
+export async function decideRequestAction(
+  requestId: string,
+  decision: "approved_training" | "approved_live" | "declined",
+): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const { decideAccessRequest } = await import("@/lib/db/admin-access");
+  const result = await decideAccessRequest(session.user.id, requestId, decision);
+  if (result.ok) {
+    revalidatePath("/admin/team");
+    revalidatePath("/admin/training");
+  }
+  return result;
+}

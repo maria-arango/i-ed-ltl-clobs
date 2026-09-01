@@ -7,6 +7,7 @@
 import { readdirSync } from "node:fs";
 import path from "node:path";
 import { TiltCard } from "@/components/ui/tilt-card";
+import { RequestAccess } from "./request-access";
 import { SignInClient } from "./signin-client";
 
 function findKimanyaPhoto(): string | null {
@@ -24,11 +25,20 @@ function findKimanyaPhoto(): string | null {
 export default function SignInPage() {
   const photo = findKimanyaPhoto();
 
-  if (!photo) return <SignInClient />;
+  if (!photo)
+    return (
+      <div className="relative">
+        <SignInClient />
+        <RequestAccess />
+      </div>
+    );
 
   return (
     <div className="grid min-h-screen bg-paper lg:grid-cols-2">
-      <SignInClient />
+      <div className="relative">
+        <SignInClient />
+        <RequestAccess />
+      </div>
       <aside
         className="relative hidden overflow-hidden p-6 lg:block"
         aria-label="Kimanya-Ngeyo"

@@ -8,15 +8,11 @@
  * justifications, and LOCKS the scores permanently.
  */
 import { useMemo, useRef, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import GlideMenu from "@/components/primitives/GlideMenu";
+import { SPRING_LAYOUT } from "@/lib/ease";
 import { AutosaveIndicator } from "@/components/workspace/autosave-indicator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { MomentCard } from "@/components/ui/moment-card";
 import { encouragement } from "@/lib/encouragement";
 import { useAutosave } from "@/lib/use-autosave";
 
@@ -164,6 +160,7 @@ export function ScoringPanel({
   noteHtml?: string | null;
   onProgress?: (scoredCount: number, submitted: boolean) => void;
 }) {
+  const reduce = useReducedMotion();
   const [currentItem, setCurrentItem] = useState(1);
   const [submitted, setSubmitted] = useState(initialSubmitted);
   const [confirming, setConfirming] = useState(false);
@@ -220,6 +217,28 @@ export function ScoringPanel({
     );
   };
 
+  /** Table-view editing: update state, notify the shell, save the item. */
+  const saveFromTable = async (itemNo: number, next: ScoreState) => {
+    const nextMap = { ...scores, [itemNo]: next };
+    setScores(nextMap);
+    onProgress?.(
+      Object.values(nextMap).filter((s) => s.scoreNum != null).length,
+      false,
+    );
+    if (next.scoreNum != null) {
+      await fetch(`/api/coder/videos/${videoId}/scores`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          itemNo,
+          scoreNum: next.scoreNum,
+          justification:
+            next.justification.trim() === "" ? null : next.justification,
+        }),
+      }).catch(() => {});
+    }
+  };
+
   const submit = async () => {
     setSubmitError(null);
     await flush();
@@ -236,6 +255,12 @@ export function ScoringPanel({
     setConfirming(false);
     setReviewOpen(false);
     setMoment(encouragement.scoresSubmitted());
+    window.scrollTo({
+      top: 0,
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
     onProgress?.(8, true);
     // The full completion moment (DESIGN_SYSTEM §4) — never under reduced motion.
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -249,12 +274,11 @@ export function ScoringPanel({
   const rules = useMemo(() => guidance.filter((g) => g.kind === "guiding_rule"), [guidance]);
 
   if (reviewOpen) {
-    const labelOf = (n: number) => SCORE_META[n - 1].label;
     return (
       <div className="space-y-5">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h3 className="text-[16px] font-medium text-ink">
-            {submitted ? "Your submitted scores" : "Your scores at a glance"}
+            {submitted ? "Your submitted scores" : "Score in a single table"}
           </h3>
           <button
             type="button"
@@ -264,7 +288,7 @@ export function ScoringPanel({
             }}
             className="rounded-md border border-hairline bg-paper px-3 py-1.5 text-[13px] font-medium text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
           >
-            {submitted ? "Back to the items" : "Keep editing"}
+            {submitted ? "Back to the items" : "Back to one-by-one view"}
           </button>
         </div>
 
@@ -275,73 +299,168 @@ export function ScoringPanel({
           >
             <p className="text-[14px] leading-[1.6] text-ink">
               One last look before it locks. Read each score against its
-              justification: does every pair still feel right? Careful
-              checking here is what makes the data trustworthy.
+              justification: does every pair still feel right? You can still
+              change anything here. Careful checking is what makes the data
+              trustworthy.
             </p>
           </div>
         )}
 
-        <Table>
-          <TableHeader>
-            <TableRow header>
-              <TableHead>Item</TableHead>
-              <TableHead>Concept</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead>Justification</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {concepts.map((c) => {
-              const entry = scores[c.itemNo];
-              return (
-                <TableRow key={c.itemNo}>
-                  <TableCell className="num text-graphite">{c.itemNo}</TableCell>
-                  <TableCell className="text-ink">{c.name}</TableCell>
-                  <TableCell>
-                    {entry.scoreNum != null ? (
-                      <span
-                        className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-medium text-ink"
-                        style={{
-                          background: SCORE_META[entry.scoreNum - 1].fill,
-                          border: `1px solid ${SCORE_META[entry.scoreNum - 1].edge}`,
-                        }}
-                      >
-                        <span
-                          className="mono flex size-4.5 items-center justify-center rounded-full text-[11px]"
-                          style={{
-                            background: SCORE_META[entry.scoreNum - 1].edge,
-                            color: "var(--clobs-paper)",
-                          }}
-                        >
-                          {entry.scoreNum}
-                        </span>
-                        {labelOf(entry.scoreNum)}
+        <div className="space-y-3">
+          {concepts.map((c) => {
+            const entry = scores[c.itemNo];
+            return (
+              <div
+                key={c.itemNo}
+                className="elev-card rounded-xl border border-hairline bg-card p-4"
+              >
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium text-ink">
+                      <span className="mono mr-2 text-[12px] text-smoke">
+                        {c.itemNo}
                       </span>
+                      {c.name}
+                    </p>
+                    <div
+                      role="radiogroup"
+                      aria-label={`Score for concept ${c.itemNo}`}
+                      className="mt-2 flex flex-wrap gap-1.5"
+                    >
+                      {SCORE_META.map((meta) => {
+                        const selected = entry.scoreNum === meta.num;
+                        const somethingSelected = entry.scoreNum != null;
+                        return (
+                          <button
+                            key={meta.num}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            disabled={submitted}
+                            onClick={() =>
+                              void saveFromTable(c.itemNo, {
+                                ...entry,
+                                scoreNum: meta.num,
+                              })
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] text-ink disabled:cursor-not-allowed"
+                            style={{
+                              background: meta.fill,
+                              border: selected
+                                ? `2px solid ${meta.edge}`
+                                : "1px solid var(--clobs-hairline)",
+                              margin: selected ? 0 : 1,
+                              opacity: somethingSelected && !selected ? 0.55 : 1,
+                              fontWeight: selected ? 600 : 500,
+                            }}
+                          >
+                            <span
+                              className="mono flex size-4 items-center justify-center rounded-full text-[10px]"
+                              style={
+                                selected
+                                  ? {
+                                      background: meta.edge,
+                                      color: "var(--clobs-paper)",
+                                    }
+                                  : {
+                                      border:
+                                        "1px solid var(--clobs-hairline-strong)",
+                                      color: "var(--clobs-ink)",
+                                    }
+                              }
+                            >
+                              {meta.num}
+                            </span>
+                            {meta.num <= 2 ? "A" : "B"} ·{" "}
+                            {meta.num === 1 || meta.num === 4
+                              ? "Very"
+                              : "Somewhat"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <label
+                      htmlFor={`table-just-${c.itemNo}`}
+                      className="block text-[12px] font-medium text-graphite"
+                    >
+                      Justification (required)
+                    </label>
+                    {submitted ? (
+                      <p className="mt-1 text-[13px] leading-[1.5] text-graphite">
+                        {entry.justification.trim() || (
+                          <span className="text-smoke">—</span>
+                        )}
+                      </p>
                     ) : (
-                      <span className="text-[13px] text-clay">not scored yet</span>
+                      <textarea
+                        id={`table-just-${c.itemNo}`}
+                        rows={2}
+                        value={entry.justification}
+                        onChange={(e) =>
+                          setScores((prev) => ({
+                            ...prev,
+                            [c.itemNo]: {
+                              ...prev[c.itemNo],
+                              justification: e.target.value,
+                            },
+                          }))
+                        }
+                        onBlur={() => void saveFromTable(c.itemNo, scores[c.itemNo])}
+                        placeholder="What you saw that earned this score."
+                        className={`mt-1 block w-full resize-none rounded-md border bg-paper px-3 py-2 text-[13px] text-ink focus:border-hairline-strong ${
+                          entry.scoreNum != null &&
+                          entry.justification.trim() === ""
+                            ? "border-clay/60"
+                            : "border-hairline"
+                        }`}
+                      />
                     )}
-                  </TableCell>
-                  <TableCell className="text-[13px] leading-[1.5] text-graphite">
-                    {entry.justification.trim() || <span className="text-smoke">—</span>}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
-        {confirming && !submitted && (
-          <div className="flex items-center justify-end gap-3">
-            {submitError && (
-              <p role="alert" className="text-[13px] text-clay">{submitError}</p>
-            )}
-            <button
-              type="button"
-              onClick={submit}
-              className="rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
-            >
-              Everything checks out. Submit and lock
-            </button>
+        {!submitted && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[13px] text-smoke" aria-live="polite">
+              <span className="mono">{scoredCount}</span> of{" "}
+              <span className="mono">8</span> scored
+              {emptyJustifications > 0 && (
+                <span className="text-clay">
+                  {" "}
+                  · {emptyJustifications} justification
+                  {emptyJustifications > 1 ? "s" : ""} missing
+                </span>
+              )}
+            </p>
+            <div className="flex items-center gap-3">
+              {submitError && (
+                <p role="alert" className="text-[13px] text-clay">{submitError}</p>
+              )}
+              {confirming ? (
+                <button
+                  type="button"
+                  onClick={submit}
+                  disabled={scoredCount < 8 || emptyJustifications > 0}
+                  className="rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98] disabled:bg-sunken disabled:text-ash"
+                >
+                  Everything checks out. Submit and lock
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirming(true)}
+                  disabled={scoredCount < 8 || emptyJustifications > 0}
+                  className="rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98] disabled:bg-sunken disabled:text-ash"
+                >
+                  Review and submit
+                </button>
+              )}
+            </div>
           </div>
         )}
         {submitted && (
@@ -358,33 +477,51 @@ export function ScoringPanel({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[13rem_minmax(0,1fr)_20rem]">
-      {/* Item rail */}
-      <nav aria-label="Concepts" className="space-y-1">
-        {concepts.map((c) => {
-          const done = scores[c.itemNo].scoreNum != null;
-          const active = c.itemNo === currentItem;
-          return (
-            <button
-              key={c.itemNo}
-              type="button"
-              onClick={() => setCurrentItem(c.itemNo)}
-              aria-current={active ? "true" : undefined}
-              className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[14px] ${
-                active ? "bg-lake-wash text-ink" : "text-graphite hover:bg-card"
-              }`}
-            >
-              <span
-                aria-hidden
-                className="size-2 shrink-0 rounded-full"
-                style={{
-                  background: done ? "var(--clobs-forest)" : "var(--clobs-hairline-strong)",
-                }}
-              />
-              <span className="mono text-[12px]">{c.itemNo}</span>
-              <span className="truncate">{c.name}</span>
-            </button>
-          );
-        })}
+      {/* Item rail — hover layer and active pill both GLIDE (María's
+          gliding-everywhere rule, 2026-09-01, supersedes the static rail). */}
+      <nav aria-label="Concepts">
+        <GlideMenu className="space-y-1" highlightClassName="rounded-md bg-card">
+          {concepts.map((c) => {
+            const done = scores[c.itemNo].scoreNum != null;
+            const active = c.itemNo === currentItem;
+            return (
+              <button
+                key={c.itemNo}
+                type="button"
+                data-menu-row
+                onClick={() => setCurrentItem(c.itemNo)}
+                aria-current={active ? "true" : undefined}
+                className="relative flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-[14px]"
+              >
+                {active && (
+                  <motion.span
+                    layoutId="scoring-rail-pill"
+                    transition={reduce ? { duration: 0 } : SPRING_LAYOUT}
+                    className="absolute inset-0 rounded-md bg-lake-wash"
+                    aria-hidden
+                  />
+                )}
+                <span
+                  className={`relative z-10 flex w-full items-center gap-2 ${
+                    active ? "text-ink" : "text-graphite"
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className="size-2 shrink-0 rounded-full"
+                    style={{
+                      background: done
+                        ? "var(--clobs-forest)"
+                        : "var(--clobs-hairline-strong)",
+                    }}
+                  />
+                  <span className="mono text-[12px]">{c.itemNo}</span>
+                  <span className="truncate">{c.name}</span>
+                </span>
+              </button>
+            );
+          })}
+        </GlideMenu>
         <div className="pt-4">
           <p className="text-[12px] text-smoke">
             <span className="mono">{scoredCount}</span> of <span className="mono">8</span> scored
@@ -395,15 +532,16 @@ export function ScoringPanel({
               onClick={() => setReviewOpen(true)}
               className="mt-2 w-full rounded-md border border-hairline bg-paper px-3 py-2 text-[13px] font-medium text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
             >
-              See all my scores as a table
+              Enter scores as a table
             </button>
           )}
           {!submitted && scoredCount === 8 && (
             <div className="mt-3 space-y-2">
               {emptyJustifications > 0 && (
-                <p className="text-[12px] leading-[1.5] text-graphite">
-                  {emptyJustifications} item{emptyJustifications > 1 ? "s have" : " has"} no
-                  justification. The rubric expects one, but you can still submit.
+                <p className="text-[12px] leading-[1.5] text-clay">
+                  {emptyJustifications} item{emptyJustifications > 1 ? "s" : ""} still
+                  need{emptyJustifications > 1 ? "" : "s"} a justification.
+                  Scores cannot be submitted without them.
                 </p>
               )}
               {!confirming ? (
@@ -444,27 +582,7 @@ export function ScoringPanel({
 
       {/* Rubric + scoring */}
       <div className="min-w-0 space-y-6">
-        {moment && (
-          <div
-            role="status"
-            className="flex items-center gap-4 rounded-xl border border-hairline p-5"
-            style={{ background: "var(--clobs-forest-wash)" }}
-          >
-            <span
-              aria-hidden
-              className="flex size-10 shrink-0 items-center justify-center rounded-full"
-              style={{ background: "var(--clobs-forest)", color: "var(--clobs-paper)" }}
-            >
-              ✓
-            </span>
-            <p
-              className="font-serif text-ink"
-              style={{ fontSize: "var(--clobs-text-prose)", lineHeight: "var(--clobs-leading-prose)" }}
-            >
-              {moment}
-            </p>
-          </div>
-        )}
+        {moment && <MomentCard>{moment}</MomentCard>}
         <div className="rounded-xl border border-hairline bg-card p-6">
           <p className="text-[11px] font-medium uppercase tracking-[0.02em] text-smoke">
             Concept {concept.itemNo} of 8
@@ -576,14 +694,27 @@ export function ScoringPanel({
               >
                 ← Previous
               </button>
-              <button
-                type="button"
-                disabled={currentItem === 8}
-                onClick={() => setCurrentItem((i) => Math.min(8, i + 1))}
-                className="rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[14px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card disabled:cursor-not-allowed disabled:text-ash"
-              >
-                Next →
-              </button>
+              {currentItem === 8 && !submitted ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (scoredCount === 8) setConfirming(true);
+                    setReviewOpen(true);
+                  }}
+                  className="rounded-md bg-bark px-4 py-2 text-[14px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
+                >
+                  {scoredCount === 8 ? "Review and submit →" : "Review my scores →"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={currentItem === 8}
+                  onClick={() => setCurrentItem((i) => Math.min(8, i + 1))}
+                  className="rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[14px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card disabled:cursor-not-allowed disabled:text-ash"
+                >
+                  Next →
+                </button>
+              )}
             </div>
           </div>
         </div>

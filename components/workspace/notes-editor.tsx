@@ -35,6 +35,7 @@ import {
   Underline,
   Undo2,
 } from "lucide-react";
+import GlideMenu from "@/components/primitives/GlideMenu";
 import { AutosaveIndicator } from "@/components/workspace/autosave-indicator";
 import { useAutosave } from "@/lib/use-autosave";
 
@@ -91,10 +92,11 @@ function ToolButton({
       disabled={disabled}
       onMouseDown={(e) => e.preventDefault()} // keep editor selection
       onClick={onClick}
-      className={`flex size-8 items-center justify-center rounded-sm ${
+      data-menu-row
+      className={`relative z-10 flex size-8 items-center justify-center rounded-sm ${
         active
           ? "bg-lake-wash text-ink"
-          : "text-graphite hover:bg-card disabled:cursor-not-allowed disabled:text-ash"
+          : "text-graphite disabled:cursor-not-allowed disabled:text-ash"
       }`}
     >
       {children}
@@ -190,10 +192,11 @@ export function NotesEditor({
   return (
     <section aria-label="Notes" className="max-w-[80ch]">
       <div className="rounded-xl border border-hairline bg-paper">
-        <div
+        <GlideMenu
           role="toolbar"
           aria-label="Text formatting"
-          className="flex flex-wrap items-center gap-0.5 border-b border-hairline bg-card px-2 py-1.5"
+          className="flex !flex-row flex-wrap items-center gap-0.5 border-b border-hairline bg-card px-2 py-1.5"
+          highlightClassName="rounded-sm bg-sunken shadow-[0_1px_3px_rgba(58,47,36,0.14)]"
         >
           <ToolButton
             title="Undo"
@@ -360,7 +363,7 @@ export function NotesEditor({
           <span className="ml-auto pr-2">
             <AutosaveIndicator status={status} savedAt={savedAt} />
           </span>
-        </div>
+        </GlideMenu>
         <EditorContent editor={editor} />
       </div>
       <p className="mt-2 text-[12px] text-smoke">

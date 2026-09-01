@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { listTeam } from "@/lib/db/admin";
+import { listPendingRequests } from "@/lib/db/admin-access";
 import {
   Table,
   TableBody,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { AddMemberForm } from "./add-member-form";
 import { MemberRowActions } from "./member-row-actions";
+import { RequestActions } from "./request-actions";
 
 function RoleChip({
   role,
@@ -54,7 +56,7 @@ function RoleChip({
 
 export default async function TeamPage() {
   const session = await requireAdmin();
-  const team = await listTeam();
+  const [team, requests] = await Promise.all([listTeam(), listPendingRequests()]);
   const visible = team.filter((m) => !m.email.endsWith("@example.invalid"));
 
   return (
@@ -91,6 +93,51 @@ export default async function TeamPage() {
           .
         </p>
       </section>
+
+      {requests.length > 0 && (
+        <section aria-label="Access requests" className="space-y-3">
+          <h2
+            className="font-sans font-medium text-ink"
+            style={{
+              fontSize: "var(--clobs-text-heading-sm)",
+              lineHeight: "var(--clobs-leading-heading-sm)",
+              letterSpacing: "var(--clobs-tracking-heading-sm)",
+            }}
+          >
+            Access requests
+            <span
+              className="badge-pop mono ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 align-middle text-[11px] font-semibold"
+              style={{ background: "var(--clobs-lake)", color: "var(--clobs-paper)" }}
+            >
+              {requests.length}
+            </span>
+          </h2>
+          <Table>
+            <TableHeader>
+              <TableRow header>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Requested</TableHead>
+                <TableHead className="text-right">Decision</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {requests.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="text-ink">{r.fullName}</TableCell>
+                  <TableCell className="mono text-[13px] text-graphite">{r.email}</TableCell>
+                  <TableCell className="text-[13px] text-graphite">
+                    {r.requestedAt.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <RequestActions requestId={r.id} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </section>
+      )}
 
       <AddMemberForm />
 
