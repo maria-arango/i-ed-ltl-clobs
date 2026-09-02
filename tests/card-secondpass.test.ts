@@ -28,6 +28,7 @@ import {
   flagContextCard,
   getWorkspace,
   saveContextCard,
+  saveNote,
   saveScore,
   submitContextCard,
   submitObservation,
@@ -62,6 +63,9 @@ async function expectCoderError(
 
 async function scoreAndSubmit(coderId: string) {
   await ensureObservation(coderId, videoId);
+  await saveNote(coderId, videoId, {
+    body: "<p>Watched in full; group work in the middle third.</p>",
+  });
   for (let i = 1; i <= 8; i++) {
     await saveScore(coderId, videoId, {
       itemNo: i,

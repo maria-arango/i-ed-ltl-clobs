@@ -166,7 +166,9 @@ export interface WeekOutlook {
   actual: number;
 }
 
-/** The study's weeks from now (or Sept 1) to the Oct 30 deadline. */
+/** The study's weeks to the (movable) deadline. NOT currently shown —
+ *  María removed the road chart 2026-09-01; this feeds the future weekly
+ *  calendar idea (docs/07 #1) when it returns. */
 export async function getWeeklyOutlook(): Promise<WeekOutlook[]> {
   const team = await db
     .select({ id: users.id, email: users.email })

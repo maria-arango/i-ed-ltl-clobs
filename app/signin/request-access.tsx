@@ -102,8 +102,8 @@ export function RequestAccess() {
                   Request permission to enter
                 </h3>
                 <p className="mt-2 text-[14px] leading-[1.6] text-graphite">
-                  Leave your name and the email you want to sign in with. An
-                  admin grants access; nothing is created until they do.
+                  Leave your name and the email you want to sign in with.
+                  An admin will grant you access.
                 </p>
                 <label className="mt-4 block text-[14px] font-medium text-ink">
                   Full name

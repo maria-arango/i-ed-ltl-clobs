@@ -9,7 +9,9 @@ import { PillButton } from "@/components/ui/pill-button";
 import {
   addTraineeAction,
   assignPackAction,
+  createDemoAction,
   enterSandboxAction,
+  resetDemoAction,
   type TrainingActionResult,
 } from "./actions";
 
@@ -189,5 +191,69 @@ export function AssignPackButton({ userId }: { userId: string }) {
         Assign the pack
       </PillButton>
     </span>
+  );
+}
+
+/* --------------------------- demo controls ---------------------------- */
+
+export function DemoButtons() {
+  const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+  const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+
+  const run = (fn: () => Promise<TrainingActionResult>, okText: (n: number) => string) =>
+    startTransition(async () => {
+      setMessage(null);
+      const r = await fn();
+      setMessage(
+        r.ok
+          ? { kind: "ok", text: okText(r.assigned ?? 0) }
+          : { kind: "error", text: r.error ?? "Something went wrong" },
+      );
+    });
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          run(createDemoAction, (n) =>
+            n > 0
+              ? `${n} demo video${n === 1 ? "" : "s"} added to My videos (calibration partner included).`
+              : "Your demo videos already exist — find them in My videos.",
+          )
+        }
+        className="rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[14px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98] disabled:text-ash"
+      >
+        {pending ? "Working…" : "Give me demo videos"}
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => {
+          if (!confirming) {
+            setConfirming(true);
+            setTimeout(() => setConfirming(false), 4000);
+            return;
+          }
+          setConfirming(false);
+          run(resetDemoAction, (n) =>
+            n > 0
+              ? `${n} demo video${n === 1 ? "" : "s"} and everything coded on them deleted. Your dashboard starts fresh.`
+              : "No demo videos to delete.",
+          );
+        }}
+        className="rounded-md border border-hairline bg-paper px-4 py-2 text-[14px] font-semibold text-clay transition-colors duration-[90ms] hover:border-clay hover:bg-card active:scale-[0.98] disabled:text-ash"
+      >
+        {confirming ? "Click again: delete demo data forever" : "Delete my demo videos & data"}
+      </button>
+      <span aria-live="polite" className="text-[13px]">
+        {message?.kind === "error" && <span className="text-clay">{message.text}</span>}
+        {message?.kind === "ok" && (
+          <span style={{ color: "var(--clobs-forest)" }}>{message.text}</span>
+        )}
+      </span>
+    </div>
   );
 }

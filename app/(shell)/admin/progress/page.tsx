@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { getProgressOverview, getWeeklyOutlook } from "@/lib/db/admin-progress";
+import { getProgressOverview } from "@/lib/db/admin-progress";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { ProgressDashboard } from "./progress-dashboard";
 
@@ -24,10 +24,7 @@ const CARDS: Array<{
 
 export default async function ProgressPage() {
   await requireAdmin();
-  const [{ totals, rows }, weeks] = await Promise.all([
-    getProgressOverview(),
-    getWeeklyOutlook(),
-  ]);
+  const { totals, rows } = await getProgressOverview();
 
   return (
     <div className="mx-auto mt-2 max-w-[980px] space-y-8">
@@ -74,7 +71,7 @@ export default async function ProgressPage() {
         ))}
       </section>
 
-      <ProgressDashboard rows={rows} weeks={weeks} />
+      <ProgressDashboard rows={rows} />
     </div>
   );
 }

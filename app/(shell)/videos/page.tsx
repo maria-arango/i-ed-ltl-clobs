@@ -5,14 +5,22 @@
  */
 import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
-import { getCoderQueue } from "@/lib/db/coder";
+import { getCoderQueue, getMyCodingStats, getRubricContent } from "@/lib/db/coder";
 import { NumberTicker } from "@/components/ui/number-ticker";
+import { ViewSwitch } from "@/components/ui/view-switch";
+import { MyDashboard } from "@/components/videos/my-dashboard";
 import { VideosTable } from "@/components/videos/videos-table";
 
 export default async function MyVideos() {
   const session = await requireSession();
-  const queue = await getCoderQueue(session.user.id);
+  const [queue, stats, rubric] = await Promise.all([
+    getCoderQueue(session.user.id),
+    getMyCodingStats(session.user.id),
+    getRubricContent(),
+  ]);
   const done = queue.filter((q) => q.observationStatus === "submitted").length;
+  const conceptNames: Record<number, string> = {};
+  for (const c of rubric?.concepts ?? []) conceptNames[c.itemNo] = c.name;
 
   return (
     <div className="space-y-6">
@@ -44,25 +52,45 @@ export default async function MyVideos() {
         </p>
       </header>
 
-      {queue.length === 0 ? (
-        <div className="elev-card rounded-2xl border border-hairline bg-card p-6">
-          <p className="text-[15px] text-graphite">
-            No videos assigned yet. Your queue fills when an admin runs an
-            assignment wave. Check back, or ask your admin.
-          </p>
-        </div>
-      ) : (
-        <VideosTable
-          rows={queue.map((q) => ({
-            videoId: q.videoId,
-            displayCode: q.displayCode,
-            durationSeconds: q.durationSeconds,
-            partnerName: q.partnerName,
-            fillsContextCard: q.fillsContextCard,
-            observationStatus: q.observationStatus,
-          }))}
-        />
-      )}
+      <ViewSwitch
+        ariaLabel="My videos views"
+        views={[
+          {
+            key: "videos",
+            label: "My videos",
+            content:
+              queue.length === 0 ? (
+                <div className="elev-card rounded-2xl border border-hairline bg-card p-6">
+                  <p className="text-[15px] text-graphite">
+                    No videos assigned yet. Your queue fills when an admin runs
+                    an assignment wave. Check back, or ask your admin.
+                  </p>
+                </div>
+              ) : (
+                <VideosTable
+                  rows={queue.map((q) => ({
+                    videoId: q.videoId,
+                    displayCode: q.displayCode,
+                    durationSeconds: q.durationSeconds,
+                    partnerName: q.partnerName,
+                    fillsContextCard: q.fillsContextCard,
+                    observationStatus: q.observationStatus,
+                  }))}
+                />
+              ),
+          },
+          {
+            key: "dashboard",
+            label: "My dashboard",
+            content: (
+              <MyDashboard
+                stats={JSON.parse(JSON.stringify(stats))}
+                conceptNames={conceptNames}
+              />
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

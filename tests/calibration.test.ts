@@ -46,8 +46,10 @@ import {
 } from "@/db/schema";
 import {
   ensureObservation,
+  saveContextCard,
   saveNote,
   saveScore,
+  submitContextCard,
   submitObservation,
 } from "@/lib/db/coder";
 import { GET as queueRoute } from "@/app/api/coder/calibration/route";
@@ -237,6 +239,14 @@ describe("the co-presence gate (CLAUDE.md §2)", () => {
       });
     }
     await saveNote(anchorId, videoId, { body: "<p>anchor note</p>" });
+    // The anchor fills the card; completion requires it (Amendment §37).
+    await saveContextCard(anchorId, videoId, {
+      subject: "Physics",
+      composition: "mixed",
+      approxCount: "35",
+      adults: [{ adultNo: 1, role: "teacher", sex: "female", speaks: "yes" }],
+    });
+    await submitContextCard(anchorId, videoId);
     await submitObservation(anchorId, videoId);
 
     const res = await join(anchorId);

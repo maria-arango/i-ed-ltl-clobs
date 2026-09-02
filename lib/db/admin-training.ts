@@ -8,17 +8,25 @@
  *
  * No calibration in training (Amendment §29): packs are single-rater.
  */
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   assignmentRaters,
   assignments,
   auditLog,
+  calibrationItems,
+  calibrationPresence,
+  calibrationSessions,
+  calibrationSignoffs,
+  contextAdults,
+  contextCards,
+  events,
   goldScores,
   notes,
   observations,
   pairMembers,
   pairs,
+  rubricVersions,
   scores,
   users,
   videos,
@@ -413,4 +421,291 @@ export async function getTraineeWork(userId: string): Promise<{
     });
   }
   return { trainee, work };
+}
+
+/* --------------------------- demo videos ------------------------------ */
+/* Self-service (Amendment §38): an admin gives themselves the two demo
+   videos (with the pre-seated calibration partner) and can delete them
+   again WITH all their data — demo scores never take up space, and the
+   personal dashboard restarts clean. Everything is dataset='training',
+   whose locked rows are deletable by design (migrations 0003/0005). */
+
+function demoCode(email: string, n: string): string {
+  const short = email.split("@")[0].replace(/[^a-z]/gi, "").slice(0, 5).toUpperCase();
+  return `V-DEMO-${short}-${n}`;
+}
+
+export async function createDemoVideos(
+  userId: string,
+): Promise<{ ok: true; created: number } | { ok: false; error: string }> {
+  const [user] = await db
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .where(eq(users.id, userId));
+  if (!user) return { ok: false, error: "No such account." };
+  const partnerId = await getPlaceholderId();
+
+  const label = `demo-${user.email}`;
+  let [pair] = await db
+    .select({ id: pairs.id })
+    .from(pairs)
+    .where(and(eq(pairs.label, label), eq(pairs.dataset, "training")));
+  if (!pair) {
+    [pair] = await db
+      .insert(pairs)
+      .values({ label, dataset: "training" })
+      .returning({ id: pairs.id });
+    await db.insert(pairMembers).values([
+      { pairId: pair.id, userId },
+      { pairId: pair.id, userId: partnerId },
+    ]);
+  }
+
+  let created = 0;
+  for (const [suffix, fills] of [
+    ["01", true],
+    ["02", false],
+  ] as const) {
+    const code = demoCode(user.email, suffix);
+    const [existing] = await db
+      .select({ id: videos.id })
+      .from(videos)
+      .where(eq(videos.displayCode, code));
+    if (existing) continue;
+    const [video] = await db
+      .insert(videos)
+      .values({
+        displayCode: code,
+        dataset: "training",
+        status: "assigned",
+        driveUrl: "https://drive.google.com/",
+        durationSeconds: 40 * 60,
+      })
+      .returning({ id: videos.id });
+    const [assignment] = await db
+      .insert(assignments)
+      .values({
+        videoId: video.id,
+        pairId: pair.id,
+        waveNo: 0,
+        dataset: "training",
+        batchLabel: "demo",
+      })
+      .returning({ id: assignments.id });
+    await db.insert(assignmentRaters).values([
+      { assignmentId: assignment.id, userId, fillsContextCard: fills },
+      { assignmentId: assignment.id, userId: partnerId, fillsContextCard: !fills },
+    ]);
+    created++;
+  }
+
+  // Calibration demo on -02: the placeholder has submitted and "sits" in
+  // the room forever, pre-signed, so the real gate opens on first join.
+  const [demo2] = await db
+    .select({ id: videos.id })
+    .from(videos)
+    .where(eq(videos.displayCode, demoCode(user.email, "02")));
+  if (demo2) {
+    const [existingSession] = await db
+      .select({ id: calibrationSessions.id })
+      .from(calibrationSessions)
+      .where(
+        and(
+          eq(calibrationSessions.videoId, demo2.id),
+          eq(calibrationSessions.pairId, pair.id),
+        ),
+      );
+    if (!existingSession) {
+      const [rubric] = await db
+        .select({ id: rubricVersions.id })
+        .from(rubricVersions)
+        .orderBy(sql`${rubricVersions.effectiveFrom} DESC NULLS LAST`)
+        .limit(1);
+      if (rubric) {
+        const TRIPLE: Record<number, { c: "A" | "B"; d: "somewhat" | "very" }> = {
+          1: { c: "A", d: "very" },
+          2: { c: "A", d: "somewhat" },
+          3: { c: "B", d: "somewhat" },
+          4: { c: "B", d: "very" },
+        };
+        const PARTNER = [1, 2, 3, 4, 2, 3, 1, 4];
+        const JUSTIFICATIONS = [
+          "Pupils worked in groups for most of the lesson and explained answers to each other.",
+          "The teacher asked open questions but answered several of them herself.",
+          "Pupils rarely initiated; most turns were teacher-prompted.",
+          "The final task asked pupils to apply the rule to a new case.",
+          "Steps were modelled once, then support was withdrawn quickly.",
+          "Understanding was checked with a show of hands only.",
+          "Feedback was mostly 'good' or 'correct', not specific.",
+          "The example about market prices connected directly to daily life.",
+        ];
+        const now = new Date();
+        const [partnerObs] = await db
+          .insert(observations)
+          .values({
+            videoId: demo2.id,
+            coderId: partnerId,
+            dataset: "training",
+            status: "submitted",
+            startedAt: now,
+            submittedAt: now,
+            rubricVersionId: rubric.id,
+          })
+          .returning({ id: observations.id });
+        for (let i = 1; i <= 8; i++) {
+          const n = PARTNER[i - 1];
+          await db.insert(scores).values({
+            observationId: partnerObs.id,
+            itemNo: i,
+            scoreNum: n,
+            scoreColumn: TRIPLE[n].c,
+            scoreDegree: TRIPLE[n].d,
+            justification: JUSTIFICATIONS[i - 1],
+            rubricVersionId: rubric.id,
+            dataset: "training",
+            submittedAt: now,
+            lockedAt: now,
+          });
+        }
+        await db.insert(notes).values({
+          observationId: partnerObs.id,
+          dataset: "training",
+          body: `<h2 style="font-size:26px;line-height:1.25;font-weight:600;margin:0.6em 0 0.4em">Lesson flow</h2><p>Clear introduction on the board, then <mark data-color="#F5E9B8" style="background-color: #F5E9B8">group work in fours</mark>. The teacher circulated and prompted quieter pupils.</p>`,
+        });
+        const [session] = await db
+          .insert(calibrationSessions)
+          .values({
+            videoId: demo2.id,
+            pairId: pair.id,
+            dataset: "training",
+            status: "lobby",
+            rubricVersionId: rubric.id,
+          })
+          .returning({ id: calibrationSessions.id });
+        await db.insert(calibrationPresence).values({
+          sessionId: session.id,
+          userId: partnerId,
+          lastSeenAt: new Date("2100-01-01T00:00:00Z"),
+        });
+        await db.insert(calibrationSignoffs).values({
+          sessionId: session.id,
+          userId: partnerId,
+          userAgent: "demo-seed",
+        });
+      }
+    }
+  }
+  await audit(userId, "demo_videos_created", userId, { created });
+  return { ok: true, created };
+}
+
+/** Delete the caller's demo videos and EVERYTHING attached to them. */
+export async function resetMyDemo(
+  userId: string,
+): Promise<{ ok: true; removed: number } | { ok: false; error: string }> {
+  const [user] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, userId));
+  if (!user) return { ok: false, error: "No such account." };
+
+  // The user's demo pair(s): the per-account label, plus María's original
+  // pre-rename pair (label demo-<email> covers both).
+  const demoPairs = await db
+    .select({ id: pairs.id })
+    .from(pairs)
+    .where(and(eq(pairs.label, `demo-${user.email}`), eq(pairs.dataset, "training")));
+  if (demoPairs.length === 0) return { ok: true, removed: 0 };
+  const pairIds = demoPairs.map((p) => p.id);
+
+  // Videos hanging off those pairs — demo codes only, belt and braces.
+  const demoVideos = await db
+    .select({ videoId: assignments.videoId, code: videos.displayCode })
+    .from(assignments)
+    .innerJoin(videos, eq(videos.id, assignments.videoId))
+    .where(
+      and(
+        inArray(assignments.pairId, pairIds),
+        eq(videos.dataset, "training"),
+        like(videos.displayCode, "V-DEMO-%"),
+      ),
+    );
+  const videoIds = [...new Set(demoVideos.map((v) => v.videoId))];
+
+  await db.transaction(async (tx) => {
+    if (videoIds.length > 0) {
+      const sessions = await tx
+        .select({ id: calibrationSessions.id })
+        .from(calibrationSessions)
+        .where(inArray(calibrationSessions.videoId, videoIds));
+      const sessionIds = sessions.map((s) => s.id);
+      if (sessionIds.length > 0) {
+        await tx.delete(events).where(inArray(events.sessionId, sessionIds));
+        await tx
+          .delete(calibrationSignoffs)
+          .where(inArray(calibrationSignoffs.sessionId, sessionIds));
+        await tx
+          .delete(calibrationItems)
+          .where(inArray(calibrationItems.sessionId, sessionIds));
+        await tx
+          .delete(calibrationPresence)
+          .where(inArray(calibrationPresence.sessionId, sessionIds));
+        await tx
+          .delete(calibrationSessions)
+          .where(inArray(calibrationSessions.id, sessionIds));
+      }
+      await tx.delete(events).where(inArray(events.videoId, videoIds));
+      const obs = await tx
+        .select({ id: observations.id })
+        .from(observations)
+        .where(inArray(observations.videoId, videoIds));
+      const obsIds = obs.map((o) => o.id);
+      if (obsIds.length > 0) {
+        await tx.delete(scores).where(inArray(scores.observationId, obsIds));
+        await tx.delete(notes).where(inArray(notes.observationId, obsIds));
+        await tx.delete(observations).where(inArray(observations.id, obsIds));
+      }
+      const cards = await tx
+        .select({ id: contextCards.id })
+        .from(contextCards)
+        .where(inArray(contextCards.videoId, videoIds));
+      if (cards.length > 0) {
+        await tx
+          .delete(contextAdults)
+          .where(inArray(contextAdults.contextCardId, cards.map((c) => c.id)));
+        await tx.delete(contextCards).where(inArray(contextCards.videoId, videoIds));
+      }
+      const assn = await tx
+        .select({ id: assignments.id })
+        .from(assignments)
+        .where(inArray(assignments.videoId, videoIds));
+      if (assn.length > 0) {
+        await tx
+          .delete(assignmentRaters)
+          .where(inArray(assignmentRaters.assignmentId, assn.map((a) => a.id)));
+        await tx.delete(assignments).where(inArray(assignments.videoId, videoIds));
+      }
+      await tx.delete(videos).where(inArray(videos.id, videoIds));
+    }
+    // Any straggler assignments on the pair, then the pair itself.
+    const rest = await tx
+      .select({ id: assignments.id })
+      .from(assignments)
+      .where(inArray(assignments.pairId, pairIds));
+    if (rest.length > 0) {
+      await tx
+        .delete(assignmentRaters)
+        .where(inArray(assignmentRaters.assignmentId, rest.map((a) => a.id)));
+      await tx.delete(assignments).where(inArray(assignments.pairId, pairIds));
+    }
+    await tx.delete(pairMembers).where(inArray(pairMembers.pairId, pairIds));
+    await tx.delete(pairs).where(inArray(pairs.id, pairIds));
+    await tx.insert(auditLog).values({
+      actorId: userId,
+      action: "demo_videos_removed",
+      subjectTable: "videos",
+      details: { removed: videoIds.length, codes: demoVideos.map((v) => v.code) },
+    });
+  });
+  return { ok: true, removed: videoIds.length };
 }

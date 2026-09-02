@@ -145,6 +145,9 @@ describe("scores and submission", () => {
 
   it("accepts all 8, stores the fixed triple, then locks on submit", async () => {
     actAs(ids.other);
+    // Completion needs real notes (Amendment §37); the earlier one was
+    // soft-deleted, so write one that stays.
+    await putNote(jsonReq({ body: "<p>kept note for submission</p>" }), withParams(ids.video));
     for (let itemNo = 1; itemNo <= 8; itemNo++) {
       const res = await putScore(
         jsonReq({ itemNo, scoreNum: ((itemNo - 1) % 4) + 1, justification: `j${itemNo}` }),

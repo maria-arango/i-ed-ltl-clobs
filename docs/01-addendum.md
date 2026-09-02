@@ -580,3 +580,18 @@ Additions of 2026-09-01 (second review of the day):
     uses a one-hue ramp). The Training dashboard gained a clearly-bannered 10-enumerator SAMPLE
     preview (client-generated, never stored) and a charts view (exact% vs the 90% bar, lean).
     María-only: a "What Arya can see" mirror page reading through the restricted coder layer.
+
+Additions of 2026-09-01 (third review — final touches):
+
+37. **Completion means something is there.** An observation cannot be submitted without
+    real note content, and — when the coder fills the context card — without the submitted
+    card. The "Complete" pill now genuinely means card (if theirs) + notes + 8 justified,
+    locked scores. Extends §32/§33; supersedes the "notes are never required" reading of
+    Amendment B §15 at SUBMISSION time only (during coding, notes stay free-form and unforced).
+38. **Personal dashboards and self-service demos.** Every coder's My videos screen carries a
+    sliding "My videos / My dashboard" switch: their own submitted totals, score distribution
+    (1–4), per-concept lean against the A/B divide, average justification length. Admins can
+    give themselves the two demo videos and DELETE them again with everything coded on them
+    (training-dataset hard delete by design), so demo work never occupies space and the
+    personal dashboard restarts clean. The "road to October 30" chart was removed from
+    Progress (deadline may move; the weekly-calendar idea in docs/07 #1 remains the plan).

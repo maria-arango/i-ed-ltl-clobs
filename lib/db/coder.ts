@@ -770,6 +770,37 @@ export async function submitObservation(coderId: string, videoId: string) {
     );
   }
 
+  // An observation is only COMPLETE when there is something there
+  // (Amendment §37): notes with real content, and — when this coder fills
+  // the context card — a submitted card.
+  const { fillsContextCard } = await assertAssigned(coderId, videoId);
+  const noteRows = await coderDb
+    .select({ body: notes.body })
+    .from(notes)
+    .where(and(eq(notes.observationId, observation.id), isNull(notes.deletedAt)));
+  const hasNote = noteRows.some((n) => {
+    const text = n.body.replace(/<[^>]*>/g, "").trim();
+    return text.length > 0;
+  });
+  if (!hasNote) {
+    throw new CoderError(
+      "Write your notes before submitting. An observation with an empty notebook is not complete",
+      400,
+    );
+  }
+  if (fillsContextCard) {
+    const [card] = await coderDb
+      .select({ status: contextCards.status })
+      .from(contextCards)
+      .where(eq(contextCards.videoId, videoId));
+    if (card?.status !== "submitted") {
+      throw new CoderError(
+        "The context card for this video is yours to fill. Submit it before submitting your scores",
+        400,
+      );
+    }
+  }
+
   const now = new Date();
   await coderDb
     .update(scores)
@@ -1075,4 +1106,74 @@ export async function flagContextCard(
     .where(eq(contextCards.id, card.id));
   await logEvent(coderId, dataset, "context_card_flagged", { videoId });
   return { flagged: true };
+}
+
+/* ------------------------------------------------------------------ */
+/* My coding statistics (own rows only — never anyone else's)          */
+/* ------------------------------------------------------------------ */
+
+export interface MyCodingStats {
+  submittedVideos: number;
+  scoredItems: number;
+  distribution: Record<1 | 2 | 3 | 4, number>;
+  perItem: Array<{ itemNo: number; mean: number; n: number }>;
+  avgJustificationWords: number;
+  lastSubmittedAt: Date | null;
+}
+
+/** How this coder codes: their submitted scores, summarized for their own
+ *  dashboard (Amendment §38). Reads nothing about anyone else. */
+export async function getMyCodingStats(coderId: string): Promise<MyCodingStats> {
+  const myObs = await coderDb
+    .select({ id: observations.id, submittedAt: observations.submittedAt })
+    .from(observations)
+    .where(
+      and(eq(observations.coderId, coderId), eq(observations.status, "submitted")),
+    );
+  if (myObs.length === 0) {
+    return {
+      submittedVideos: 0,
+      scoredItems: 0,
+      distribution: { 1: 0, 2: 0, 3: 0, 4: 0 },
+      perItem: [],
+      avgJustificationWords: 0,
+      lastSubmittedAt: null,
+    };
+  }
+  const myScores = await coderDb
+    .select({
+      itemNo: scores.itemNo,
+      scoreNum: scores.scoreNum,
+      justification: scores.justification,
+    })
+    .from(scores)
+    .where(inArray(scores.observationId, myObs.map((o) => o.id)));
+
+  const distribution: Record<1 | 2 | 3 | 4, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  const perItemAcc = new Map<number, { sum: number; n: number }>();
+  let words = 0;
+  for (const s of myScores) {
+    distribution[s.scoreNum as 1 | 2 | 3 | 4]++;
+    const acc = perItemAcc.get(s.itemNo) ?? { sum: 0, n: 0 };
+    acc.sum += s.scoreNum;
+    acc.n++;
+    perItemAcc.set(s.itemNo, acc);
+    words += (s.justification ?? "").trim().split(/\s+/).filter(Boolean).length;
+  }
+  const perItem = [...perItemAcc.entries()]
+    .map(([itemNo, a]) => ({ itemNo, mean: a.sum / a.n, n: a.n }))
+    .sort((a, b) => a.itemNo - b.itemNo);
+  const lastSubmittedAt = myObs
+    .map((o) => o.submittedAt)
+    .filter((d): d is Date => !!d)
+    .sort((a, b) => b.getTime() - a.getTime())[0] ?? null;
+
+  return {
+    submittedVideos: myObs.length,
+    scoredItems: myScores.length,
+    distribution,
+    perItem,
+    avgJustificationWords: myScores.length ? Math.round(words / myScores.length) : 0,
+    lastSubmittedAt,
+  };
 }

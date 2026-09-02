@@ -2,7 +2,12 @@
 /** Training space server actions — admin re-checked on every call. */
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { addTrainee, assignTrainingPack } from "@/lib/db/admin-training";
+import {
+  addTrainee,
+  assignTrainingPack,
+  createDemoVideos,
+  resetMyDemo,
+} from "@/lib/db/admin-training";
 
 export interface TrainingActionResult {
   ok: boolean;
@@ -39,6 +44,32 @@ export async function enterSandboxAction(): Promise<TrainingActionResult> {
     revalidatePath("/admin/training");
     revalidatePath("/videos");
     revalidatePath("/");
+  }
+  return result;
+}
+
+/** Self-service demo videos for the acting admin (Amendment §38). */
+export async function createDemoAction(): Promise<TrainingActionResult> {
+  const session = await requireAdmin();
+  const result = await createDemoVideos(session.user.id);
+  if (result.ok) {
+    revalidatePath("/admin/training");
+    revalidatePath("/videos");
+    revalidatePath("/");
+    return { ok: true, assigned: result.created };
+  }
+  return result;
+}
+
+/** Delete the acting admin's demo videos and all their data. */
+export async function resetDemoAction(): Promise<TrainingActionResult> {
+  const session = await requireAdmin();
+  const result = await resetMyDemo(session.user.id);
+  if (result.ok) {
+    revalidatePath("/admin/training");
+    revalidatePath("/videos");
+    revalidatePath("/");
+    return { ok: true, assigned: result.removed };
   }
   return result;
 }

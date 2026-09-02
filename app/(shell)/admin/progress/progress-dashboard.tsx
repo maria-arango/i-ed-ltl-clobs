@@ -11,9 +11,7 @@ import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   Cell,
-  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -30,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { ProgressRow, ProgressStage, WeekOutlook } from "@/lib/db/admin-progress";
+import type { ProgressRow, ProgressStage } from "@/lib/db/admin-progress";
 
 /* Pipeline (ordinal) — sequential lake ramp, light → dark. */
 const STAGE_RAMP: Record<ProgressStage, string> = {
@@ -72,13 +70,7 @@ const TOOLTIP_STYLE = {
 
 const MAX_VISIBLE = 200;
 
-export function ProgressDashboard({
-  rows,
-  weeks,
-}: {
-  rows: ProgressRow[];
-  weeks: WeekOutlook[];
-}) {
+export function ProgressDashboard({ rows }: { rows: ProgressRow[] }) {
   const [stageFilter, setStageFilter] = useState<"all" | ProgressStage>("all");
   const [school, setSchool] = useState("all");
   const [arm, setArm] = useState("all");
@@ -147,54 +139,6 @@ export function ProgressDashboard({
 
   return (
     <div className="space-y-8">
-      {/* What's ahead */}
-      <section aria-label="Weekly outlook" className="elev-card rounded-2xl border border-hairline bg-card p-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-[16px] font-medium text-ink">
-            The road to October 30
-          </h2>
-          <p className="text-[13px] text-graphite">
-            Expected = the week&apos;s availability plan (videos/day × 5 days,
-            two coders per video). Actual = calibrations signed.
-          </p>
-        </div>
-        <div className="mt-4 h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={weeks} barGap={2}>
-              <CartesianGrid stroke="var(--clobs-hairline)" vertical={false} />
-              <XAxis
-                dataKey="weekLabel"
-                tick={{ fontSize: 12, fill: "var(--clobs-graphite)" }}
-                axisLine={{ stroke: "var(--clobs-hairline-strong)" }}
-                tickLine={false}
-              />
-              <YAxis
-                tick={{ fontSize: 12, fill: "var(--clobs-graphite)" }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "var(--clobs-sunken)" }} />
-              <Legend wrapperStyle={{ fontSize: 13 }} />
-              <Bar
-                name="Expected (plan)"
-                dataKey="expected"
-                fill="rgba(169, 133, 63, 0.16)"
-                stroke="#A9853F"
-                strokeWidth={1.5}
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                name="Actual (calibrated)"
-                dataKey="actual"
-                fill="#2C5C8F"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
-
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pipeline */}
         <section aria-label="Pipeline" className="elev-card rounded-2xl border border-hairline bg-card p-6">
