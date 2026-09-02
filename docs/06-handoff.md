@@ -257,6 +257,15 @@ purgeFixture unchanged. NOTE: rerun `node scripts/setup-coder-role.mts`
 after pulling? Not needed — access_requests is admin-only and the coder
 role gets no grant (revoke-all covers it on next run).
 
+## Progress (2026-09-01, round 8 — pair peek)
+
+"See their hand": the Assignment pairs table is now a client component
+(pairs-table.tsx) where each row expands an alive card below it —
+getPairAssignmentDetails (arms mix with the validated dot colors, schools,
+card-duty split, every video code chip with its arm dot and a "card"
+marker for anchor-filled cards). Loads on first open via pairDetailsAction,
+skeleton while fetching, moment-enter on reveal. 88 tests.
+
 ## Progress (2026-09-01, round 7 — final touches before the new session)
 
 Amendments §37–38. **Completion is honest** (§37): submitObservation refuses

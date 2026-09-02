@@ -7,7 +7,7 @@
  * with its seed (addendum §6: reproducible and reportable).
  */
 import { createHash } from "node:crypto";
-import { and, asc, count, desc, eq, isNotNull, isNull, max, ne } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, max, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   assignmentLog,
@@ -702,4 +702,88 @@ export async function confirmRotation(
     });
   });
   return { ok: true, formed: proposals.length };
+}
+
+/* --------------------------- pair details ----------------------------- */
+
+export interface PairAssignmentDetails {
+  total: number;
+  armCounts: { control: number; dispersed: number; connected: number };
+  schools: number;
+  anchorCards: number;
+  enumeratorCards: number;
+  videos: Array<{
+    displayCode: string;
+    arm: string | null;
+    sid: string;
+    cardFiller: "anchor" | "enumerator";
+    status: string;
+  }>;
+}
+
+/** What one pair is holding: their dealt videos with arms, schools and
+ *  card duties (ADMIN surface — arms and school ids are fine here). */
+export async function getPairAssignmentDetails(
+  pairId: string,
+): Promise<PairAssignmentDetails> {
+  const members = await db
+    .select({
+      userId: pairMembers.userId,
+      role: users.role,
+      isChiefCoder: users.isChiefCoder,
+    })
+    .from(pairMembers)
+    .innerJoin(users, eq(users.id, pairMembers.userId))
+    .where(eq(pairMembers.pairId, pairId));
+  const anchorId =
+    members.find((m) => m.role === "admin" || m.isChiefCoder)?.userId ?? null;
+
+  const rows = await db
+    .select({
+      assignmentId: assignments.id,
+      status: assignments.status,
+      displayCode: videos.displayCode,
+      arm: videoProvenance.arm,
+      sid: videoProvenance.sid,
+      fillerId: assignmentRaters.userId,
+      fills: assignmentRaters.fillsContextCard,
+    })
+    .from(assignments)
+    .innerJoin(videos, eq(videos.id, assignments.videoId))
+    .innerJoin(videoProvenance, eq(videoProvenance.videoId, videos.id))
+    .innerJoin(assignmentRaters, eq(assignmentRaters.assignmentId, assignments.id))
+    .where(
+      and(
+        eq(assignments.pairId, pairId),
+        inArray(assignments.status, ["active", "completed"]),
+        eq(assignmentRaters.fillsContextCard, true),
+      ),
+    )
+    .orderBy(asc(videos.displayCode));
+
+  const armCounts = { control: 0, dispersed: 0, connected: 0 };
+  const schools = new Set<string>();
+  let anchorCards = 0;
+  const out = rows.map((r) => {
+    if (r.arm && r.arm in armCounts) armCounts[r.arm as keyof typeof armCounts]++;
+    schools.add(r.sid);
+    const cardFiller: "anchor" | "enumerator" =
+      r.fillerId === anchorId ? "anchor" : "enumerator";
+    if (cardFiller === "anchor") anchorCards++;
+    return {
+      displayCode: r.displayCode,
+      arm: r.arm,
+      sid: r.sid,
+      cardFiller,
+      status: r.status,
+    };
+  });
+  return {
+    total: out.length,
+    armCounts,
+    schools: schools.size,
+    anchorCards,
+    enumeratorCards: out.length - anchorCards,
+    videos: out,
+  };
 }

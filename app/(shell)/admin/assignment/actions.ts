@@ -142,3 +142,18 @@ export async function setWeekPlanAction(
   }
   return result;
 }
+
+export type PairDetailsResult =
+  | { ok: true; details: import("@/lib/db/admin-assignment").PairAssignmentDetails }
+  | { ok: false; error: string };
+
+/** The "peek at their hand" card under a pair row. */
+export async function pairDetailsAction(pairId: string): Promise<PairDetailsResult> {
+  await requireAdmin();
+  const { getPairAssignmentDetails } = await import("@/lib/db/admin-assignment");
+  try {
+    return { ok: true, details: await getPairAssignmentDetails(pairId) };
+  } catch {
+    return { ok: false, error: "Could not load this pair's assignment." };
+  }
+}

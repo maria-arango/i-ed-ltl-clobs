@@ -10,15 +10,7 @@ import { requireAdmin } from "@/lib/auth-helpers";
 import { db } from "@/lib/db";
 import { videos } from "@/db/schema";
 import { getWeekRoster, listPairs } from "@/lib/db/admin-assignment";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { DissolveButton } from "./pair-forms";
+import { PairsTable } from "./pairs-table";
 import { RotationRunner } from "./rotation-runner";
 import { WeekPlan } from "./week-plan";
 
@@ -84,36 +76,14 @@ export default async function AssignmentPage() {
           Pairs
         </h2>
         {pairs.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow header>
-                <TableHead>Anchor</TableHead>
-                <TableHead>Enumerator</TableHead>
-                <TableHead>Active videos</TableHead>
-                <TableHead className="text-right">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pairs.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="text-ink">
-                    {p.anchor.name ?? p.anchor.email}
-                  </TableCell>
-                  <TableCell className="text-ink">
-                    {p.enumerator.name ?? p.enumerator.email}
-                  </TableCell>
-                  <TableCell className="num text-graphite">
-                    {p.activeAssignments}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DissolveButton pairId={p.id} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <PairsTable
+            pairs={pairs.map((p) => ({
+              id: p.id,
+              anchorLabel: p.anchor.name ?? p.anchor.email,
+              enumeratorLabel: p.enumerator.name ?? p.enumerator.email,
+              activeAssignments: p.activeAssignments,
+            }))}
+          />
         ) : (
           <p className="text-[14px] text-graphite">
             No pairs yet. Form the first one below.
