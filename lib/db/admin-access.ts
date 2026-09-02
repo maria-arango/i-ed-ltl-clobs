@@ -69,10 +69,16 @@ export async function decideAccessRequest(
 
   if (decision === "approved_training") {
     const r = await addTrainee(actorId, request.email, request.fullName);
-    // "gold set empty" must not block the account: addTrainee creates the
-    // user first and only the pack assignment can fail; surface that as a
-    // warning, not a refusal.
-    if (!r.ok && !/gold set is empty/i.test(r.error)) return r;
+    if (!r.ok) {
+      // The ACCOUNT is what the decision grants; a failed pack assignment
+      // (empty gold set, transient error) is recoverable from the Training
+      // screen. Only refuse when the account itself was not created.
+      const [created] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, request.email));
+      if (!created) return r;
+    }
   } else if (decision === "approved_live") {
     await db.insert(users).values({
       email: request.email,

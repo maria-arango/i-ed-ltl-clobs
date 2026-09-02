@@ -22,6 +22,7 @@ import {
 import {
   AddTraineeForm,
   AssignPackButton,
+  DemoButtons,
   SandboxButton,
   TrainingViews,
 } from "./training-widgets";
@@ -139,6 +140,17 @@ export default async function TrainingPage() {
             </p>
           </div>
           <SandboxButton />
+        </div>
+        <div className="mt-4 border-t border-hairline pt-4">
+          <p className="text-[13px] leading-[1.5] text-graphite">
+            Or use the two DEMO videos (one to code end to end, one with a
+            calibration partner already waiting). Deleting them removes every
+            score, note and card written on them, so demo work never takes up
+            space and your personal dashboard restarts clean.
+          </p>
+          <div className="mt-3">
+            <DemoButtons />
+          </div>
         </div>
       </section>
 

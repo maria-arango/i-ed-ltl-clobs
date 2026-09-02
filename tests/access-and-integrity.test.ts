@@ -22,6 +22,7 @@ import {
   CoderError,
   ensureObservation,
   saveContextCard,
+  saveNote,
   saveScore,
   submitContextCard,
   submitObservation,
@@ -117,6 +118,7 @@ describe("card and score integrity", () => {
   });
 
   it("scores cannot be submitted while justifications are missing", async () => {
+    await saveNote(coderId, videoId, { body: "<p>Full watch, notes taken.</p>" });
     for (let i = 1; i <= 8; i++) {
       await saveScore(coderId, videoId, {
         itemNo: i,

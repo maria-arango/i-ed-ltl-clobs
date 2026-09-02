@@ -257,7 +257,45 @@ purgeFixture unchanged. NOTE: rerun `node scripts/setup-coder-role.mts`
 after pulling? Not needed — access_requests is admin-only and the coder
 role gets no grant (revoke-all covers it on next run).
 
+## Progress (2026-09-01, round 7 — final touches before the new session)
+
+Amendments §37–38. **Completion is honest** (§37): submitObservation refuses
+without real note content and (for the card-filler) the submitted card —
+the "Complete" pill now means card+notes+scores; tests updated across four
+suites. **Personal dashboards** (§38): getMyCodingStats in the restricted
+coder layer; My videos gained a sliding "My videos / My dashboard" switch
+(components/ui/view-switch.tsx, reusable) with score distribution, per-
+concept lean vs the A/B divide (recharts), stat tiles. **Demo self-service**
+(§38): createDemoVideos/resetMyDemo in lib/db/admin-training.ts (per-account
+codes, calibration partner pre-seated; reset hard-deletes videos+scores+
+notes+cards+calibration+pair — training rows are deletable by design);
+buttons on the Training sandbox card. **Removed** the road-to-Oct-30 chart
+(getWeeklyOutlook kept in lib for the future weekly calendar). Floating
+tiles now scattered (offsets/widths/tilts). Request-access copy trimmed.
+Sign-in request button, Team approvals, access requests all confirmed
+working by María. 88 tests.
+
 ## Next up
+
+1. **Stage 4 continues: EXPORTS** — the tidy AI-training datasets
+   (scores long/wide, single-table context cards with A1–A6 blocks,
+   calibration records, notes) + the codebook, per addendum §12 and
+   Amendment B §1/§5/§6; column names/types/row counts contract-tested.
+   `.reference/beautifului/RecordsTable` kept as the records-screen pattern.
+2. **Reliability statistics** on Progress (exact/adjacent agreement,
+   quadratic-weighted kappa or Krippendorff's alpha per item, per-coder
+   signed deviation — addendum §9), once real double-coded data exists.
+3. **Reassignment tooling**: move work when someone leaves mid-video —
+   pool untouched videos, transfer in-progress work with provenance,
+   preserve completed work, consequences PREVIEWED before confirming
+   (addendum §6, CLAUDE.md §7).
+4. **Waiting on María:** school 22103's arm; flag the 6 gold videos + enter
+   master scores once the rubric is final (data/gold-set.md holds 3 + links);
+   the remaining 3 gold choices; Drive links via Video library.
+5. Stage 5 later: embedded theatre playback, nightly Drive backup +
+   restore drill, weekly calendar (docs/07 #1), remaining later-ideas.
+
+
 
 1. **Stage 3 continues:** gold set + certification gate (María's gold videos pending),
    Drive-link attachment step (match combined files by sid_tr_id prefix; 3 duplicate-session
