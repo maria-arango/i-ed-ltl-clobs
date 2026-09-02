@@ -61,10 +61,15 @@ export function MyDashboard({
     count: stats.distribution[n],
     fill: RAMP[n - 1],
   }));
-  const itemData = stats.perItem.map((i) => ({
-    name: `${i.itemNo} · ${conceptNames[i.itemNo] ?? `Concept ${i.itemNo}`}`,
-    mean: Math.round(i.mean * 100) / 100,
-  }));
+  const shorten = (t: string) => (t.length > 16 ? `${t.slice(0, 15)}…` : t);
+  const itemData = stats.perItem.map((i) => {
+    const full = conceptNames[i.itemNo] ?? `Concept ${i.itemNo}`;
+    return {
+      name: `${i.itemNo} · ${shorten(full)}`,
+      fullName: `${i.itemNo} · ${full}`,
+      mean: Math.round(i.mean * 100) / 100,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -145,9 +150,14 @@ export function MyDashboard({
           <h3 className="text-[15px] font-medium text-ink">
             Where I sit per concept
           </h3>
-          <div className="mt-3 h-56">
+          <div className="mt-3 h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={itemData} layout="vertical" barSize={12}>
+              <BarChart
+                data={itemData}
+                layout="vertical"
+                barSize={12}
+                margin={{ top: 8, right: 16, bottom: 4, left: 4 }}
+              >
                 <CartesianGrid stroke="var(--clobs-hairline)" horizontal={false} />
                 <XAxis
                   type="number"
@@ -160,7 +170,7 @@ export function MyDashboard({
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={170}
+                  width={128}
                   interval={0}
                   tick={{ fontSize: 11, fill: "var(--clobs-graphite)" }}
                   axisLine={false}
@@ -169,6 +179,9 @@ export function MyDashboard({
                 <Tooltip
                   contentStyle={TOOLTIP_STYLE}
                   cursor={{ fill: "var(--clobs-sunken)" }}
+                  labelFormatter={(_, payload) =>
+                    (payload?.[0]?.payload as { fullName?: string })?.fullName ?? ""
+                  }
                 />
                 <ReferenceLine
                   x={2.5}

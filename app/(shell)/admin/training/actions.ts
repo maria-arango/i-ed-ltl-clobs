@@ -6,6 +6,7 @@ import {
   addTrainee,
   assignTrainingPack,
   createDemoVideos,
+  removeMyTrainingPack,
   resetMyDemo,
 } from "@/lib/db/admin-training";
 
@@ -65,6 +66,19 @@ export async function createDemoAction(): Promise<TrainingActionResult> {
 export async function resetDemoAction(): Promise<TrainingActionResult> {
   const session = await requireAdmin();
   const result = await resetMyDemo(session.user.id);
+  if (result.ok) {
+    revalidatePath("/admin/training");
+    revalidatePath("/videos");
+    revalidatePath("/");
+    return { ok: true, assigned: result.removed };
+  }
+  return result;
+}
+
+/** Remove the acting admin's own training-pack sandbox work. */
+export async function removePackAction(): Promise<TrainingActionResult> {
+  const session = await requireAdmin();
+  const result = await removeMyTrainingPack(session.user.id);
   if (result.ok) {
     revalidatePath("/admin/training");
     revalidatePath("/videos");
