@@ -25,6 +25,7 @@ import {
   getTrainingDashboard,
   getTraineeWork,
   listTraineesWithProgress,
+  removeMyTrainingPack,
 } from "@/lib/db/admin-training";
 import { getCoderQueue } from "@/lib/db/coder";
 import { purgeFixture } from "./fixtures";
@@ -217,5 +218,30 @@ describe("the training pack", () => {
       scoreNum: 2,
       gold: 4,
     });
+  });
+
+  it("removing the pack deletes the trainee's work and frees the card slots", async () => {
+    const r = await removeMyTrainingPack(traineeId);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.removed).toBeGreaterThanOrEqual(2);
+    const { assignments, assignmentRaters } = await import("@/db/schema");
+    const { and, inArray } = await import("drizzle-orm");
+    const left = await db
+      .select({ id: assignments.id })
+      .from(assignments)
+      .innerJoin(assignmentRaters, eq(assignmentRaters.assignmentId, assignments.id))
+      .where(
+        and(
+          inArray(assignments.videoId, videoIds),
+          eq(assignmentRaters.userId, traineeId),
+        ),
+      );
+    expect(left).toHaveLength(0);
+    const obsLeft = await db
+      .select({ id: observations.id })
+      .from(observations)
+      .where(eq(observations.coderId, traineeId));
+    expect(obsLeft).toHaveLength(0);
   });
 });

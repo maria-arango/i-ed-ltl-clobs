@@ -259,6 +259,16 @@ role gets no grant (revoke-all covers it on next run).
 
 ## Progress (2026-09-01, round 8 — pair peek)
 
+Round-8 additions after María's check: My-dashboard per-concept chart
+fixed (taller, truncated labels, full name in tooltip); "Remove my training
+pack" button beside the sandbox (deletes own pack assignments + everything
+coded on them, INCLUDING the training context cards — a gold video's unique
+card slot must be free before live coding; note for a future session: a
+trainee's training card on a live gold video occupies that slot until their
+pack is removed — consider card-per-dataset if it bites); flagging a video
+gold now AUTO-ASSIGNS it to every active trainee (assignGoldToAllTrainees;
+the pack always equals the gold set, Amendment §29).
+
 "See their hand": the Assignment pairs table is now a client component
 (pairs-table.tsx) where each row expands an alive card below it —
 getPairAssignmentDetails (arms mix with the validated dot colors, schools,

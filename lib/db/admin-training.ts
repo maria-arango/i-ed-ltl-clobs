@@ -709,3 +709,109 @@ export async function resetMyDemo(
   });
   return { ok: true, removed: videoIds.length };
 }
+
+/**
+ * Remove the caller's own training-pack assignments AND everything they
+ * coded on them (observations, scores, notes, and crucially the context
+ * cards — a gold video's single card slot must be free again before live
+ * coding). The gold videos themselves are untouched.
+ */
+export async function removeMyTrainingPack(
+  userId: string,
+): Promise<{ ok: true; removed: number } | { ok: false; error: string }> {
+  const [user] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, userId));
+  if (!user) return { ok: false, error: "No such account." };
+
+  const packAssignments = await db
+    .select({ id: assignments.id, videoId: assignments.videoId })
+    .from(assignments)
+    .innerJoin(assignmentRaters, eq(assignmentRaters.assignmentId, assignments.id))
+    .where(
+      and(
+        eq(assignments.dataset, "training"),
+        eq(assignments.batchLabel, "training-pack"),
+        eq(assignmentRaters.userId, userId),
+      ),
+    );
+  if (packAssignments.length === 0) return { ok: true, removed: 0 };
+  const assignmentIds = packAssignments.map((a) => a.id);
+  const videoIds = [...new Set(packAssignments.map((a) => a.videoId))];
+
+  await db.transaction(async (tx) => {
+    const obs = await tx
+      .select({ id: observations.id })
+      .from(observations)
+      .where(
+        and(
+          eq(observations.coderId, userId),
+          eq(observations.dataset, "training"),
+          inArray(observations.videoId, videoIds),
+        ),
+      );
+    const obsIds = obs.map((o) => o.id);
+    if (obsIds.length > 0) {
+      await tx.delete(events).where(inArray(events.observationId, obsIds));
+      await tx.delete(scores).where(inArray(scores.observationId, obsIds));
+      await tx.delete(notes).where(inArray(notes.observationId, obsIds));
+      await tx.delete(observations).where(inArray(observations.id, obsIds));
+    }
+    // My training cards on those (live, gold) videos free the card slot.
+    const cards = await tx
+      .select({ id: contextCards.id })
+      .from(contextCards)
+      .where(
+        and(
+          inArray(contextCards.videoId, videoIds),
+          eq(contextCards.authoredBy, userId),
+          eq(contextCards.dataset, "training"),
+        ),
+      );
+    if (cards.length > 0) {
+      await tx
+        .delete(contextAdults)
+        .where(inArray(contextAdults.contextCardId, cards.map((c) => c.id)));
+      await tx
+        .delete(contextCards)
+        .where(inArray(contextCards.id, cards.map((c) => c.id)));
+    }
+    await tx
+      .delete(assignmentRaters)
+      .where(inArray(assignmentRaters.assignmentId, assignmentIds));
+    await tx.delete(assignments).where(inArray(assignments.id, assignmentIds));
+    await tx.insert(auditLog).values({
+      actorId: userId,
+      action: "training_pack_removed",
+      subjectTable: "assignments",
+      details: { email: user.email, removed: videoIds.length },
+    });
+  });
+  return { ok: true, removed: videoIds.length };
+}
+
+/**
+ * Hand a newly gold-flagged video to EVERY active trainee (Amendment §29:
+ * the training pack always equals the gold set). assignTrainingPack is
+ * idempotent, so this simply tops each trainee up.
+ */
+export async function assignGoldToAllTrainees(actorId: string): Promise<number> {
+  const trainees = await db
+    .select({ userId: users.id, email: users.email })
+    .from(users)
+    .where(
+      and(
+        eq(users.datasetScope, "training"),
+        eq(users.isActive, true),
+        eq(users.role, "coder"),
+      ),
+    );
+  let touched = 0;
+  for (const t of trainees) {
+    if (t.email.endsWith("@example.invalid")) continue;
+    const r = await assignTrainingPack(actorId, t.userId);
+    if (r.ok && r.assigned > 0) touched++;
+  }
+  return touched;
+}

@@ -141,6 +141,12 @@ export async function setGoldFlag(
   await audit(actorId, isGold ? "gold_flag_set" : "gold_flag_removed", videoId, {
     displayCode: video.displayCode,
   });
+  if (isGold) {
+    // The training pack always equals the gold set (Amendment §29):
+    // every active trainee receives the new video immediately.
+    const { assignGoldToAllTrainees } = await import("@/lib/db/admin-training");
+    await assignGoldToAllTrainees(actorId);
+  }
   return { ok: true };
 }
 

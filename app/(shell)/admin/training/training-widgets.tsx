@@ -11,6 +11,7 @@ import {
   assignPackAction,
   createDemoAction,
   enterSandboxAction,
+  removePackAction,
   resetDemoAction,
   type TrainingActionResult,
 } from "./actions";
@@ -80,32 +81,55 @@ export function TrainingViews({
 
 export function SandboxButton() {
   const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+
+  const run = (fn: () => Promise<TrainingActionResult>, okText: (n: number) => string) =>
+    startTransition(async () => {
+      setMessage(null);
+      const r = await fn();
+      setMessage(
+        r.ok
+          ? { kind: "ok", text: okText(r.assigned ?? 0) }
+          : { kind: "error", text: r.error ?? "Something went wrong" },
+      );
+    });
+
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         disabled={pending}
         onClick={() =>
-          startTransition(async () => {
-            setMessage(null);
-            const r = await enterSandboxAction();
-            setMessage(
-              r.ok
-                ? {
-                    kind: "ok",
-                    text:
-                      r.assigned && r.assigned > 0
-                        ? `${r.assigned} training videos added to My videos — go live the coder's week.`
-                        : "Your sandbox pack is already in My videos.",
-                  }
-                : { kind: "error", text: r.error ?? "Something went wrong" },
-            );
-          })
+          run(enterSandboxAction, (n) =>
+            n > 0
+              ? `${n} training videos added to My videos — go live the coder's week.`
+              : "Your sandbox pack is already in My videos.",
+          )
         }
         className="rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98] disabled:bg-sunken disabled:text-ash"
       >
-        {pending ? "Setting up…" : "Assign me the training pack"}
+        {pending ? "Working…" : "Assign me the training pack"}
+      </button>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => {
+          if (!confirming) {
+            setConfirming(true);
+            setTimeout(() => setConfirming(false), 4000);
+            return;
+          }
+          setConfirming(false);
+          run(removePackAction, (n) =>
+            n > 0
+              ? `${n} pack videos and everything you coded on them removed.`
+              : "You have no pack videos to remove.",
+          );
+        }}
+        className="rounded-md border border-hairline bg-paper px-4 py-2 text-[14px] font-semibold text-clay transition-colors duration-[90ms] hover:border-clay hover:bg-card active:scale-[0.98] disabled:text-ash"
+      >
+        {confirming ? "Click again: remove my pack work" : "Remove my training pack"}
       </button>
       <span aria-live="polite" className="text-[13px]">
         {message?.kind === "error" && <span className="text-clay">{message.text}</span>}
