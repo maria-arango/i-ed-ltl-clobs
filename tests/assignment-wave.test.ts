@@ -198,7 +198,15 @@ describe("wave preview → confirm", () => {
     const log = await db
       .select({ seed: assignmentLog.seed, action: assignmentLog.action })
       .from(assignmentLog)
-      .where(and(eq(assignmentLog.dataset, "test"), eq(assignmentLog.action, "assign")));
+      .where(
+        and(
+          eq(assignmentLog.dataset, "test"),
+          eq(assignmentLog.action, "assign"),
+          // Scoped to this fixture: other suites (exports) also log
+          // dataset='test' assignments in parallel.
+          inArray(assignmentLog.videoId, fixtureVideoIds),
+        ),
+      );
     expect(log).toHaveLength(24);
     expect(log.every((l) => l.seed === "test-wave-seed")).toBe(true);
   });

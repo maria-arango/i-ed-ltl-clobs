@@ -14,6 +14,7 @@ import {
   Award,
   ChartLine,
   Clapperboard,
+  Download,
   Film,
   GraduationCap,
   Handshake,
@@ -43,6 +44,7 @@ const adminItems = [
   { href: "/admin/gold", label: "Gold set", icon: Award, exact: false },
   { href: "/admin/training", label: "Training", icon: GraduationCap, exact: false },
   { href: "/admin/progress", label: "Progress", icon: ChartLine, exact: false },
+  { href: "/admin/exports", label: "Exports", icon: Download, exact: false },
 ];
 
 function Badge({ count }: { count: number }) {

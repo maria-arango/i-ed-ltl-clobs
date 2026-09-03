@@ -283,10 +283,13 @@ download, unblinding view, test-data purge, adjudication…), `subject_table`, `
 (jsonb), `occurred_at`.
 
 **`exports`** — `id`, `requested_by`, `requested_at`, `dataset` (always `live`), `rubric_version_id`,
-`row_counts` (jsonb per table), `manifest` (jsonb), `drive_file_ids` (jsonb) — the generated files are
-written to Drive alongside the nightly backups so any past export is re-downloadable **unchanged**
-(re-serving the stored artifact, never regenerating). Stable identifiers across exports = the UUIDs and
-display codes above, which never change once created.
+`row_counts` (jsonb per table), `manifest` (jsonb), `drive_file_ids` (jsonb). **`export_files`**
+(migration 0007, 2026-09-03) — `export_id`, `filename`, `content_type`, `byte_size`, `sha256`,
+`content` (bytea): the generated files stored verbatim, so any past export is re-downloadable
+**unchanged** (re-serving the stored artifact, never regenerating). The nightly Drive backup will mirror
+them (`drive_file_ids`); Drive is never the only copy. Stable identifiers across exports = the UUIDs and
+display codes above, which never change once created. The contract (tables, columns, types, labels,
+codes) is `lib/export/contract.ts`; see addendum Amendment §39.
 
 ---
 
