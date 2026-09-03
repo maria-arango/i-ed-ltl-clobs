@@ -143,6 +143,39 @@ export async function setWeekPlanAction(
   return result;
 }
 
+export interface MoveActionResult {
+  ok: boolean;
+  error?: string;
+  preview?: import("@/lib/db/admin-reassignment").MovePreview;
+  result?: import("@/lib/db/admin-reassignment").MoveResult;
+}
+
+/** Preview moving a pair's work (nothing written). */
+export async function previewMoveAction(
+  input: import("@/lib/db/admin-reassignment").MoveInput,
+): Promise<MoveActionResult> {
+  await requireAdmin();
+  const { previewMove } = await import("@/lib/db/admin-reassignment");
+  const r = await previewMove(input);
+  return r.ok ? { ok: true, preview: r.preview } : { ok: false, error: r.error };
+}
+
+/** Confirm the previewed move (hash-guarded, reason required). */
+export async function confirmMoveAction(
+  input: import("@/lib/db/admin-reassignment").MoveInput & { reason: string; expectedHash: string },
+): Promise<MoveActionResult> {
+  const session = await requireAdmin();
+  const { confirmMove } = await import("@/lib/db/admin-reassignment");
+  const r = await confirmMove(session.user.id, input);
+  if (r.ok) {
+    revalidatePath("/admin/assignment");
+    revalidatePath("/admin/progress");
+    revalidatePath("/");
+    return { ok: true, result: r.result };
+  }
+  return { ok: false, error: r.error };
+}
+
 export type PairDetailsResult =
   | { ok: true; details: import("@/lib/db/admin-assignment").PairAssignmentDetails }
   | { ok: false; error: string };

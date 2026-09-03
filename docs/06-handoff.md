@@ -28,7 +28,7 @@
 - Branch per concern; PRs to `main`; she merges via the GitHub button. Conventional commits.
 - Stop at reviewable milestones and report in plain language, leading with the outcome.
 
-## State snapshot (last updated 2026-08-31, branch feat/coding-path-blinding)
+## State snapshot (history; the "Progress" sections below are the running log — read the LAST one first)
 
 **Merged to main:** scaffold (Next 16 + Tailwind v4 + shadcn, tokens, /styleguide, re-themed
 fluid-orb/dock/dotted-surface/sign-in-flow-1, canvas-confetti), foundation schema
@@ -294,25 +294,83 @@ tiles now scattered (offsets/widths/tilts). Request-access copy trimmed.
 Sign-in request button, Team approvals, access requests all confirmed
 working by María. 88 tests.
 
+## Progress (2026-09-03 — Stage 4: exports, reliability, reassignment)
+
+Branch `feat/stage4-exports-reliability-reassignment`, stacked on
+`feat/pair-peek` (round 8, PR pending). Three commits, one per concern.
+Amendments §39–41 record the decisions for María to confirm.
+
+**Exports (§39):** `lib/export/contract.ts` declares the nine tables ONCE
+(column order, type, label, value codes, long-text flag) and drives the CSV
+writer (`csv.ts`), the Stata writer (`dta.ts`, format 118 with variable +
+value labels and strL; verified independently by reading a generated file
+with pandas), the codebook (`codebook.ts`, JSON + Markdown) and the
+contract test. `lib/db/admin-exports.ts` assembles the tables from LIVE
+rows only (`buildExportTables` takes a dataset ONLY so the test can use a
+purgeable fixture; `createExport` never passes it and `assertLiveOnly`
+refuses anything else), stores every file verbatim in `export_files`
+(migration 0007, applied to Neon) and audits creation and every download.
+`/admin/exports` (sidebar: Exports): generate, list past exports with row
+counts, per-file links and a ZIP bundle (`lib/export/zip.ts`, store-only,
+assembled from the stored files). Route
+`/api/admin/exports/[exportId]/[filename]` (admin-only, 403 otherwise).
+Consensus rows enter `clobs_scores_long` only from SIGNED calibrations;
+`minutes_on_item` follows the codebook formula (gap → earlier item, >30 min
+dropped). 17 tests: exact column sets per table, derived columns, CSV
+escaping, .dta parse-back (names, labels, value labels, types), ZIP
+structure, live-only rule, end-to-end create + re-serve.
+
+**Reliability (§40):** `lib/reliability.ts` (pure, hand-computed tests:
+exact/adjacent, quadratic-weighted kappa, Krippendorff's alpha ordinal
+with the coincidence-matrix formula, mean signed deviation, A/B column
+flips; chance-corrected stats return null below two pairs). Progress now
+ends with a Reliability section (overall tiles, per-concept table,
+per-coder lean table) via `getReliabilityStats` in admin-progress.ts; an
+honest empty state until the first signed live calibration exists.
+
+**Reassignment (§41):** `lib/db/admin-reassignment.ts` — `previewMove`
+classifies every active assignment of a pair (untouched / in progress /
+one submitted / both submitted) into return-to-pool / transfer / hold with
+a plain-language consequence; `confirmMove` re-classifies, checks the hash,
+requires a reason, and writes: new assignment for the destination pair,
+old assignment `returned`, rater rows `transferred` (or `voided` when a
+departing coder had submitted — scores preserved, seat refilled), staying
+coder's observation re-pointed, card duty travels (draft card re-authored
+to the incoming duty holder; submitted card stays), assignment_log rows
+(`reassign`, `return_to_pool`, `void`, `transfer_card_duty`) and an audit
+entry. Assignment screen: "Move work" pill per pair with active videos
+opens `move-work-panel.tsx` (destination select or "return untouched to
+the pool", include-submitted checkbox, preview table, reason, confirm).
+Dissolve's refusal now points to it. 6 tests on a four-state fixture.
+
+**Verification:** 119 tests (all suites), lint clean, `next build` clean.
+`npx drizzle-kit migrate` was run against live Neon (adds `export_files`
+only). Screens NOT yet browser-tested this session (no dev server was run);
+first thing next session: open /admin/exports, generate one export, open
+the .dta in Stata; open Progress (empty reliability state expected); try
+Move work on a demo pair.
+
+**Known limits / follow-ups:** deactivating a coder on the Team screen does
+not yet prompt to move their work (use Move work first); voiding a
+calibration session has no admin UI (needed before a both-submitted video
+can move); exports are not yet mirrored to Drive (Stage 5 backup);
+`clobs_coders` is identifying — keep it with the crosswalk.
+
 ## Next up
 
-1. **Stage 4 continues: EXPORTS** — the tidy AI-training datasets
-   (scores long/wide, single-table context cards with A1–A6 blocks,
-   calibration records, notes) + the codebook, per addendum §12 and
-   Amendment B §1/§5/§6; column names/types/row counts contract-tested.
-   `.reference/beautifului/RecordsTable` kept as the records-screen pattern.
-2. **Reliability statistics** on Progress (exact/adjacent agreement,
-   quadratic-weighted kappa or Krippendorff's alpha per item, per-coder
-   signed deviation — addendum §9), once real double-coded data exists.
-3. **Reassignment tooling**: move work when someone leaves mid-video —
-   pool untouched videos, transfer in-progress work with provenance,
-   preserve completed work, consequences PREVIEWED before confirming
-   (addendum §6, CLAUDE.md §7).
-4. **Waiting on María:** school 22103's arm; flag the 6 gold videos + enter
+1. **Browser-check Stage 4** (above), then María confirms Amendments
+   §39–41 (export shape, reliability choices, reassignment rules) or asks
+   for changes.
+2. **Team-screen hook**: when deactivating someone with active work, show
+   the pairs affected and link to Move work; admin "void calibration
+   session" action with a reason (CLAUDE.md §7) so both-submitted videos
+   can be moved when a pair truly dissolves.
+3. **Waiting on María:** school 22103's arm; flag the 6 gold videos + enter
    master scores once the rubric is final (data/gold-set.md holds 3 + links);
    the remaining 3 gold choices; Drive links via Video library.
-5. Stage 5 later: embedded theatre playback, nightly Drive backup +
-   restore drill, weekly calendar (docs/07 #1), remaining later-ideas.
+4. Stage 5: nightly Drive backup (mirror `export_files` + full export set)
+   with a tested restore drill, embedded theatre playback, weekly calendar
+   (docs/07 #1), remaining later-ideas.
 
 
 

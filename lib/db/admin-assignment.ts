@@ -157,7 +157,7 @@ export async function dissolvePair(
   if (Number(active.n) > 0) {
     return {
       ok: false,
-      error: `This pair still has ${active.n} active assignment(s). Reassignment tooling arrives with the next stage — until then, dissolve only empty pairs.`,
+      error: `This pair still has ${active.n} active assignment(s). Use "Move work" on this row first: it returns untouched videos to the pool or carries the work to another pair, then the pair can be dissolved.`,
     };
   }
   await db

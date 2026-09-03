@@ -595,3 +595,41 @@ Additions of 2026-09-01 (third review — final touches):
     (training-dataset hard delete by design), so demo work never occupies space and the
     personal dashboard restarts clean. The "road to October 30" chart was removed from
     Progress (deadline may move; the weekly-calendar idea in docs/07 #1 remains the plan).
+
+Additions of 2026-09-03 (Stage 4: exports, reliability, reassignment — built from the handoff;
+recorded here for María to confirm or amend):
+
+39. **The export set and where it lives.** Nine tables per export, declared once in
+    `lib/export/contract.ts` (column order, types, labels, value codes) and delivered as CSV and
+    Stata `.dta` (format 118, variable and value labels applied, long text as strL) plus
+    `codebook.json`, `codebook.md` and `manifest.json` (sizes and SHA-256 checksums):
+    `clobs_scores_long` (video × item × rater, consensus rows only from SIGNED calibrations),
+    `clobs_scores_wide` (one row per codable video: c1–c8 consensus, a1–a8 anchor, b1–b8
+    enumerator), `clobs_context_cards` (single table, `video` first, then the pilot sheet's
+    general fields, `A1_`…`A6_` blocks, `timeline`, `setting_change`; the mapping file's subject is
+    `mapping_subject`), `clobs_notes` (HTML + derived plain text), `clobs_calibration`,
+    `clobs_assignments` (the append-only log), `clobs_events`, `clobs_videos` (the display-code ↔
+    sid/tr_id/arm crosswalk) and `clobs_coders` (ids to people). Categorical text is text in the
+    CSV and a labelled integer in Stata; booleans are 1/0. **Generated files are stored verbatim
+    in the database** (`export_files`, migration 0007) so any past export re-downloads unchanged;
+    the nightly Drive backup (Stage 5) will mirror them. Exports contain only `dataset = 'live'`
+    rows (tested) and every download is audited. `minutes_on_item` is derived from the event log
+    with the formula in the codebook (gaps attributed to the earlier item, gaps over 30 minutes
+    dropped as idle).
+40. **Reliability on Progress.** Over signed live calibrations: exact and adjacent agreement,
+    quadratic-weighted kappa and Krippendorff's alpha (ordinal) per concept and overall, and per
+    coder the share matching the consensus, the mean signed deviation (positive = runs toward B)
+    and how often their column differed from the consensus column. Chance-corrected statistics
+    need at least two pairs and otherwise show a dash, never a number.
+41. **Reassignment rules ("Move work" on the Assignment screen).** Per video of the source pair,
+    previewed before anything is written and hash-guarded on confirm: nobody started → back to
+    the pool (or dealt to the destination pair); notes / draft scores / draft card → transferred
+    to the destination pair with the staying coder keeping their observation and the departing
+    coder's draft kept on record (seat marked `transferred`); one coder submitted → transferred
+    only if the admin ticks "include submitted", in which case the departing coder's locked
+    scores are preserved as evidence, their seat is marked `voided` with the reason, and the new
+    pair codes the video again; both submitted → held (finish or void the calibration first);
+    completed → never touched. Card duty travels with the video: a submitted card stays, an
+    unsubmitted one is re-authored to the incoming duty holder. A reason is mandatory and every
+    step lands in `assignment_log` (`reassign`, `return_to_pool`, `void`,
+    `transfer_card_duty`). Dissolving a pair with active work now points to this tool.
