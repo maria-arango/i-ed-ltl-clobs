@@ -3,18 +3,28 @@
  * path pool → assigned → scored twice → calibrated. Feeds the Progress
  * dashboard's insight cards and its filterable table.
  */
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import {
   assignments,
+  calibrationItems,
   calibrationSessions,
   coderAvailability,
   observations,
   pairs,
+  rubricConcepts,
+  rubricVersions,
+  scores,
   users,
   videoProvenance,
   videos,
 } from "@/db/schema";
+import {
+  summarizeReliability,
+  type CalibrationRecord,
+  type ReliabilitySummary,
+} from "@/lib/reliability";
 
 export type ProgressStage =
   | "pool"
@@ -152,6 +162,84 @@ export async function getProgressOverview(): Promise<ProgressOverview> {
   };
   for (const r of rows) totals[r.stage]++;
   return { totals, rows };
+}
+
+/* ---------------------------- reliability ----------------------------- */
+
+export interface ReliabilityView extends ReliabilitySummary {
+  /** Names for the per-coder table (admin surface). */
+  coderNames: Record<string, string>;
+  /** Rubric item names for the per-item table. */
+  itemNames: Record<number, string>;
+}
+
+/**
+ * Reliability statistics (addendum §9) over every SIGNED live calibration:
+ * anchor vs enumerator individual scores per item, and each coder's signed
+ * deviation from the consensus. Computed here from the immutable
+ * calibration items; the arithmetic lives in lib/reliability.ts (tested).
+ */
+export async function getReliabilityStats(): Promise<ReliabilityView> {
+  const a = alias(scores, "a");
+  const b = alias(scores, "b");
+  const oa = alias(observations, "oa");
+  const ob = alias(observations, "ob");
+  const rows = await db
+    .select({
+      videoId: calibrationSessions.videoId,
+      itemNo: calibrationItems.itemNo,
+      finalScore: calibrationItems.finalScoreNum,
+      anchorScore: a.scoreNum,
+      enumeratorScore: b.scoreNum,
+      anchorId: oa.coderId,
+      enumeratorId: ob.coderId,
+    })
+    .from(calibrationItems)
+    .innerJoin(calibrationSessions, eq(calibrationSessions.id, calibrationItems.sessionId))
+    .innerJoin(a, eq(a.id, calibrationItems.coderAScoreId))
+    .innerJoin(b, eq(b.id, calibrationItems.coderBScoreId))
+    .innerJoin(oa, eq(oa.id, a.observationId))
+    .innerJoin(ob, eq(ob.id, b.observationId))
+    .where(
+      and(
+        eq(calibrationSessions.dataset, "live"),
+        eq(calibrationSessions.status, "completed"),
+      ),
+    );
+
+  const records: CalibrationRecord[] = rows.map((r) => ({
+    itemNo: r.itemNo,
+    anchorId: r.anchorId,
+    enumeratorId: r.enumeratorId,
+    anchorScore: r.anchorScore,
+    enumeratorScore: r.enumeratorScore,
+    finalScore: r.finalScore,
+  }));
+  const summary = summarizeReliability(records, new Set(rows.map((r) => r.videoId)).size);
+
+  const coderIds = [...new Set(rows.flatMap((r) => [r.anchorId, r.enumeratorId]))];
+  const people = coderIds.length
+    ? await db
+        .select({ id: users.id, name: users.name, email: users.email })
+        .from(users)
+        .where(inArray(users.id, coderIds))
+    : [];
+  const coderNames = Object.fromEntries(people.map((p) => [p.id, p.name ?? p.email]));
+
+  const [rubric] = await db
+    .select({ id: rubricVersions.id })
+    .from(rubricVersions)
+    .orderBy(sql`${rubricVersions.effectiveFrom} DESC NULLS LAST`)
+    .limit(1);
+  const concepts = rubric
+    ? await db
+        .select({ itemNo: rubricConcepts.itemNo, name: rubricConcepts.name })
+        .from(rubricConcepts)
+        .where(eq(rubricConcepts.rubricVersionId, rubric.id))
+    : [];
+  const itemNames = Object.fromEntries(concepts.map((c) => [c.itemNo, c.name]));
+
+  return { ...summary, coderNames, itemNames };
 }
 
 /* --------------------------- weekly outlook --------------------------- */
