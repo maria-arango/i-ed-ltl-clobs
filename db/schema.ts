@@ -17,6 +17,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  customType,
   real,
   index,
   integer,
@@ -867,3 +868,30 @@ export const exports = pgTable("exports", {
   manifest: jsonb("manifest"),
   driveFileIds: jsonb("drive_file_ids"),
 });
+
+/** Raw bytes column (Drizzle has no built-in bytea). */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
+// The generated files of one export (migration 0007). Stored verbatim so a
+// past export is re-served byte-for-byte, never regenerated (§4.9). Small:
+// the whole study's text is a few megabytes. The nightly Drive backup
+// (Stage 5) mirrors these; Drive is never the only copy of an export.
+export const exportFiles = pgTable(
+  "export_files",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    exportId: uuid("export_id")
+      .notNull()
+      .references(() => exports.id),
+    filename: text("filename").notNull(),
+    contentType: text("content_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    sha256: text("sha256").notNull(),
+    content: bytea("content").notNull(),
+  },
+  (t) => [uniqueIndex("one_filename_per_export").on(t.exportId, t.filename)],
+);

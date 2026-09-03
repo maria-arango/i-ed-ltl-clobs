@@ -6,9 +6,10 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { getProgressOverview } from "@/lib/db/admin-progress";
+import { getProgressOverview, getReliabilityStats } from "@/lib/db/admin-progress";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { ProgressDashboard } from "./progress-dashboard";
+import { ReliabilityPanel } from "./reliability-panel";
 
 const CARDS: Array<{
   key: "codable" | "assigned" | "one_submitted" | "ready_to_calibrate" | "calibrated";
@@ -24,7 +25,10 @@ const CARDS: Array<{
 
 export default async function ProgressPage() {
   await requireAdmin();
-  const { totals, rows } = await getProgressOverview();
+  const [{ totals, rows }, reliability] = await Promise.all([
+    getProgressOverview(),
+    getReliabilityStats(),
+  ]);
 
   return (
     <div className="mx-auto mt-2 max-w-[980px] space-y-8">
@@ -49,8 +53,7 @@ export default async function ProgressPage() {
         </h1>
         <p className="text-[15px] text-graphite">
           Every codable video on its way from the pool to a signed
-          calibration. Reliability statistics join this screen later in
-          stage 4.
+          calibration, and how reliably the pairs agree.
         </p>
       </section>
 
@@ -72,6 +75,8 @@ export default async function ProgressPage() {
       </section>
 
       <ProgressDashboard rows={rows} />
+
+      <ReliabilityPanel stats={reliability} />
     </div>
   );
 }

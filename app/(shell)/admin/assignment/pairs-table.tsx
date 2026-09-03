@@ -21,6 +21,7 @@ import {
 import { pairDetailsAction } from "./actions";
 import type { PairAssignmentDetails } from "@/lib/db/admin-assignment";
 import { DissolveButton } from "./pair-forms";
+import { MoveWorkPanel } from "./move-work-panel";
 
 const ARM_COLOR: Record<string, string> = {
   control: "#2F6BAA",
@@ -115,6 +116,7 @@ function HandCard({ details }: { details: PairAssignmentDetails }) {
 
 export function PairsTable({ pairs }: { pairs: PairRowData[] }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [moveId, setMoveId] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, PairAssignmentDetails>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
@@ -159,6 +161,11 @@ export function PairsTable({ pairs }: { pairs: PairRowData[] }) {
             error={errors[p.id]}
             loading={pending && openId === p.id && !details[p.id]}
             onToggle={() => toggle(p.id)}
+            moveOpen={moveId === p.id}
+            onToggleMove={() => setMoveId(moveId === p.id ? null : p.id)}
+            otherPairs={pairs
+              .filter((o) => o.id !== p.id)
+              .map((o) => ({ id: o.id, label: ` × ` }))}
           />
         ))}
       </TableBody>
@@ -173,6 +180,9 @@ function PairRowGroup({
   error,
   loading,
   onToggle,
+  moveOpen,
+  onToggleMove,
+  otherPairs,
 }: {
   pair: PairRowData;
   open: boolean;
@@ -180,6 +190,9 @@ function PairRowGroup({
   error?: string;
   loading: boolean;
   onToggle: () => void;
+  moveOpen: boolean;
+  onToggleMove: () => void;
+  otherPairs: Array<{ id: string; label: string }>;
 }) {
   return (
     <>
@@ -192,6 +205,11 @@ function PairRowGroup({
             <PillButton aria-expanded={open} onClick={onToggle}>
               {open ? "Hide their hand" : "See their hand"}
             </PillButton>
+            {pair.activeAssignments > 0 && (
+              <PillButton aria-expanded={moveOpen} onClick={onToggleMove}>
+                {moveOpen ? "Close" : "Move work"}
+              </PillButton>
+            )}
             <DissolveButton pairId={pair.id} />
           </span>
         </TableCell>
@@ -210,6 +228,17 @@ function PairRowGroup({
             ) : (
               <HandCard details={details} />
             )}
+          </td>
+        </tr>
+      )}
+      {moveOpen && (
+        <tr className="border-t border-hairline">
+          <td colSpan={4} className="bg-sunken/40 px-4 py-4">
+            <MoveWorkPanel
+              pairId={pair.id}
+              pairLabel={` × `}
+              otherPairs={otherPairs}
+            />
           </td>
         </tr>
       )}

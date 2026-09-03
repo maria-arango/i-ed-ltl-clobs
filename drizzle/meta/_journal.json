@@ -50,6 +50,13 @@
       "when": 1788300000000,
       "tag": "0006_access-requests",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788400000000,
+      "tag": "0007_export-files",
+      "breakpoints": true
     }
   ]
 }
