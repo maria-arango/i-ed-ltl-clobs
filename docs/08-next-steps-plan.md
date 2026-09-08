@@ -95,7 +95,15 @@ removed from the card form, §46 the simple/advanced interface pair (Phase 3).
 
 ---
 
-## 3. Phase 3 — the simple interface (ODK-style) as a prototype first
+## 3. Phase 3 — the simple interface (ODK-style) as a prototype first — **PROTOTYPE BUILT 2026-09-08** (Amendments §46–47, branch `feat/phase3-simple-interface`; team decision pending)
+
+> Built: `/s` (My videos as cards), `/s/videos/[id]` hub (start → watch here / in Drive → three
+> tiles), card as one question per screen, notes full width, scores reusing the scoring panel
+> behind the timed gates; `ui_mode` per account on the Team screen (Auto / Simple / Full); device-
+> aware redirect for coders; admin "Preview as → Simple interface (phone)" in a phone frame.
+> Not yet: a stepper-only scores screen (the panel's rail stacks on phones instead), calibration
+> restyled for phones (existing room is used), per-day grouping of "My week" (waves are weekly,
+> not daily). §3b: "Watch here" embed shipped in both interfaces; 43/46 links attached.
 
 ### 3.1 What it is
 

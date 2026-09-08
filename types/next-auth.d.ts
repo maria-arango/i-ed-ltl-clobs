@@ -7,6 +7,7 @@ declare module "next-auth" {
       role: "admin" | "coder";
       isChiefCoder: boolean;
       datasetScope: "live" | "test" | "training";
+      uiMode: "auto" | "simple" | "full";
     } & DefaultSession["user"];
   }
 
@@ -14,6 +15,7 @@ declare module "next-auth" {
     role: "admin" | "coder";
     isChiefCoder: boolean;
     datasetScope: "live" | "test" | "training";
+    uiMode: "auto" | "simple" | "full";
   }
 }
 
@@ -22,5 +24,6 @@ declare module "@auth/core/adapters" {
     role: "admin" | "coder";
     isChiefCoder: boolean;
     datasetScope: "live" | "test" | "training";
+    uiMode: "auto" | "simple" | "full";
   }
 }

@@ -43,6 +43,21 @@ export async function setActiveAction(
   return result.ok ? { ok: true } : { ok: false, error: result.error };
 }
 
+/** Which interface the account gets (Amendment §46). */
+export async function setUiModeAction(
+  userId: string,
+  mode: "auto" | "simple" | "full",
+): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const { setUiMode } = await import("@/lib/db/admin");
+  const result = await setUiMode(session.user.id, userId, mode);
+  if (result.ok) {
+    revalidatePath("/admin/team");
+    revalidatePath(`/admin/preview/${userId}`);
+  }
+  return result.ok ? { ok: true } : { ok: false, error: result.error };
+}
+
 export async function setChiefAction(
   userId: string,
   isChief: boolean,

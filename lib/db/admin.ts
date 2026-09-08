@@ -64,6 +64,7 @@ export interface TeamMember {
   role: "admin" | "coder";
   isChiefCoder: boolean;
   datasetScope: "live" | "test" | "training";
+  uiMode: "auto" | "simple" | "full";
   isActive: boolean;
   createdAt: Date;
 }
@@ -77,11 +78,24 @@ export async function listTeam(): Promise<TeamMember[]> {
       role: users.role,
       isChiefCoder: users.isChiefCoder,
       datasetScope: users.datasetScope,
+      uiMode: users.uiMode,
       isActive: users.isActive,
       createdAt: users.createdAt,
     })
     .from(users)
     .orderBy(asc(users.createdAt));
+}
+
+/** Which interface the account gets (Amendment §46). Audited. */
+export async function setUiMode(
+  actorId: string,
+  userId: string,
+  mode: "auto" | "simple" | "full",
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!["auto", "simple", "full"].includes(mode)) return { ok: false, error: "Unknown interface mode." };
+  await db.update(users).set({ uiMode: mode }).where(eq(users.id, userId));
+  await audit(actorId, "ui_mode_set", userId, { mode });
+  return { ok: true };
 }
 
 async function audit(
