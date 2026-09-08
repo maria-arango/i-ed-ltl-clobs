@@ -3,7 +3,7 @@
  * path pool → assigned → scored twice → calibrated. Feeds the Progress
  * dashboard's insight cards and its filterable table.
  */
-import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import {
@@ -325,6 +325,77 @@ export async function releaseVideoLock(
     subjectTable: "video_locks",
     subjectId: lockId,
     details: { coderId: lock.coderId, videoId: lock.videoId, reason: trimmed },
+  });
+  return { ok: true };
+}
+
+/* ------------------------- video problems (§48) ------------------------- */
+
+export interface VideoProblemRow {
+  videoId: string;
+  displayCode: string;
+  reason: string;
+  reportedAt: Date;
+  reportedBy: string;
+  /** Unblinded (admin surface). */
+  sid: string;
+  rawFilename: string;
+  driveUrl: string | null;
+}
+
+export async function listVideoProblems(): Promise<VideoProblemRow[]> {
+  const rows = await db
+    .select({
+      videoId: videos.id,
+      displayCode: videos.displayCode,
+      reason: videos.unusableReason,
+      reportedAt: videos.unusableFlaggedAt,
+      name: users.name,
+      email: users.email,
+      sid: videoProvenance.sid,
+      rawFilename: videoProvenance.rawFilename,
+      driveUrl: videos.driveUrl,
+    })
+    .from(videos)
+    .innerJoin(videoProvenance, eq(videoProvenance.videoId, videos.id))
+    .leftJoin(users, eq(users.id, videos.unusableFlaggedBy))
+    .where(and(eq(videos.dataset, "live"), isNotNull(videos.unusableFlaggedAt)))
+    .orderBy(asc(videos.unusableFlaggedAt));
+  return rows.map((r) => ({
+    videoId: r.videoId,
+    displayCode: r.displayCode,
+    reason: r.reason ?? "",
+    reportedAt: r.reportedAt!,
+    reportedBy: r.name ?? r.email ?? "unknown",
+    sid: r.sid,
+    rawFilename: r.rawFilename,
+    driveUrl: r.driveUrl,
+  }));
+}
+
+/** The problem is fixed (link corrected, file swapped): clear the flag, audited. */
+export async function clearVideoProblem(
+  actorId: string,
+  videoId: string,
+  note: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const trimmed = note.trim();
+  if (trimmed.length < 3) return { ok: false, error: "Say what was done (it goes to the audit log)." };
+  const [v] = await db
+    .select({ id: videos.id, reason: videos.unusableReason })
+    .from(videos)
+    .where(and(eq(videos.id, videoId), isNotNull(videos.unusableFlaggedAt)));
+  if (!v) return { ok: false, error: "No open problem on that video." };
+  await db
+    .update(videos)
+    .set({ unusableReason: null, unusableFlaggedBy: null, unusableFlaggedAt: null })
+    .where(eq(videos.id, videoId));
+  await db.insert(auditLog).values({
+    actorId,
+    action: "video_problem_cleared",
+    subjectTable: "videos",
+    subjectId: videoId,
+    details: { reportedReason: v.reason, resolution: trimmed },
   });
   return { ok: true };
 }

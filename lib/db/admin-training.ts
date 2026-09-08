@@ -461,6 +461,15 @@ export async function createDemoVideos(
     ]);
   }
 
+  // A real Drive link (any live video's) so "Watch here" can be tried on
+  // the demo; falls back to the Drive home when none is attached yet.
+  const [sample] = await db
+    .select({ url: videos.driveUrl })
+    .from(videos)
+    .where(and(eq(videos.dataset, "live"), like(videos.driveUrl, "%/file/d/%")))
+    .limit(1);
+  const demoUrl = sample?.url ?? "https://drive.google.com/";
+
   let created = 0;
   for (const suffix of ["01", "02"] as const) {
     const code = demoCode(user.email, suffix);
@@ -475,7 +484,7 @@ export async function createDemoVideos(
         displayCode: code,
         dataset: "training",
         status: "assigned",
-        driveUrl: "https://drive.google.com/",
+        driveUrl: demoUrl,
         durationSeconds: 40 * 60,
       })
       .returning({ id: videos.id });

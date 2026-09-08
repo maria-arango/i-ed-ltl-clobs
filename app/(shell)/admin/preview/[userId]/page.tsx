@@ -109,7 +109,14 @@ export default async function PreviewAsCoderPage({
           <p className="text-[14px] text-graphite">
             The ODK-style interface {label} gets on a phone or tablet (or
             everywhere, if their account is set to Simple). Shown at phone
-            width, read-only.
+            width, read-only. To tap through it yourself (video hub, Watch
+            here, card, notes, scores), open{" "}
+            <Link href="/s" className="rounded-sm text-lake underline underline-offset-4">
+              /s
+            </Link>{" "}
+            with your own account, on this computer or on your phone; your
+            demo videos carry a Drive link, so &ldquo;Watch here&rdquo; can be
+            tried there.
           </p>
           <div className="mx-auto w-full max-w-[400px] overflow-hidden rounded-[28px] border-[6px] border-ink bg-paper shadow-[var(--clobs-shadow-card)]">
             <div className="border-b border-hairline bg-card px-4 py-3 font-serif text-[15px] text-ink">
