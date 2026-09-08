@@ -112,6 +112,8 @@ export const guidanceKindEnum = pgEnum("guidance_kind", [
   "guiding_rule",
   "reach_band",
 ]);
+// Phase 3 (Amendment §46): the coder interface. 'auto' follows the device.
+export const uiModeEnum = pgEnum("ui_mode", ["auto", "simple", "full"]);
 
 /** The one legal score encoding (CLAUDE.md §4), reused wherever a score triple is stored. */
 const scoreTripleCheck = (num: string, col: string, deg: string) =>
@@ -134,6 +136,8 @@ export const users = pgTable("users", {
   isChiefCoder: boolean("is_chief_coder").notNull().default(false),
   // `training` is what makes an account a trainee (Amendment B §9).
   datasetScope: datasetEnum("dataset_scope").notNull().default("live"),
+  // Simple (ODK-style) or full interface; 'auto' = by device (migration 0010).
+  uiMode: uiModeEnum("ui_mode").notNull().default("auto"),
   isActive: boolean("is_active").notNull().default(true),
   deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
   deactivatedReason: text("deactivated_reason"),

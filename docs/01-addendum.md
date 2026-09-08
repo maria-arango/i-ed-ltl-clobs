@@ -682,3 +682,25 @@ Additions of 2026-09-07 (Phase 2 of docs/08: the schema decisions, migration 000
     "Other" + text), written onto the interrupted sitting. Autosave is unchanged, so an abrupt end
     never loses work. Caution recorded: the lock bites when a Drive link is broken mid-video; the
     admin release is the escape until a coder-side "problem with this video" action exists.
+
+Additions of 2026-09-08 (Phase 3 of docs/08 — prototype for the team's decision):
+
+46. **Two coder interfaces, one platform.** The **simple** interface (`/s`, ODK-style: one column,
+    big tap targets, "My videos" as cards, a video hub with three tiles, the context card as one
+    question per screen, notes full width, scores one concept at a time behind the same timed
+    gates) and the **full** interface (the tabbed workspace) read and write through the same
+    restricted layer and the same rules (one video at a time, own card, blinding). Each account
+    carries `ui_mode` ∈ {auto, simple, full} (migration 0010), set on the Team screen: **auto**
+    serves simple on phones and tablets and full on computers (device classified server-side from
+    the browser); admins are never redirected and see either interface through "Preview as"
+    (phone-width frame for the simple one). Calibration keeps its existing screens in both. Status:
+    PROTOTYPE on real data, awaiting the team meeting's choice (simple / full / both).
+47. **Video embedding is an enhancement, not a dependency** (docs/08 §3b). Both interfaces offer
+    "Watch here" (the Drive player embedded, 16:9, remembered per browser) beside "Open in Drive",
+    with an on-screen note for browsers that block Google's sign-in inside the page (iPhone, iPad).
+    The player cannot report the current time, so timestamps stay manual. Drive links are attached
+    from the mounted Drive folder by `scripts/attach-drive-links-from-folder.mts` (file ids from the
+    mount's extended attribute), which prints display codes only; the raw filename→link lines stay
+    under `data/`. 2026-09-08: 43 of 46 files attached; one file pair is a duplicate-session
+    teacher (attach by code), one filename carries a double underscore typo (rename in Drive, or
+    attach by code), one has no matching session.

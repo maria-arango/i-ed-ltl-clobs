@@ -403,17 +403,42 @@ sittings as `admin_released`). Tests: card-secondpass.test.ts replaced by
 card-two-coders.test.ts; new sections-locks.test.ts; blinding, workflow,
 calibration, reassignment and export suites updated.
 
+## Progress (2026-09-08 — Phase 3 prototype + 3b embedding)
+
+María confirmed Phases 1–2 work on the deployed site. **3b:** the Drive
+folder is mounted locally; each file's Drive id is the xattr
+`com.google.drivefs.item-id#S`, so `scripts/attach-drive-links-from-folder.mts`
+built the links and attached **43/46** (1 ambiguous duplicate-session pair
+V-0459/V-0209 → attach by code; 1 filename with a double underscore typo;
+1 without a matching session). `components/workspace/video-theatre.tsx`:
+"Watch here" (Drive `/preview` iframe, 16:9, remembered per browser) beside
+"Open in Drive", with the Safari/iPad caveat on screen; used by both
+interfaces. **Phase 3 prototype (Amendment §46):** migration 0010
+`users.ui_mode` (auto/simple/full) + session field; `lib/ui-mode.ts`
+(pure) + `lib/serve-mode.ts` (UA → device → mode); route group
+`app/(simple)/s`: layout, My videos (`components/simple/week-list.tsx`,
+reusable for the admin preview), hub, card (`components/simple/card-stepper.tsx`,
+one question per screen), notes, scores (reuses ScoringPanel) — all behind
+the Phase 2 gates and lock; coders (never admins) are redirected from
+Home, My videos and the workspace when the resolved mode is simple; Team
+screen has an Interface picker per coder; `/admin/preview/[id]?mode=simple`
+shows the simple My videos in a phone frame. Tests: ui-mode.test.ts.
+
 ## Next up
 
-1. **Browser-check Phase 1 + 2** on the deployed site (start a demo video,
-   card gate, resume-reason flow, lock on a second video, Progress →
-   Started videos → release). NOT browser-tested this session.
-2. **Phase 3 of docs/08**: the simple (ODK-style) interface as a prototype
-   on demo data, device-aware, with the admin "Preview as" switch gaining
-   simple/advanced. **Phase 3b** embedding experiment can run any time.
+1. **Team meeting on the simple interface**: open Team → Preview → "Simple
+   interface (phone)" for a coder, and try `/s` on a real phone/tablet with
+   a coder account set to Simple. Decide simple / full / both (§46).
+   Depending on the decision: a stepper-only scores screen, phone layout
+   for the calibration room, per-day grouping if daily plans arrive.
+2. **3b device test**: play a linked video via "Watch here" on Android
+   Chrome, iPad Safari, iPhone Safari, Windows Chrome; record in docs/08 §3b.
+   Attach the remaining 3 links by code in the Video library.
 3. Coder-side "problem with this video" action (releases the lock, flags
    the video unusable, notifies admins) — the escape §45 needs.
-4. María confirms Amendments §39–45 or asks for changes.
+4. **Phase 4** Drive data sync (nightly export to the Harvard Drive +
+   optional Sheets mirror + restore drill).
+5. María confirms Amendments §39–47 or asks for changes.
 2. **Team-screen hook**: when deactivating someone with active work, show
    the pairs affected and link to Move work; admin "void calibration
    session" action with a reason (CLAUDE.md §7) so both-submitted videos

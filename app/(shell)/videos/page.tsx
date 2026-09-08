@@ -4,7 +4,9 @@
  * coder query layer.
  */
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth-helpers";
+import { resolvedModeFor } from "@/lib/serve-mode";
 import { getActiveLock, getCoderQueue, getMyCodingStats, getRubricContent } from "@/lib/db/coder";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { ViewSwitch } from "@/components/ui/view-switch";
@@ -13,6 +15,9 @@ import { VideosTable } from "@/components/videos/videos-table";
 
 export default async function MyVideos() {
   const session = await requireSession();
+  // Phones and tablets (or accounts set to Simple) get the simple interface.
+  const served = await resolvedModeFor(session.user);
+  if (served.autoRedirect && served.mode === "simple") redirect("/s");
   const [queue, stats, activeLock, rubric] = await Promise.all([
     getCoderQueue(session.user.id),
     getMyCodingStats(session.user.id),

@@ -5,12 +5,13 @@
  * shows "Do you want to start this video?" or "Finish V-xxxx first".
  */
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth-helpers";
+import { resolvedModeFor } from "@/lib/serve-mode";
 import { getRubricContent, getWorkspace } from "@/lib/db/coder";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
-import { CopyButton } from "@/components/workspace/copy-button";
 import { StartVideoCard } from "@/components/workspace/start-video-card";
+import { VideoTheatre } from "@/components/workspace/video-theatre";
 
 export default async function VideoWorkspace({
   params,
@@ -20,6 +21,9 @@ export default async function VideoWorkspace({
   const session = await requireSession();
   const { videoId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(videoId)) notFound();
+  // Phones and tablets (or accounts set to Simple) get the simple hub.
+  const served = await resolvedModeFor(session.user);
+  if (served.autoRedirect && served.mode === "simple") redirect(`/s/videos/${videoId}`);
 
   const workspace = await getWorkspace(session.user.id, videoId);
   if (!workspace) notFound();
@@ -60,40 +64,8 @@ export default async function VideoWorkspace({
         />
       ) : (
         <>
-          {/* The video link card — the darker rectangle from the brief. */}
-          <div className="elev-card card-lift flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline-strong bg-sunken p-5">
-            <div>
-              <p className="video-code text-[20px] text-ink">{video.displayCode}</p>
-              <p className="mt-1 text-[13px] text-smoke">
-                Watch in Google Drive, take notes here as you go.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {video.driveUrl ? (
-                <>
-                  <a
-                    href={video.driveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
-                  >
-                    Open video in Drive{" "}
-                    <span
-                      aria-hidden
-                      className="inline-block transition-transform duration-[150ms] ease-out-clobs group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 motion-reduce:group-hover:translate-y-0"
-                    >
-                      ↗
-                    </span>
-                  </a>
-                  <CopyButton text={video.driveUrl} />
-                </>
-              ) : (
-                <p className="text-[14px] text-graphite">
-                  Drive link not attached yet. An admin will add it.
-                </p>
-              )}
-            </div>
-          </div>
+          {/* The video card: watch here (Drive embed) or open in Drive (§3b). */}
+          <VideoTheatre displayCode={video.displayCode} driveUrl={video.driveUrl} />
 
           <WorkspaceShell
             videoId={videoId}

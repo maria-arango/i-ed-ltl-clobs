@@ -75,6 +75,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.role = user.role;
       session.user.isChiefCoder = user.isChiefCoder;
       session.user.datasetScope = user.datasetScope;
+      session.user.uiMode = user.uiMode;
       return session;
     },
   },

@@ -5,7 +5,9 @@
  * into Team. Quiet, per DESIGN_SYSTEM ("Operate" surface).
  */
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireSession } from "@/lib/auth-helpers";
+import { resolvedModeFor } from "@/lib/serve-mode";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getAdminHomeStats } from "@/lib/db/admin";
 import { NumberTicker } from "@/components/ui/number-ticker";
@@ -21,6 +23,9 @@ function formatToday(): string {
 
 export default async function Home() {
   const session = await requireSession();
+  // Phones and tablets (or accounts set to Simple) land on the simple interface.
+  const served = await resolvedModeFor(session.user);
+  if (served.autoRedirect && served.mode === "simple") redirect("/s");
   const { user } = session;
   const firstName = user.name?.split(" ")[0] ?? user.email?.split("@")[0];
 

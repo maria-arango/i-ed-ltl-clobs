@@ -19,6 +19,7 @@ import {
 import { AddMemberForm } from "./add-member-form";
 import { MemberRowActions } from "./member-row-actions";
 import { RequestActions } from "./request-actions";
+import { UiModePicker } from "./ui-mode-picker";
 
 function RoleChip({
   role,
@@ -81,9 +82,11 @@ export default async function TeamPage() {
           Team
         </h1>
         <p className="text-[15px] text-graphite">
-          Everyone who can sign in, and as what. Deactivating blocks sign-in
-          but keeps all work; deleting is only possible for accounts with
-          nothing on record. Weekly availability lives on the{" "}
+          Everyone who can sign in, and as what. Interface: Auto gives the
+          simple, ODK-style screens on phones and tablets and the full
+          workspace on computers; Simple or Full overrides that. Preview shows
+          either as that person. Deactivating blocks sign-in but keeps all
+          work; deleting is only possible for accounts with nothing on record. Weekly availability lives on the{" "}
           <Link
             href="/admin/assignment"
             className="rounded-sm text-lake underline underline-offset-4"
@@ -148,6 +151,7 @@ export default async function TeamPage() {
               <TableHead>Person</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Interface</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -165,6 +169,13 @@ export default async function TeamPage() {
                     isChiefCoder={m.isChiefCoder}
                     datasetScope={m.datasetScope}
                   />
+                </TableCell>
+                <TableCell>
+                  {m.role === "admin" ? (
+                    <span className="text-[12px] text-smoke" title="Admins always get the full interface; use Preview to see the simple one">full</span>
+                  ) : (
+                    <UiModePicker userId={m.id} value={m.uiMode} />
+                  )}
                 </TableCell>
                 <TableCell className="text-[13px] text-graphite">
                   {m.isActive ? "Active" : "Deactivated"}

@@ -16,6 +16,7 @@ import { users } from "@/db/schema";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getCalibrationQueue } from "@/lib/db/coder-calibration";
 import { StatusPill } from "@/components/ui/status-pill";
+import { SimpleWeekList } from "@/components/simple/week-list";
 import {
   Table,
   TableBody,
@@ -27,11 +28,15 @@ import {
 
 export default async function PreviewAsCoderPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ userId: string }>;
+  searchParams: Promise<{ mode?: string }>;
 }) {
   await requireAdmin();
   const { userId } = await params;
+  const { mode } = await searchParams;
+  const simple = mode === "simple";
   if (!/^[0-9a-f-]{36}$/i.test(userId)) notFound();
 
   const [person] = await db
@@ -81,6 +86,45 @@ export default async function PreviewAsCoderPage({
           {person.isActive ? "" : " · deactivated"}
         </span>
       </div>
+
+      <div role="group" aria-label="Interface to preview" className="inline-flex rounded-full border border-hairline-strong bg-paper p-0.5 text-[13px]">
+        <Link
+          href={`/admin/preview/${person.id}`}
+          aria-current={!simple ? "page" : undefined}
+          className={`rounded-full px-3 py-1 ${!simple ? "bg-lake-wash text-ink" : "text-graphite hover:text-ink"}`}
+        >
+          Full interface
+        </Link>
+        <Link
+          href={`/admin/preview/${person.id}?mode=simple`}
+          aria-current={simple ? "page" : undefined}
+          className={`rounded-full px-3 py-1 ${simple ? "bg-lake-wash text-ink" : "text-graphite hover:text-ink"}`}
+        >
+          Simple interface (phone)
+        </Link>
+      </div>
+
+      {simple && (
+        <section aria-label="Simple interface preview" className="space-y-3">
+          <p className="text-[14px] text-graphite">
+            The ODK-style interface {label} gets on a phone or tablet (or
+            everywhere, if their account is set to Simple). Shown at phone
+            width, read-only.
+          </p>
+          <div className="mx-auto w-full max-w-[400px] overflow-hidden rounded-[28px] border-[6px] border-ink bg-paper shadow-[var(--clobs-shadow-card)]">
+            <div className="border-b border-hairline bg-card px-4 py-3 font-serif text-[15px] text-ink">
+              LTL Classroom Observations
+            </div>
+            <div className="max-h-[720px] overflow-y-auto px-4 pb-8 pt-4">
+              <SimpleWeekList
+                coderId={person.id}
+                showCalibration={person.datasetScope !== "training"}
+                readOnly
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="space-y-1">
         <h1
