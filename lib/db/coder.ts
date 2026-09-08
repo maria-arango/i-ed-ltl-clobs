@@ -997,8 +997,9 @@ export async function submitContextCard(coderId: string, videoId: string) {
       ),
     )
     .limit(1);
+  // Amendment §42: subject is no longer asked (it comes from the mapping
+  // file), so the minimum is composition + count + one adult (§33).
   const gaps: string[] = [];
-  if (!cardRow.subject?.trim()) gaps.push("subject");
   if (!cardRow.composition) gaps.push("composition");
   if (!cardRow.approxCount?.trim()) gaps.push("approximate pupil count");
   if (adultsPresent.length === 0) gaps.push("at least one adult");

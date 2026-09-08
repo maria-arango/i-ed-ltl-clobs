@@ -633,3 +633,21 @@ recorded here for María to confirm or amend):
     unsubmitted one is re-authored to the incoming duty holder. A reason is mandatory and every
     step lands in `assignment_log` (`reassign`, `return_to_pool`, `void`,
     `transfer_card_duty`). Dissolving a pair with active work now points to this tool.
+
+Additions of 2026-09-07 (Phase 1 of docs/08-next-steps-plan.md, decided at the team meeting):
+
+42. **Quick fixes bundle.** (a) In the scoring panel the rubric text (importance, indicators,
+    special note, reach scale) is CLOSED by default behind a "Show the rubric for this concept"
+    rectangle; the choice is remembered per browser. The concept statement stays visible. The
+    score chips stay motionless (DESIGN_SYSTEM §4). (b) "Enter scores as a table" is visible from
+    the moment the scoring screen opens (it used to appear only after the first score); after
+    submission it reads "See all my scores as a table". (c) **Subject is no longer asked on the
+    context card**: it comes from the mapping file and is exported as `mapping_subject`; the
+    minimum for submission (§33) is composition, approximate count and one adult. (d) "What Arya
+    can see" is replaced by a general **Preview** button on every Team-screen row: any admin can see
+    any account's queues, read-only, through the restricted coder layer. (e) CSV exports start with
+    a UTF-8 byte-order mark so Excel reads accented names correctly; names are NOT restricted to
+    plain letters (the "Mar√≠a" display was a spreadsheet encoding guess, not a data fault).
+    (f) `clobs_scores_wide` columns are `consensus_item1..8`, `anchor_item1..8`,
+    `enumerator_item1..8`. (g) Every export ships `data_dictionary.csv` (one row per column) and
+    the Exports screen shows the same dictionary; the codebook explains `clobs_events`.

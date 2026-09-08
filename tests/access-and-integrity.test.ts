@@ -103,8 +103,10 @@ describe("card and score integrity", () => {
     } catch (e) {
       expect(e).toBeInstanceOf(CoderError);
       expect((e as CoderError).message).toMatch(/still needs/i);
-      expect((e as CoderError).message).toMatch(/subject/i);
+      expect((e as CoderError).message).toMatch(/composition/i);
       expect((e as CoderError).message).toMatch(/adult/i);
+      // Subject is no longer asked (Amendment §42).
+      expect((e as CoderError).message).not.toMatch(/subject/i);
     }
     // Filled in, it goes through.
     await saveContextCard(coderId, videoId, {

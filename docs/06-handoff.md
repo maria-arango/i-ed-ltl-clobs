@@ -356,11 +356,33 @@ calibration session has no admin UI (needed before a both-submitted video
 can move); exports are not yet mirrored to Drive (Stage 5 backup);
 `clobs_coders` is identifying — keep it with the crosswalk.
 
+## Progress (2026-09-07 — Phase 1 of docs/08)
+
+Team meeting of 2026-09-03 produced `docs/08-next-steps-plan.md` (five
+phases; read it before continuing). **Phase 1 shipped** (Amendment §42):
+rubric text closed by default behind a disclosure in the scoring panel
+(localStorage `clobs.rubricOpen`), "Enter scores as a table" always visible,
+Subject removed from the card form and from the submit minimum, "What Arya
+can see" replaced by `/admin/preview/[userId]` + a Preview pill on every
+Team row (any admin, any account, restricted layer), CSV BOM, wide columns
+renamed `consensus_item*/anchor_item*/enumerator_item*`,
+`lib/export/dictionary.ts` → `data_dictionary.csv` in every export + a Data
+dictionary section on the Exports screen, `clobs_events` explained in the
+codebook. Stage 4 merged (PR #23) and the plan (PR #24).
+**Tests now run one file at a time** (`fileParallelism: false`, ~95 s):
+parallel suites raced through the global gold-auto-assign rule (a gold
+flag assigns the video to EVERY trainee, including another suite's fixture
+trainee) and failed 2 of 3 runs; `purgeFixture` also re-sweeps and retries
+the video delete. 119 tests, two consecutive green runs.
+
 ## Next up
 
-1. **Browser-check Stage 4** (above), then María confirms Amendments
-   §39–41 (export shape, reliability choices, reassignment rules) or asks
-   for changes.
+1. **Phase 2 of docs/08** (schema decisions before the simple interface):
+   card by both coders, `section_sessions` timing, single-sitting lock and
+   abrupt-end reason. Draft Amendments §43–45 for María first.
+2. **Phase 3b** embedding experiment can run any time (46 links attached).
+3. María confirms Amendments §39–42 or asks for changes; browser-check
+   Stage 4 + Phase 1 on the deployed site.
 2. **Team-screen hook**: when deactivating someone with active work, show
    the pairs affected and link to Move work; admin "void calibration
    session" action with a reason (CLAUDE.md §7) so both-submitted videos

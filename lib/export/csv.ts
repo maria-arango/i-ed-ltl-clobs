@@ -1,9 +1,14 @@
 /**
- * CSV writer (RFC 4180): UTF-8, no BOM, CRLF line endings, every field
- * quoted when it contains a comma, quote, CR or LF. Header = the contract's
- * column names in order. Booleans are 1/0, datetimes ISO 8601 in UTC,
- * nulls are empty fields. Pure — no database, no filesystem.
+ * CSV writer (RFC 4180): UTF-8 WITH a byte-order mark, CRLF line endings,
+ * every field quoted when it contains a comma, quote, CR or LF. Header =
+ * the contract's column names in order. Booleans are 1/0, datetimes ISO
+ * 8601 in UTC, nulls are empty fields. Pure — no database, no filesystem.
+ *
+ * The BOM (Amendment §42) is what makes Excel and Numbers read accented
+ * names correctly ("María", not "Mar√≠a"); Stata, R and Python ignore it.
  */
+
+export const UTF8_BOM = "﻿";
 import type { ExportColumn, ExportRow, ExportTable } from "./contract";
 
 export function formatCsvValue(
@@ -35,5 +40,5 @@ export function toCsv(table: ExportTable, rows: ExportRow[]): string {
       .map((c) => escapeField(formatCsvValue(row[c.name] ?? null, c)))
       .join(","),
   );
-  return [header, ...lines].join("\r\n") + "\r\n";
+  return UTF8_BOM + [header, ...lines].join("\r\n") + "\r\n";
 }

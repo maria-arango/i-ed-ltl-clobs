@@ -77,6 +77,90 @@ async function purgeAssignmentsForPairs(pairIds: string[]) {
   }
 }
 
+/**
+ * Everything that hangs off a set of videos, deepest first. Kept separate
+ * so the video delete below can re-sweep and retry: while one suite purges
+ * its gold-flagged videos, another suite's setGoldFlag/addTrainee may have
+ * just assigned them to a trainee (gold auto-assign, round 8), which would
+ * otherwise fail the FK on assignments.video_id.
+ */
+async function purgeVideoDependents(videoIds: string[]) {
+  const sessions = await db
+    .select({ id: calibrationSessions.id })
+    .from(calibrationSessions)
+    .where(inArray(calibrationSessions.videoId, videoIds));
+  await purgeCalibrationForSessions(sessions.map((s) => s.id));
+  await db.delete(assignmentLog).where(inArray(assignmentLog.videoId, videoIds));
+  const obs = await db
+    .select({ id: observations.id })
+    .from(observations)
+    .where(inArray(observations.videoId, videoIds));
+  const obsIds = obs.map((o) => o.id);
+
+  await db.delete(events).where(inArray(events.videoId, videoIds));
+  if (obsIds.length > 0) {
+    const scoreRows = await db
+      .select({ id: scores.id })
+      .from(scores)
+      .where(inArray(scores.observationId, obsIds));
+    if (scoreRows.length > 0) {
+      await db.delete(scoreNoteCitations).where(
+        inArray(
+          scoreNoteCitations.scoreId,
+          scoreRows.map((s) => s.id),
+        ),
+      );
+    }
+    await db.delete(scores).where(inArray(scores.observationId, obsIds));
+    await db.delete(notes).where(inArray(notes.observationId, obsIds));
+  }
+  const cards = await db
+    .select({ id: contextCards.id })
+    .from(contextCards)
+    .where(inArray(contextCards.videoId, videoIds));
+  if (cards.length > 0) {
+    await db.delete(contextAdults).where(
+      inArray(
+        contextAdults.contextCardId,
+        cards.map((c) => c.id),
+      ),
+    );
+    await db.delete(contextCards).where(inArray(contextCards.videoId, videoIds));
+  }
+  await db.delete(observations).where(inArray(observations.videoId, videoIds));
+
+  const assn = await db
+    .select({ id: assignments.id })
+    .from(assignments)
+    .where(inArray(assignments.videoId, videoIds));
+  if (assn.length > 0) {
+    await db.delete(assignmentRaters).where(
+      inArray(
+        assignmentRaters.assignmentId,
+        assn.map((a) => a.id),
+      ),
+    );
+    await db.delete(assignments).where(inArray(assignments.videoId, videoIds));
+  }
+  await db.delete(goldScores).where(inArray(goldScores.videoId, videoIds));
+  await db.delete(videoProvenance).where(inArray(videoProvenance.videoId, videoIds));
+}
+
+async function deleteVideosWithRetry(videoIds: string[]) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await purgeVideoDependents(videoIds);
+    try {
+      await db.delete(videos).where(inArray(videos.id, videoIds));
+      return;
+    } catch (e) {
+      lastError = e;
+      await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
+
 export async function purgeFixture(opts: {
   displayCodes: string[];
   emails: string[];
@@ -90,66 +174,7 @@ export async function purgeFixture(opts: {
   const videoIds = videoRows.map((v) => v.id);
 
   if (videoIds.length > 0) {
-    const sessions = await db
-      .select({ id: calibrationSessions.id })
-      .from(calibrationSessions)
-      .where(inArray(calibrationSessions.videoId, videoIds));
-    await purgeCalibrationForSessions(sessions.map((s) => s.id));
-    await db.delete(assignmentLog).where(inArray(assignmentLog.videoId, videoIds));
-    const obs = await db
-      .select({ id: observations.id })
-      .from(observations)
-      .where(inArray(observations.videoId, videoIds));
-    const obsIds = obs.map((o) => o.id);
-
-    await db.delete(events).where(inArray(events.videoId, videoIds));
-    if (obsIds.length > 0) {
-      const scoreRows = await db
-        .select({ id: scores.id })
-        .from(scores)
-        .where(inArray(scores.observationId, obsIds));
-      if (scoreRows.length > 0) {
-        await db.delete(scoreNoteCitations).where(
-          inArray(
-            scoreNoteCitations.scoreId,
-            scoreRows.map((s) => s.id),
-          ),
-        );
-      }
-      await db.delete(scores).where(inArray(scores.observationId, obsIds));
-      await db.delete(notes).where(inArray(notes.observationId, obsIds));
-    }
-    const cards = await db
-      .select({ id: contextCards.id })
-      .from(contextCards)
-      .where(inArray(contextCards.videoId, videoIds));
-    if (cards.length > 0) {
-      await db.delete(contextAdults).where(
-        inArray(
-          contextAdults.contextCardId,
-          cards.map((c) => c.id),
-        ),
-      );
-      await db.delete(contextCards).where(inArray(contextCards.videoId, videoIds));
-    }
-    await db.delete(observations).where(inArray(observations.videoId, videoIds));
-
-    const assn = await db
-      .select({ id: assignments.id })
-      .from(assignments)
-      .where(inArray(assignments.videoId, videoIds));
-    if (assn.length > 0) {
-      await db.delete(assignmentRaters).where(
-        inArray(
-          assignmentRaters.assignmentId,
-          assn.map((a) => a.id),
-        ),
-      );
-      await db.delete(assignments).where(inArray(assignments.videoId, videoIds));
-    }
-    await db.delete(goldScores).where(inArray(goldScores.videoId, videoIds));
-    await db.delete(videoProvenance).where(inArray(videoProvenance.videoId, videoIds));
-    await db.delete(videos).where(inArray(videos.id, videoIds));
+    await deleteVideosWithRetry(videoIds);
   }
 
   const pairRows = await db

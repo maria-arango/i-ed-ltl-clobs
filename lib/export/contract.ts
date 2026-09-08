@@ -235,22 +235,24 @@ export const SCORES_WIDE: ExportTable = {
     { name: "n_submitted", type: "int", label: "Individual observations submitted (0-2)" },
     { name: "calibrated", type: "bool", label: "Calibration signed by both" },
     { name: "calibrated_at", type: "datetime", label: "When the calibration completed" },
+    // Self-explaining names (Amendment §42): consensus_item1, anchor_item1,
+    // enumerator_item1 … resolve via anchor_coder_id / enumerator_coder_id.
     ...[1, 2, 3, 4, 5, 6, 7, 8].map((i) => ({
-      name: `c${i}`,
+      name: `consensus_item${i}`,
       type: "int" as const,
-      label: `Consensus score item ${i}`,
+      label: `Consensus (signed calibration) score, item ${i}`,
       valueLabels: SCORE_VALUE_LABELS,
     })),
     ...[1, 2, 3, 4, 5, 6, 7, 8].map((i) => ({
-      name: `a${i}`,
+      name: `anchor_item${i}`,
       type: "int" as const,
-      label: `Anchor's individual score item ${i}`,
+      label: `Anchor's individual locked score, item ${i}`,
       valueLabels: SCORE_VALUE_LABELS,
     })),
     ...[1, 2, 3, 4, 5, 6, 7, 8].map((i) => ({
-      name: `b${i}`,
+      name: `enumerator_item${i}`,
       type: "int" as const,
-      label: `Enumerator's individual score item ${i}`,
+      label: `Enumerator's individual locked score, item ${i}`,
       valueLabels: SCORE_VALUE_LABELS,
     })),
     { name: "rubric_version", type: "str", label: "Rubric version of the consensus (or individual) scores" },
@@ -393,7 +395,8 @@ export const ASSIGNMENTS: ExportTable = {
 export const EVENTS: ExportTable = {
   name: "clobs_events",
   unit: "one row per instrumentation event",
-  description: "The raw event log (addendum §8) for the timing analysis. payload_json is the event's JSON payload verbatim.",
+  description:
+    "The platform's raw diary (addendum §8): one row every time a coder does something that matters for timing or provenance, written by the server with the exact second, never typed by anyone. Kinds: observation_started, note_created, note_deleted, score_selected (payload itemNo), score_changed (itemNo), observation_submitted, context_card_started, context_card_submitted, context_card_confirmed, context_card_flagged, context_card_flag_resolved, calibration_session_created, calibration_joined, calibration_opened, consensus_saved (itemNo, resolution), calibration_signed, calibration_completed. Used for time on task (minutes_on_item is derived from it), resume and interruption analysis, and provenance (when a score was first chosen and whether it changed before locking). payload_json is the event's JSON payload verbatim.",
   columns: [
     { name: "event_id", type: "str", label: "Event id (UUID)" },
     { name: "occurred_at", type: "datetime", label: "When" },

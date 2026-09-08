@@ -193,17 +193,16 @@ export default async function Home() {
               >
                 Progress
               </Link>
-              ; reliability statistics and the AI-training exports are the
-              next build.
-            </p>
-            {user.email?.toLowerCase() === "maria_oteroarango@gse.harvard.edu" && (
+              , the datasets under{" "}
               <Link
-                href="/admin/preview"
-                className="inline-flex items-center gap-2 rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[13px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+                href="/admin/exports"
+                className="rounded-sm text-lake underline underline-offset-4"
               >
-                What Arya can see →
+                Exports
               </Link>
-            )}
+              . To see the platform as one coder sees it, use &ldquo;Preview&rdquo;
+              on their row of the Team screen.
+            </p>
           </section>
         )}
 
