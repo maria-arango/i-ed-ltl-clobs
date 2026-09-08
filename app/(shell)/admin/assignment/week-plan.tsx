@@ -257,7 +257,7 @@ export function WeekPlan({
           The algorithm deals the pool ({poolSize} videos) to the active pairs.
           Each pair&apos;s share is its slower member&apos;s videos per day (from the
           plan above) times the {workingDays} working days. Arm-balanced within
-          every pair, schools spread, card duty split. Preview writes nothing.
+          every pair, schools spread. Preview writes nothing.
         </p>
         <form action={previewAction} className="mt-4 flex flex-wrap items-end gap-4">
           <input type="hidden" name="weekStart" value={weekStart} />
@@ -332,7 +332,6 @@ export function WeekPlan({
                 <TableHead>Videos (of capacity)</TableHead>
                 <TableHead>Control / Dispersed / Connected</TableHead>
                 <TableHead>Max same school</TableHead>
-                <TableHead>Cards (anchor)</TableHead>
                 <TableHead>First codes</TableHead>
               </TableRow>
             </TableHeader>
@@ -347,9 +346,6 @@ export function WeekPlan({
                     {p.arms.control} / {p.arms.dispersed} / {p.arms.connected}
                   </TableCell>
                   <TableCell className="num text-graphite">{p.maxSameSchool}</TableCell>
-                  <TableCell className="num text-graphite">
-                    {p.anchorFillsCards} of {p.count}
-                  </TableCell>
                   <TableCell className="mono text-[12px] text-smoke">
                     {p.sampleCodes.join(" ")}
                   </TableCell>

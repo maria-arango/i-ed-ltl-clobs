@@ -32,7 +32,9 @@ import {
   rubricVersions,
   scoreNoteCitations,
   scores,
+  sectionSessions,
   users,
+  videoLocks,
   videoProvenance,
   videos,
 } from "@/db/schema";
@@ -98,6 +100,8 @@ async function purgeVideoDependents(videoIds: string[]) {
   const obsIds = obs.map((o) => o.id);
 
   await db.delete(events).where(inArray(events.videoId, videoIds));
+  await db.delete(sectionSessions).where(inArray(sectionSessions.videoId, videoIds));
+  await db.delete(videoLocks).where(inArray(videoLocks.videoId, videoIds));
   if (obsIds.length > 0) {
     const scoreRows = await db
       .select({ id: scores.id })
@@ -292,6 +296,8 @@ export async function purgeFixture(opts: {
   }
 
   for (const u of userRows) {
+    await db.delete(sectionSessions).where(eq(sectionSessions.coderId, u.id));
+    await db.delete(videoLocks).where(eq(videoLocks.coderId, u.id));
     await db.delete(certifications).where(eq(certifications.userId, u.id));
     await db.delete(goldScores).where(eq(goldScores.enteredBy, u.id));
     await db.delete(events).where(eq(events.userId, u.id));

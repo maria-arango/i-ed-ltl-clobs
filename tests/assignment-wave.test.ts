@@ -184,7 +184,8 @@ describe("wave preview → confirm", () => {
         (byAssignment.get(row.assignmentId) ?? 0) + (row.fills ? 1 : 0),
       );
     }
-    for (const fillers of byAssignment.values()) expect(fillers).toBe(1);
+    // Amendment §43: both coders fill a card.
+    for (const fillers of byAssignment.values()) expect(fillers).toBe(2);
 
     // Videos flipped to assigned; the arm-less one stays pool.
     const vids = await db

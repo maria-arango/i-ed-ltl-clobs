@@ -651,3 +651,34 @@ Additions of 2026-09-07 (Phase 1 of docs/08-next-steps-plan.md, decided at the t
     (f) `clobs_scores_wide` columns are `consensus_item1..8`, `anchor_item1..8`,
     `enumerator_item1..8`. (g) Every export ships `data_dictionary.csv` (one row per column) and
     the Exports screen shows the same dictionary; the codebook explains `clobs_events`.
+
+Additions of 2026-09-07 (Phase 2 of docs/08: the schema decisions, migration 0008):
+
+43. **Both coders fill the context card.** Reverses Amendment A's "one card per video": every
+    coder writes their OWN card for every video they code (`context_cards` unique on video +
+    author; `fills_context_card` is true for both seats of every new assignment; the algorithm's
+    card-duty balancing is kept only for the reproducibility of past waves). The Amendment A
+    ordering rule stands: a coder never sees the partner's card, not even that it exists, until
+    they have submitted their own scores; then it shows read-only under their own. The
+    confirm/flag second pass is retired (columns kept for the pre-§43 rows). Submission of
+    scores requires the coder's own submitted card. Export `clobs_context_cards` becomes one row
+    per video × coder with `coder_id` and `coder_pair_role`. Reassignment no longer moves card
+    duty: a departing coder's card stays on record and the incoming coder writes theirs.
+44. **Timed sections.** Every sitting on the context card, the notes or the scores is a row in
+    `section_sessions`: start, last heartbeat (every 30 s from the browser), end, how it ended
+    (`submitted`, `closed` on purpose, `abrupt` = heartbeat lost for over 2 minutes, recorded at
+    the last heartbeat, `admin_released`), the coder's resume reason, and the device (phone /
+    tablet / desktop, classified server-side from the browser and its viewport). The card and the
+    scores sit behind a "Start …" gate in the workspace; notes stay free. Export `clobs_sections`
+    gives start, end, minutes and reasons per coder × video × section; this is the ODK-style
+    "time per section" the team asked for. `clobs_events` keeps the fine-grained trail.
+45. **One video at a time, finished in a sitting.** Opening a video asks "Do you want to start
+    this video?"; yes takes the coder's single lock (`video_locks`). While it is held, every write
+    to another video is refused (423, "Finish V-xxxx first") and the queue shows the others as
+    waiting. The lock is released by the coder's own complete submission (card + notes + scores),
+    or by an admin on Progress ("Started videos") with a mandatory reason, audited; releasing
+    keeps every keystroke. Reopening a card or scores section after a sitting that did not end in
+    a submission requires a short reason ("Network dropped", "Battery / power", "Interrupted",
+    "Other" + text), written onto the interrupted sitting. Autosave is unchanged, so an abrupt end
+    never loses work. Caution recorded: the lock bites when a Drive link is broken mid-video; the
+    admin release is the escape until a coder-side "problem with this video" action exists.

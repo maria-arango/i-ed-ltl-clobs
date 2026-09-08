@@ -36,6 +36,7 @@ import {
   rubricVersions,
   scoreNoteCitations,
   scores,
+  sectionSessions,
   users,
   videoProvenance,
   videos,
@@ -50,6 +51,7 @@ import {
   NOTES,
   SCORES_LONG,
   SCORES_WIDE,
+  SECTIONS,
   VIDEOS,
   type ExportRow,
   type ExportTable,
@@ -529,8 +531,11 @@ export async function buildExportTables(dataset: Dataset = LIVE): Promise<BuiltT
     : [];
   const cards: ExportRow[] = cardRows.map((c) => {
     const v = facts.get(c.videoId);
+    const cardAssn = assnByVideo.get(c.videoId);
     const row: ExportRow = {
       video: v?.displayCode ?? null,
+      coder_id: c.authoredBy,
+      coder_pair_role: seatOf(cardAssn?.pairId ?? null, c.authoredBy),
       subject: c.subject,
       composition: c.composition,
       approx_count: c.approxCount,
@@ -596,6 +601,33 @@ export async function buildExportTables(dataset: Dataset = LIVE): Promise<BuiltT
       created_at: n.createdAt,
       updated_at: n.updatedAt,
       deleted: !!n.deletedAt,
+      dataset,
+    };
+  });
+
+  /* ---- clobs_sections ---- */
+  const sectionRows = await db
+    .select()
+    .from(sectionSessions)
+    .where(eq(sectionSessions.dataset, dataset))
+    .orderBy(asc(sectionSessions.startedAt));
+  const sectionsOut: ExportRow[] = sectionRows.map((sr) => {
+    const v = facts.get(sr.videoId);
+    const sAssn = assnByVideo.get(sr.videoId);
+    return {
+      section_id: sr.id,
+      observation_id: sr.observationId,
+      video_id: v?.videoId ?? sr.videoId,
+      display_code: v?.displayCode ?? null,
+      coder_id: sr.coderId,
+      coder_pair_role: seatOf(sAssn?.pairId ?? null, sr.coderId),
+      section: sr.section,
+      started_at: sr.startedAt,
+      ended_at: sr.endedAt,
+      minutes: sr.endedAt ? Math.round(((sr.endedAt.getTime() - sr.startedAt.getTime()) / 60000) * 100) / 100 : null,
+      end_reason: sr.endReason,
+      resume_reason: sr.resumeReason,
+      device: sr.device,
       dataset,
     };
   });
@@ -759,6 +791,7 @@ export async function buildExportTables(dataset: Dataset = LIVE): Promise<BuiltT
       [CONTEXT_CARDS.name]: cards,
       [NOTES.name]: notesOut,
       [CALIBRATION.name]: calibration,
+      [SECTIONS.name]: sectionsOut,
       [ASSIGNMENTS.name]: assignmentsOut,
       [EVENTS.name]: eventsOut,
       [VIDEOS.name]: videosOut,

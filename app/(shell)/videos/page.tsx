@@ -5,7 +5,7 @@
  */
 import Link from "next/link";
 import { requireSession } from "@/lib/auth-helpers";
-import { getCoderQueue, getMyCodingStats, getRubricContent } from "@/lib/db/coder";
+import { getActiveLock, getCoderQueue, getMyCodingStats, getRubricContent } from "@/lib/db/coder";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { ViewSwitch } from "@/components/ui/view-switch";
 import { MyDashboard } from "@/components/videos/my-dashboard";
@@ -13,9 +13,10 @@ import { VideosTable } from "@/components/videos/videos-table";
 
 export default async function MyVideos() {
   const session = await requireSession();
-  const [queue, stats, rubric] = await Promise.all([
+  const [queue, stats, activeLock, rubric] = await Promise.all([
     getCoderQueue(session.user.id),
     getMyCodingStats(session.user.id),
+    getActiveLock(session.user.id),
     getRubricContent(),
   ]);
   const done = queue.filter((q) => q.observationStatus === "submitted").length;
@@ -76,6 +77,7 @@ export default async function MyVideos() {
                     fillsContextCard: q.fillsContextCard,
                     observationStatus: q.observationStatus,
                   }))}
+                  lockedVideoId={activeLock?.videoId ?? null}
                 />
               ),
           },

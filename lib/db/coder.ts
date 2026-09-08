@@ -17,7 +17,7 @@
  * The ESLint boundary rule forbids importing the admin client (`@/lib/db`)
  * anywhere under app/api/coder or app/(coder).
  */
-import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { hardenSslMode } from "@/lib/pg-url";
@@ -29,9 +29,12 @@ import {
   notes,
   observations,
   scores,
+  sectionSessions,
   users,
+  videoLocks,
   videos,
 } from "@/db/schema";
+import type { DeviceKind } from "@/lib/device";
 
 const pool = new Pool({
   connectionString: hardenSslMode(process.env.DATABASE_URL_CODER),
@@ -129,42 +132,43 @@ export async function getCoderQueue(coderId: string): Promise<QueueRow[]> {
 /* Workspace                                                           */
 /* ------------------------------------------------------------------ */
 
-export interface WorkspaceContextCard {
-  /** True when the card exists but this coder may not read it yet
-   *  (they are not its author and have not submitted their own scores —
-   *  Amendment A). */
-  locked: boolean;
-  authoredByMe: boolean;
-  card: {
+export interface CardRecord {
+  id: string;
+  status: string;
+  submittedAt: Date | null;
+  subject: string | null;
+  composition: string | null;
+  approxCount: string | null;
+  uniforms: string | null;
+  appearanceCaveats: string | null;
+  room: string | null;
+  camera: string | null;
+  notes: string | null;
+  timeline: string | null;
+  settingChange: string | null;
+  adults: Array<{
     id: string;
-    status: string;
-    /** The confirm/flag second pass (Amendment A). */
-    confirmedAt: Date | null;
-    confirmedByMe: boolean;
-    flagged: boolean;
-    flagReason: string | null;
-    subject: string | null;
-    composition: string | null;
-    approxCount: string | null;
-    uniforms: string | null;
-    appearanceCaveats: string | null;
-    room: string | null;
-    camera: string | null;
-    notes: string | null;
-    timeline: string | null;
-    settingChange: string | null;
-    adults: Array<{
-      id: string;
-      adultNo: number;
-      role: string | null;
-      sex: string | null;
-      clothing: string | null;
-      clothingCaveats: string | null;
-      features: string | null;
-      behavior: string | null;
-      speaks: string | null;
-    }>;
-  } | null;
+    adultNo: number;
+    role: string | null;
+    sex: string | null;
+    clothing: string | null;
+    clothingCaveats: string | null;
+    features: string | null;
+    behavior: string | null;
+    speaks: string | null;
+  }>;
+}
+
+/**
+ * Amendment §43: every coder fills their OWN card. `mine` is always
+ * readable; the partner's card is released only after this coder has
+ * submitted their own scores (the Amendment A ordering rule, unchanged).
+ */
+export interface WorkspaceContextCard {
+  mine: CardRecord | null;
+  /** True while the partner's card (if any) may not be read yet. */
+  partnerLocked: boolean;
+  partner: CardRecord | null;
 }
 
 export interface Workspace {
@@ -198,6 +202,12 @@ export interface Workspace {
     submittedAt: Date | null;
   }>;
   contextCard: WorkspaceContextCard;
+  /** Amendment §45: "this" when this video holds the coder's lock, "other"
+   *  when another video does (then `lockedVideo` says which), null when
+   *  nothing is started. */
+  lock: { holder: "this" | "other" | null; lockedVideo: { videoId: string; displayCode: string } | null };
+  /** Amendment §44: sitting state per gated section. */
+  sections: { context_card: SectionState; scores: SectionState };
 }
 
 /**
@@ -284,11 +294,20 @@ export async function getWorkspace(
         .orderBy(asc(scores.itemNo))
     : [];
 
-  const contextCard = await getContextCardForCoder(
-    coderId,
-    videoId,
-    observation?.status === "submitted",
-  );
+  const submitted = observation?.status === "submitted";
+  const contextCard = await getContextCardForCoder(coderId, videoId, submitted);
+
+  const activeLock = await getActiveLock(coderId);
+  const lock: Workspace["lock"] = activeLock
+    ? activeLock.videoId === videoId
+      ? { holder: "this", lockedVideo: null }
+      : { holder: "other", lockedVideo: { videoId: activeLock.videoId, displayCode: activeLock.displayCode } }
+    : { holder: null, lockedVideo: null };
+
+  const sections = {
+    context_card: await getSectionState(coderId, videoId, "context_card", contextCard.mine?.status === "submitted"),
+    scores: await getSectionState(coderId, videoId, "scores", submitted),
+  };
 
   return {
     video: {
@@ -303,12 +322,16 @@ export async function getWorkspace(
     notes: myNotes,
     scores: myScores,
     contextCard,
+    lock,
+    sections,
   };
 }
 
 /**
- * Amendment A visibility: the author always sees their own card; the other
- * coder sees it only after submitting their own individual scores.
+ * Amendment §43 + Amendment A visibility: this coder's own card is always
+ * readable; the partner's only after this coder has submitted their own
+ * individual scores (the card describes what the teacher did and would
+ * colour a first impression).
  */
 async function getContextCardForCoder(
   coderId: string,
@@ -320,10 +343,7 @@ async function getContextCardForCoder(
       id: contextCards.id,
       authoredBy: contextCards.authoredBy,
       status: contextCards.status,
-      confirmedBy: contextCards.confirmedBy,
-      confirmedAt: contextCards.confirmedAt,
-      flagged: contextCards.flagged,
-      flagReason: contextCards.flagReason,
+      submittedAt: contextCards.submittedAt,
       subject: contextCards.subject,
       composition: contextCards.composition,
       approxCount: contextCards.approxCount,
@@ -336,19 +356,26 @@ async function getContextCardForCoder(
       settingChange: contextCards.settingChange,
     })
     .from(contextCards)
-    .where(eq(contextCards.videoId, videoId))
-    .limit(1);
+    .where(eq(contextCards.videoId, videoId));
 
-  const row = cardRows[0];
-  if (!row) return { locked: false, authoredByMe: false, card: null };
+  const mineRow = cardRows.find((r) => r.authoredBy === coderId) ?? null;
+  const partnerRow = cardRows.find((r) => r.authoredBy !== coderId) ?? null;
 
-  const authoredByMe = row.authoredBy === coderId;
-  if (!authoredByMe && !hasSubmittedOwnScores) {
-    // The card exists, but releasing any field of it — including who wrote
-    // it — before this coder's own submission would leak observations.
-    return { locked: true, authoredByMe: false, card: null };
-  }
+  const withAdults = async (row: NonNullable<typeof mineRow>): Promise<CardRecord> => {
+    const adults = await loadAdults(row.id);
+    const { authoredBy: _authoredBy, ...fields } = row;
+    return { ...fields, adults };
+  };
 
+  const mine = mineRow ? await withAdults(mineRow) : null;
+  // Releasing any field of the partner's card — including that it exists —
+  // before this coder's own submission would leak observations.
+  const partnerLocked = !!partnerRow && !hasSubmittedOwnScores;
+  const partner = partnerRow && hasSubmittedOwnScores ? await withAdults(partnerRow) : null;
+  return { mine, partnerLocked, partner };
+}
+
+async function loadAdults(cardId: string) {
   const adults = await coderDb
     .select({
       id: contextAdults.id,
@@ -364,22 +391,12 @@ async function getContextCardForCoder(
     .from(contextAdults)
     .where(
       and(
-        eq(contextAdults.contextCardId, row.id),
+        eq(contextAdults.contextCardId, cardId),
         isNull(contextAdults.deletedAt),
       ),
     )
     .orderBy(asc(contextAdults.adultNo));
-
-  const { authoredBy: _authoredBy, confirmedBy, ...cardFields } = row;
-  return {
-    locked: false,
-    authoredByMe,
-    card: {
-      ...cardFields,
-      confirmedByMe: confirmedBy === coderId,
-      adults,
-    },
-  };
+  return adults;
 }
 
 /* ------------------------------------------------------------------ */
@@ -509,13 +526,23 @@ export type Dataset = "live" | "test" | "training";
 // (used by the .mts scripts) cannot run that syntax.
 class CoderError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /** Machine-readable reason for clients that branch on it. */
+  code?: string;
+  details?: Record<string, unknown>;
+  constructor(message: string, status: number, code?: string, details?: Record<string, unknown>) {
     super(message);
     this.status = status;
+    this.code = code;
+    this.details = details;
   }
 }
 export { CoderError };
 
+/**
+ * Every write goes through here. Besides ownership it enforces the
+ * one-video-at-a-time rule (Amendment §45): while the coder holds an active
+ * lock on ANOTHER video, writes to this one are refused with 423.
+ */
 async function assertAssigned(coderId: string, videoId: string) {
   const rows = await coderDb
     .select({
@@ -533,6 +560,15 @@ async function assertAssigned(coderId: string, videoId: string) {
       ),
     )
     .limit(1);
+  const lock = await getActiveLock(coderId);
+  if (lock && lock.videoId !== videoId) {
+    throw new CoderError(
+      `Finish ${lock.displayCode} first. You started it and one video is worked at a time`,
+      423,
+      "locked_elsewhere",
+      { videoId: lock.videoId, displayCode: lock.displayCode },
+    );
+  }
   if (!rows[0]) throw new CoderError("Not found", 404);
   return rows[0];
 }
@@ -771,9 +807,9 @@ export async function submitObservation(coderId: string, videoId: string) {
   }
 
   // An observation is only COMPLETE when there is something there
-  // (Amendment §37): notes with real content, and — when this coder fills
-  // the context card — a submitted card.
-  const { fillsContextCard } = await assertAssigned(coderId, videoId);
+  // (Amendment §37): notes with real content and, since every coder fills
+  // a card (Amendment §43), this coder's own submitted card.
+  await assertAssigned(coderId, videoId);
   const noteRows = await coderDb
     .select({ body: notes.body })
     .from(notes)
@@ -788,17 +824,15 @@ export async function submitObservation(coderId: string, videoId: string) {
       400,
     );
   }
-  if (fillsContextCard) {
-    const [card] = await coderDb
-      .select({ status: contextCards.status })
-      .from(contextCards)
-      .where(eq(contextCards.videoId, videoId));
-    if (card?.status !== "submitted") {
-      throw new CoderError(
-        "The context card for this video is yours to fill. Submit it before submitting your scores",
-        400,
-      );
-    }
+  const [card] = await coderDb
+    .select({ status: contextCards.status })
+    .from(contextCards)
+    .where(and(eq(contextCards.videoId, videoId), eq(contextCards.authoredBy, coderId)));
+  if (card?.status !== "submitted") {
+    throw new CoderError(
+      "Submit your context card before submitting your scores. Every coder fills one",
+      400,
+    );
   }
 
   const now = new Date();
@@ -810,6 +844,14 @@ export async function submitObservation(coderId: string, videoId: string) {
     .update(observations)
     .set({ status: "submitted", submittedAt: now })
     .where(eq(observations.id, observation.id));
+  await endOpenSection(observation.id, "scores", "submitted", now);
+  // The observation is complete → the single-video lock is released
+  // (Amendment §45). Notes stay editable? No: submission locks scores; notes
+  // remain readable. The coder may start the next video.
+  await coderDb
+    .update(videoLocks)
+    .set({ releasedAt: now, releasedBy: coderId, releaseReason: "observation submitted" })
+    .where(and(eq(videoLocks.coderId, coderId), eq(videoLocks.videoId, videoId), isNull(videoLocks.releasedAt)));
   await logEvent(coderId, dataset, "observation_submitted", {
     videoId,
     observationId: observation.id,
@@ -851,10 +893,8 @@ export async function saveContextCard(
   videoId: string,
   input: ContextCardInput,
 ) {
-  const { fillsContextCard, dataset } = await assertAssigned(coderId, videoId);
-  if (!fillsContextCard) {
-    throw new CoderError("The context card for this video is not yours to fill", 403);
-  }
+  // Amendment §43: every coder fills their own card; no duty check.
+  const { dataset } = await assertAssigned(coderId, videoId);
   if (input.adults.length > 6) throw new CoderError("At most six adults", 400);
   for (const a of input.adults) {
     if (!Number.isInteger(a.adultNo) || a.adultNo < 1 || a.adultNo > 6) {
@@ -881,21 +921,14 @@ export async function saveContextCard(
     .select({
       id: contextCards.id,
       status: contextCards.status,
-      authoredBy: contextCards.authoredBy,
-      flagged: contextCards.flagged,
     })
     .from(contextCards)
-    .where(eq(contextCards.videoId, videoId))
+    .where(and(eq(contextCards.videoId, videoId), eq(contextCards.authoredBy, coderId)))
     .limit(1);
 
   let cardId: string;
   if (existing[0]) {
-    if (existing[0].authoredBy !== coderId) {
-      throw new CoderError("The card was authored by someone else", 403);
-    }
-    // A FLAGGED submitted card reopens for its author (Amendment A second
-    // pass); otherwise submitted stays read-only.
-    if (existing[0].status === "submitted" && !existing[0].flagged) {
+    if (existing[0].status === "submitted") {
       throw new CoderError("The card is submitted and read-only", 409);
     }
     cardId = existing[0].id;
@@ -961,20 +994,18 @@ export async function saveContextCard(
   return { cardId, savedAt: fields.updatedAt };
 }
 
-/** Submit the context card (author only; becomes read-only). */
+/** Submit this coder's own context card (becomes read-only). */
 export async function submitContextCard(coderId: string, videoId: string) {
   const { dataset } = await assertAssigned(coderId, videoId);
   const existing = await coderDb
     .select({
       id: contextCards.id,
       status: contextCards.status,
-      authoredBy: contextCards.authoredBy,
-      flagged: contextCards.flagged,
     })
     .from(contextCards)
-    .where(eq(contextCards.videoId, videoId))
+    .where(and(eq(contextCards.videoId, videoId), eq(contextCards.authoredBy, coderId)))
     .limit(1);
-  if (!existing[0] || existing[0].authoredBy !== coderId) {
+  if (!existing[0]) {
     throw new CoderError("Not found", 404);
   }
   // An empty card is not a card (Amendment §33): the essentials must be
@@ -1010,103 +1041,285 @@ export async function submitContextCard(coderId: string, videoId: string) {
     );
   }
   const now = new Date();
-  if (existing[0].status === "submitted") {
-    if (!existing[0].flagged) throw new CoderError("Already submitted", 409);
-    // Resubmission after a flag: the flag is resolved by the author, the
-    // partner's confirmation resets so they review the updated card.
-    await coderDb
-      .update(contextCards)
-      .set({
-        submittedAt: now,
-        updatedAt: now,
-        flagged: false,
-        flagResolvedBy: coderId,
-        flagResolvedAt: now,
-        confirmedBy: null,
-        confirmedAt: null,
-      })
-      .where(eq(contextCards.id, existing[0].id));
-    await logEvent(coderId, dataset, "context_card_flag_resolved", { videoId });
-    return { submittedAt: now };
-  }
+  if (existing[0].status === "submitted") throw new CoderError("Already submitted", 409);
   await coderDb
     .update(contextCards)
     .set({ status: "submitted", submittedAt: now, updatedAt: now })
     .where(eq(contextCards.id, existing[0].id));
+  const own = await getOwnObservation(coderId, videoId);
+  if (own) await endOpenSection(own.id, "context_card", "submitted", now);
   await logEvent(coderId, dataset, "context_card_submitted", { videoId });
   return { submittedAt: now };
 }
 
-/* ------------------ card second pass (Amendment A) ------------------- */
+/* ---------------- one video at a time (Amendment §45) ---------------- */
 
-async function getReviewableCard(coderId: string, videoId: string) {
-  const { dataset } = await assertAssigned(coderId, videoId);
-  const own = await getOwnObservation(coderId, videoId);
-  if (own?.status !== "submitted") {
-    throw new CoderError("Submit your own scores before reviewing the card", 409);
-  }
+export interface ActiveLock {
+  id: string;
+  videoId: string;
+  displayCode: string;
+  startedAt: Date;
+}
+
+/** The coder's active lock, if any (the video they must finish first). */
+export async function getActiveLock(coderId: string): Promise<ActiveLock | null> {
   const rows = await coderDb
     .select({
-      id: contextCards.id,
-      status: contextCards.status,
-      authoredBy: contextCards.authoredBy,
-      flagged: contextCards.flagged,
-      confirmedBy: contextCards.confirmedBy,
+      id: videoLocks.id,
+      videoId: videoLocks.videoId,
+      displayCode: videos.displayCode,
+      startedAt: videoLocks.startedAt,
     })
-    .from(contextCards)
-    .where(eq(contextCards.videoId, videoId))
+    .from(videoLocks)
+    .innerJoin(videos, eq(videos.id, videoLocks.videoId))
+    .where(and(eq(videoLocks.coderId, coderId), isNull(videoLocks.releasedAt)))
     .limit(1);
-  const card = rows[0];
-  if (!card || card.status !== "submitted") {
-    throw new CoderError("The card has not been submitted yet", 409);
-  }
-  if (card.authoredBy === coderId) {
-    throw new CoderError("You wrote this card; your partner reviews it", 403);
-  }
-  return { card, dataset };
+  return rows[0] ?? null;
 }
 
-/** Confirm the partner's card as accurate (second pass, Amendment A). */
-export async function confirmContextCard(coderId: string, videoId: string) {
-  const { card, dataset } = await getReviewableCard(coderId, videoId);
-  if (card.flagged) {
-    throw new CoderError("The card is flagged; wait for the update", 409);
+/**
+ * "Do you want to start this video?" → yes. Takes the coder's single lock
+ * and opens the observation. Idempotent for the locked video; refused
+ * (423) while another video is locked.
+ */
+export async function startVideo(coderId: string, videoId: string) {
+  const { dataset } = await assertAssigned(coderId, videoId); // 423 if locked elsewhere
+  const existing = await getActiveLock(coderId);
+  if (!existing) {
+    await coderDb.insert(videoLocks).values({ coderId, videoId, dataset });
+    await logEvent(coderId, dataset, "video_started", { videoId });
   }
-  if (card.confirmedBy) throw new CoderError("Already confirmed", 409);
-  const now = new Date();
+  const observation = await ensureObservation(coderId, videoId);
+  return { observationId: observation.id, lock: (await getActiveLock(coderId))! };
+}
+
+/* ------------------- timed sections (Amendment §44) ------------------- */
+
+export type SectionKind = "context_card" | "notes" | "scores";
+type SectionEndReason = "submitted" | "closed" | "abrupt" | "admin_released";
+
+/** A sitting whose heartbeat is older than this is over (abruptly). */
+const STALE_MS = 2 * 60 * 1000;
+
+export interface SectionState {
+  /** The sitting currently open in this browser, if any. */
+  open: { id: string; startedAt: Date } | null;
+  /** True when the last sitting did not end with a submission and no
+   *  reason has been recorded yet — the coder must say why before the
+   *  section reopens. */
+  needsResumeReason: boolean;
+  sittings: number;
+  lastEndReason: SectionEndReason | null;
+  submitted: boolean;
+}
+
+async function endOpenSection(
+  observationId: string,
+  section: SectionKind,
+  reason: SectionEndReason,
+  at: Date,
+) {
   await coderDb
-    .update(contextCards)
-    .set({ confirmedBy: coderId, confirmedAt: now, updatedAt: now })
-    .where(eq(contextCards.id, card.id));
-  await logEvent(coderId, dataset, "context_card_confirmed", { videoId });
-  return { confirmedAt: now };
+    .update(sectionSessions)
+    .set({ endedAt: at, endReason: reason })
+    .where(
+      and(
+        eq(sectionSessions.observationId, observationId),
+        eq(sectionSessions.section, section),
+        isNull(sectionSessions.endedAt),
+      ),
+    );
 }
 
-/** Flag the partner's card with a reason; the author can then revise. */
-export async function flagContextCard(
+/** Mark any open sitting whose heartbeat went stale as ended abruptly. */
+async function sweepStaleSections(observationId: string, section: SectionKind, now: Date) {
+  const stale = await coderDb
+    .select({ id: sectionSessions.id, lastHeartbeatAt: sectionSessions.lastHeartbeatAt })
+    .from(sectionSessions)
+    .where(
+      and(
+        eq(sectionSessions.observationId, observationId),
+        eq(sectionSessions.section, section),
+        isNull(sectionSessions.endedAt),
+      ),
+    );
+  for (const s of stale) {
+    if (now.getTime() - s.lastHeartbeatAt.getTime() > STALE_MS) {
+      await coderDb
+        .update(sectionSessions)
+        .set({ endedAt: s.lastHeartbeatAt, endReason: "abrupt" })
+        .where(eq(sectionSessions.id, s.id));
+    }
+  }
+}
+
+export async function getSectionState(
   coderId: string,
   videoId: string,
-  reason: string,
+  section: SectionKind,
+  submitted: boolean,
+): Promise<SectionState> {
+  const own = await getOwnObservation(coderId, videoId);
+  if (!own) return { open: null, needsResumeReason: false, sittings: 0, lastEndReason: null, submitted };
+  const now = new Date();
+  await sweepStaleSections(own.id, section, now);
+  const rows = await coderDb
+    .select({
+      id: sectionSessions.id,
+      startedAt: sectionSessions.startedAt,
+      endedAt: sectionSessions.endedAt,
+      endReason: sectionSessions.endReason,
+      resumeReason: sectionSessions.resumeReason,
+    })
+    .from(sectionSessions)
+    .where(and(eq(sectionSessions.observationId, own.id), eq(sectionSessions.section, section)))
+    .orderBy(desc(sectionSessions.startedAt));
+  const open = rows.find((r) => !r.endedAt) ?? null;
+  const last = rows.find((r) => !!r.endedAt) ?? null;
+  const needsResumeReason =
+    !open && !submitted && !!last && last.endReason !== "submitted" && !last.resumeReason;
+  return {
+    open: open ? { id: open.id, startedAt: open.startedAt } : null,
+    needsResumeReason,
+    sittings: rows.length,
+    lastEndReason: last?.endReason ?? null,
+    submitted,
+  };
+}
+
+/**
+ * Open a sitting on a section. If the previous sitting did not end with a
+ * submission, a resume reason is required first (428 with code
+ * resume_reason_required); it is written onto that previous sitting.
+ */
+export async function startSection(
+  coderId: string,
+  videoId: string,
+  section: SectionKind,
+  device: DeviceKind,
+  resumeReason?: string | null,
 ) {
-  const trimmed = reason.trim();
-  if (!trimmed) {
-    throw new CoderError("Say briefly what looks wrong, so it can be fixed", 400);
+  const { dataset } = await assertAssigned(coderId, videoId);
+  const lock = await getActiveLock(coderId);
+  if (!lock || lock.videoId !== videoId) {
+    throw new CoderError("Start the video first", 409, "video_not_started");
   }
-  const { card, dataset } = await getReviewableCard(coderId, videoId);
-  if (card.flagged) throw new CoderError("Already flagged", 409);
+  const own = await ensureObservation(coderId, videoId);
+  const now = new Date();
+  await sweepStaleSections(own.id, section, now);
+
+  const openRows = await coderDb
+    .select({ id: sectionSessions.id, startedAt: sectionSessions.startedAt })
+    .from(sectionSessions)
+    .where(
+      and(
+        eq(sectionSessions.observationId, own.id),
+        eq(sectionSessions.section, section),
+        isNull(sectionSessions.endedAt),
+      ),
+    )
+    .limit(1);
+  if (openRows[0]) {
+    // Same sitting (e.g. a reload): refresh the heartbeat, hand it back.
+    await coderDb
+      .update(sectionSessions)
+      .set({ lastHeartbeatAt: now })
+      .where(eq(sectionSessions.id, openRows[0].id));
+    return { sessionId: openRows[0].id, startedAt: openRows[0].startedAt, resumed: false };
+  }
+
+  const lastRows = await coderDb
+    .select({
+      id: sectionSessions.id,
+      endReason: sectionSessions.endReason,
+      endedAt: sectionSessions.endedAt,
+      resumeReason: sectionSessions.resumeReason,
+    })
+    .from(sectionSessions)
+    .where(and(eq(sectionSessions.observationId, own.id), eq(sectionSessions.section, section)))
+    .orderBy(desc(sectionSessions.startedAt))
+    .limit(1);
+  const last = lastRows[0];
+  if (last && last.endReason !== "submitted" && !last.resumeReason) {
+    const reason = resumeReason?.trim();
+    if (!reason) {
+      throw new CoderError(
+        "Your last sitting on this section did not finish. Say briefly what happened before continuing",
+        428,
+        "resume_reason_required",
+        { endedAt: last.endedAt, endReason: last.endReason },
+      );
+    }
+    await coderDb
+      .update(sectionSessions)
+      .set({ resumeReason: reason.slice(0, 500) })
+      .where(eq(sectionSessions.id, last.id));
+  }
+
+  const [created] = await coderDb
+    .insert(sectionSessions)
+    .values({
+      observationId: own.id,
+      coderId,
+      videoId,
+      section,
+      device,
+      dataset,
+      startedAt: now,
+      lastHeartbeatAt: now,
+    })
+    .returning({ id: sectionSessions.id, startedAt: sectionSessions.startedAt });
+  await logEvent(coderId, dataset, "section_started", { videoId, observationId: own.id }, {
+    section,
+    device,
+    sessionId: created.id,
+    resumed: !!last,
+  });
+  return { sessionId: created.id, startedAt: created.startedAt, resumed: !!last };
+}
+
+async function ownSection(coderId: string, sessionId: string) {
+  const rows = await coderDb
+    .select({
+      id: sectionSessions.id,
+      videoId: sectionSessions.videoId,
+      observationId: sectionSessions.observationId,
+      section: sectionSessions.section,
+      endedAt: sectionSessions.endedAt,
+      dataset: sectionSessions.dataset,
+    })
+    .from(sectionSessions)
+    .where(and(eq(sectionSessions.id, sessionId), eq(sectionSessions.coderId, coderId)))
+    .limit(1);
+  if (!rows[0]) throw new CoderError("Not found", 404);
+  return rows[0];
+}
+
+export async function heartbeatSection(coderId: string, sessionId: string) {
+  const s = await ownSection(coderId, sessionId);
+  if (s.endedAt) return { ended: true };
+  await coderDb
+    .update(sectionSessions)
+    .set({ lastHeartbeatAt: new Date() })
+    .where(eq(sectionSessions.id, s.id));
+  return { ended: false };
+}
+
+/** The coder leaves the section on purpose (tab closed, navigated away). */
+export async function endSection(coderId: string, sessionId: string) {
+  const s = await ownSection(coderId, sessionId);
+  if (s.endedAt) return { ended: true };
   const now = new Date();
   await coderDb
-    .update(contextCards)
-    .set({
-      flagged: true,
-      flagReason: trimmed,
-      confirmedBy: null,
-      confirmedAt: null,
-      updatedAt: now,
-    })
-    .where(eq(contextCards.id, card.id));
-  await logEvent(coderId, dataset, "context_card_flagged", { videoId });
-  return { flagged: true };
+    .update(sectionSessions)
+    .set({ endedAt: now, endReason: "closed" })
+    .where(eq(sectionSessions.id, s.id));
+  await logEvent(coderId, s.dataset, "section_ended", { videoId: s.videoId, observationId: s.observationId }, {
+    section: s.section,
+    sessionId: s.id,
+    reason: "closed",
+  });
+  return { ended: true };
 }
 
 /* ------------------------------------------------------------------ */

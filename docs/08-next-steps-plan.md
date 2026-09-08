@@ -39,7 +39,7 @@ Definition of done: tests green (contract test updated for 1.5–1.7), María co
 
 ---
 
-## 2. Phase 2 — data-model decisions to take before the new interface
+## 2. Phase 2 — data-model decisions to take before the new interface — **DONE 2026-09-07** (Amendments §43–45, migration 0008, branch `feat/phase2-schema-decisions`)
 
 These change tables that the simple interface will write to. Each needs an Amendment; the
 schema changes are small but they should land **before** Phase 3 so the prototype writes real data.

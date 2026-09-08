@@ -154,13 +154,13 @@ describe("preview", () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     const byCode = Object.fromEntries(r.preview.rows.map((x) => [x.displayCode, x]));
-    expect(byCode["V-TEST-RA-1"]).toMatchObject({ state: "untouched", action: "transfer", cardDuty: "enumerator", cardStatus: "none" });
-    expect(byCode["V-TEST-RA-2"]).toMatchObject({ state: "in_progress", action: "transfer", cardDuty: "anchor", cardStatus: "draft" });
+    expect(byCode["V-TEST-RA-1"]).toMatchObject({ state: "untouched", action: "transfer", cards: { anchor: "none", enumerator: "none" } });
+    expect(byCode["V-TEST-RA-2"]).toMatchObject({ state: "in_progress", action: "transfer", cards: { anchor: "draft", enumerator: "none" } });
     expect(byCode["V-TEST-RA-3"]).toMatchObject({ state: "one_submitted", action: "hold", submittedSeats: ["enumerator"] });
     expect(byCode["V-TEST-RA-4"]).toMatchObject({ state: "both_submitted", action: "hold" });
     expect(r.preview.counts).toEqual({ return_to_pool: 0, transfer: 2, hold: 2 });
     expect(r.preview.seats.anchor.to?.id).toBe(ids.A2);
-    expect(byCode["V-TEST-RA-2"].note).toMatch(/draft card passes to ra-a2/);
+    expect(byCode["V-TEST-RA-2"].note).toMatch(/ra-a1's draft card stays on record; ra-a2 writes their own card/);
   });
 
   it("with 'include submitted', a one-submitted video moves (scores kept as evidence)", async () => {
@@ -231,13 +231,13 @@ describe("confirm", () => {
     expect(fresh.map((a) => a.videoId).sort()).toEqual(videoIds.slice(0, 3).sort());
     expect(fresh.every((a) => a.waveNo === 3 && a.status === "active")).toBe(true);
 
-    // Card duty travelled: RA-1 duty (E1) → E2; RA-2 draft card re-authored to A2.
+    // Both new seats fill their own card (Amendment §43); A1's draft card
+    // stays A1's, on record.
     const ra1new = fresh.find((a) => a.videoId === videoIds[0])!;
     const ra1raters = await db.select().from(assignmentRaters).where(eq(assignmentRaters.assignmentId, ra1new.id));
-    expect(ra1raters.find((x) => x.userId === ids.E2)?.fillsContextCard).toBe(true);
-    expect(ra1raters.find((x) => x.userId === ids.A2)?.fillsContextCard).toBe(false);
+    expect(ra1raters.every((x) => x.fillsContextCard)).toBe(true);
     const [card] = await db.select({ authoredBy: contextCards.authoredBy, status: contextCards.status }).from(contextCards).where(eq(contextCards.videoId, videoIds[1]));
-    expect(card).toEqual({ authoredBy: ids.A2, status: "draft" });
+    expect(card).toEqual({ authoredBy: ids.A1, status: "draft" });
 
     // E1's note on RA-2 and E1's locked scores on RA-3 still exist.
     const [e1obs2] = await db.select({ id: observations.id }).from(observations).where(and(eq(observations.videoId, videoIds[1]), eq(observations.coderId, ids.E1)));
@@ -253,14 +253,14 @@ describe("confirm", () => {
     expect(ra3old.find((x) => x.userId === ids.E1)?.status).toBe("voided");
     expect(ra3old.find((x) => x.userId === ids.A1)?.status).toBe("transferred");
 
-    // The log tells the story: reassign ×6 (3 videos × 2 seats), duty transfers, one void.
+    // The log tells the story: reassign ×6 (3 videos × 2 seats), one void.
     const log = await db
       .select({ action: assignmentLog.action, videoId: assignmentLog.videoId, toUserId: assignmentLog.toUserId })
       .from(assignmentLog)
       .where(and(eq(assignmentLog.fromPairId, ids.P1), eq(assignmentLog.dataset, "training")));
     expect(log.filter((l) => l.action === "reassign")).toHaveLength(6);
     expect(log.filter((l) => l.action === "void")).toHaveLength(1);
-    expect(log.filter((l) => l.action === "transfer_card_duty").map((l) => l.videoId).sort()).toEqual(videoIds.slice(0, 3).sort());
+    expect(log.filter((l) => l.action === "transfer_card_duty")).toHaveLength(0);
 
     // Queues: E2 now sees 1–3; E1 keeps only RA-4.
     const e2 = (await getCoderQueue(ids.E2)).map((q) => q.displayCode).sort();

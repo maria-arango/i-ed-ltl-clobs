@@ -328,11 +328,12 @@ describe("the workspace payload", () => {
     expect(body.notes).toEqual([]);
   });
 
-  it("locks the context card for the non-author before their own submission (Amendment A)", async () => {
+  it("locks the partner's context card before this coder's own submission (Amendment A, kept under §43)", async () => {
     actAs(ids.coderB);
     const { body } = await callWorkspace(ids.video);
-    expect(body.contextCard.locked).toBe(true);
-    expect(body.contextCard.card).toBeNull();
+    expect(body.contextCard.partnerLocked).toBe(true);
+    expect(body.contextCard.partner).toBeNull();
+    expect(body.contextCard.mine).toBeNull(); // B has no card of their own yet
     expect(JSON.stringify(body)).not.toContain("blindtest room description");
   });
 
@@ -344,9 +345,9 @@ describe("the workspace payload", () => {
 
     actAs(ids.coderB);
     const { body } = await callWorkspace(ids.video);
-    expect(body.contextCard.locked).toBe(false);
-    expect(body.contextCard.card?.room).toBe("blindtest room description");
-    expect(body.contextCard.card?.adults).toHaveLength(1);
+    expect(body.contextCard.partnerLocked).toBe(false);
+    expect(body.contextCard.partner?.room).toBe("blindtest room description");
+    expect(body.contextCard.partner?.adults).toHaveLength(1);
     // Even the released card payload carries nothing blinded.
     expectBlinded(body);
 
@@ -360,9 +361,8 @@ describe("the workspace payload", () => {
   it("always shows the author their own card", async () => {
     actAs(ids.coderA);
     const { body } = await callWorkspace(ids.video);
-    expect(body.contextCard.locked).toBe(false);
-    expect(body.contextCard.authoredByMe).toBe(true);
-    expect(body.contextCard.card?.room).toBe("blindtest room description");
+    expect(body.contextCard.mine?.room).toBe("blindtest room description");
+    expect(body.contextCard.partner).toBeNull(); // B has written none
   });
 
   it("returns 404 for a coder the video is not assigned to", async () => {

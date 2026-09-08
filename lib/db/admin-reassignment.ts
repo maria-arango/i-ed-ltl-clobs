@@ -17,10 +17,11 @@
  *                  calibration; moving would orphan two locked scores
  *   completed      never touched
  *
- * Card duty (Amendment A) travels with the video: a submitted card stays;
- * an unsubmitted one is re-authored to the incoming duty holder and logged.
- * Every step lands in assignment_log with its reason; the confirm re-runs
- * the same classification and refuses if anything changed (hash guard).
+ * Cards (Amendment §43): every coder fills their own, so a departing
+ * coder's card (draft or submitted) simply stays on record and the incoming
+ * coder writes theirs. Every step lands in assignment_log with its reason;
+ * the confirm re-runs the same classification and refuses if anything
+ * changed (hash guard).
  */
 import { createHash } from "node:crypto";
 import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
@@ -53,8 +54,8 @@ export interface MovePlanRow {
   action: MoveAction;
   /** Plain-language consequence shown in the preview. */
   note: string;
-  cardDuty: Seat;
-  cardStatus: "none" | "draft" | "submitted";
+  /** Each seat's own context card (Amendment §43). */
+  cards: Record<Seat, "none" | "draft" | "submitted">;
   /** Seats whose CURRENT holder has submitted scores. */
   submittedSeats: Seat[];
 }
@@ -122,7 +123,7 @@ function hashPlan(input: MoveInput, rows: MovePlanRow[]): string {
   h.update(`${input.fromPairId}>${input.toPairId ?? "pool"}#${input.includeSubmitted ? 1 : 0}`);
   h.update(
     rows
-      .map((r) => `${r.assignmentId}:${r.state}:${r.cardStatus}:${r.submittedSeats.join("+")}`)
+      .map((r) => `${r.assignmentId}:${r.state}:${r.cards.anchor}:${r.cards.enumerator}:${r.submittedSeats.join("+")}`)
       .sort()
       .join(","),
   );
@@ -230,18 +231,16 @@ async function classify(input: MoveInput): Promise<
     noteRows.some((n) => n.observationId === obsId) || scoreRows.some((s) => s.observationId === obsId);
 
   const rows: MovePlanRow[] = active.map((a) => {
-    const myRaters = raterRows.filter((r) => r.assignmentId === a.assignmentId);
-    const dutyRow = myRaters.find((r) => r.fillsContextCard);
-    const cardDuty: Seat = dutyRow?.userId === fromSeats.anchor.id ? "anchor" : "enumerator";
-    const card = cards.find((c) => c.videoId === a.videoId);
-    const cardStatus = card ? card.status : "none";
-
     const seatOf = (userId: string): Seat => (userId === fromSeats.anchor.id ? "anchor" : "enumerator");
+    const cardOf = (seat: Seat): "none" | "draft" | "submitted" =>
+      cards.find((c) => c.videoId === a.videoId && c.authoredBy === seats[seat].from.id)?.status ?? "none";
+    const cardsBySeat = { anchor: cardOf("anchor"), enumerator: cardOf("enumerator") };
+    const anyCard = cards.some((c) => c.videoId === a.videoId);
     const submittedSeats: Seat[] = obs
       .filter((o) => o.videoId === a.videoId && o.status === "submitted")
       .map((o) => seatOf(o.coderId));
     const anyWork =
-      obs.some((o) => o.videoId === a.videoId && (o.status !== "not_started" || hasContent(o.id))) || !!card;
+      obs.some((o) => o.videoId === a.videoId && (o.status !== "not_started" || hasContent(o.id))) || anyCard;
     const session = sessions.find((s) => s.videoId === a.videoId);
 
     const state: MoveState =
@@ -289,15 +288,11 @@ async function classify(input: MoveInput): Promise<
       for (const seat of ["anchor", "enumerator"] as Seat[]) {
         const o = obs.find((x) => x.videoId === a.videoId && x.coderId === seats[seat].from.id);
         const worked = o && (o.status !== "not_started" || hasContent(o.id));
-        if (departing(seat) && worked) parts.push(`${who(seat)}'s draft stays on record`);
+        const cardWord = cardsBySeat[seat] === "submitted" ? "submitted card" : cardsBySeat[seat] === "draft" ? "draft card" : null;
+        if (departing(seat) && (worked || cardWord)) {
+          parts.push(`${who(seat)}'s ${[worked ? "draft" : null, cardWord].filter(Boolean).join(" and ")} stays on record; ${seats[seat].to!.label} writes their own card`);
+        }
         if (!departing(seat)) parts.push(`${who(seat)} keeps their work`);
-      }
-      if (cardStatus === "draft" && departing(cardDuty)) {
-        parts.push(`the draft card passes to ${seats[cardDuty].to!.label}`);
-      } else if (cardStatus === "submitted") {
-        parts.push("the submitted card stays");
-      } else if (cardStatus === "none" && departing(cardDuty)) {
-        parts.push(`card duty passes to ${seats[cardDuty].to!.label}`);
       }
       note = state === "untouched" ? `Nobody has started. ${parts.length ? parts.join("; ") + "." : "Dealt to the new pair as is."}` : `${parts.join("; ")}.`;
     }
@@ -309,8 +304,7 @@ async function classify(input: MoveInput): Promise<
       state,
       action,
       note,
-      cardDuty,
-      cardStatus,
+      cards: cardsBySeat,
       submittedSeats,
     };
   });
@@ -423,10 +417,6 @@ export async function confirmMove(
         })
         .returning({ id: assignments.id });
 
-      const dutyMoves = row.cardStatus !== "submitted";
-      // Release the old duty flag first so the partial unique index never
-      // sees two fillers on one assignment... (different assignments, but
-      // clearing keeps the history honest: duty left with the video).
       for (const seat of ["anchor", "enumerator"] as Seat[]) {
         const fromUser = seats[seat].from;
         const toUser = seats[seat].to!;
@@ -461,7 +451,8 @@ export async function confirmMove(
           }
         }
 
-        const fills = row.cardDuty === seat && dutyMoves;
+        // Amendment §43: every seat fills its own card.
+        const fills = true;
         const [newRow] = await tx
           .insert(assignmentRaters)
           .values({
@@ -493,31 +484,6 @@ export async function confirmMove(
           actorId,
           dataset,
         });
-
-        if (row.cardDuty === seat && dutyMoves && !samePerson) {
-          await tx.insert(assignmentLog).values({
-            action: "transfer_card_duty",
-            videoId: row.videoId,
-            fromPairId,
-            toPairId,
-            fromUserId: fromUser.id,
-            toUserId: toUser.id,
-            fillsContextCard: true,
-            waveNo: assn.waveNo,
-            reason,
-            actorId,
-            dataset,
-          });
-          if (row.cardStatus === "draft") {
-            // An unsubmitted card is not evidence; it is re-authored so the
-            // incoming duty holder can keep editing it (saveContextCard
-            // refuses another author's card).
-            await tx
-              .update(contextCards)
-              .set({ authoredBy: toUser.id, updatedAt: new Date() })
-              .where(and(eq(contextCards.videoId, row.videoId), eq(contextCards.status, "draft")));
-          }
-        }
       }
 
       await tx

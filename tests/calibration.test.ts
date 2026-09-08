@@ -268,6 +268,13 @@ describe("the co-presence gate (CLAUDE.md §2)", () => {
     await saveNote(enumId, videoId, {
       body: `<h2 style="font-size:26px;line-height:1.25;font-weight:600;margin:0.6em 0 0.4em">Head</h2><script>alert("${SENTINEL_NOTE}-xss")</script><p onclick="steal()">${SENTINEL_NOTE} <mark data-color="#F5E9B8" style="background-color: #F5E9B8">hi</mark></p><img src=x onerror=alert(1)>`,
     });
+    // Every coder fills a card (Amendment §43); completion requires it.
+    await saveContextCard(enumId, videoId, {
+      composition: "mixed",
+      approxCount: "35",
+      adults: [{ adultNo: 1, role: "teacher", sex: "female", speaks: "yes" }],
+    });
+    await submitContextCard(enumId, videoId);
     await submitObservation(enumId, videoId);
 
     // The anchor joins ALONE. Session exists (lobby) — no partner data.

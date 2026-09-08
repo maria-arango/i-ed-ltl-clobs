@@ -3,11 +3,12 @@
  * path pool → assigned → scored twice → calibrated. Feeds the Progress
  * dashboard's insight cards and its filterable table.
  */
-import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db";
 import {
   assignments,
+  auditLog,
   calibrationItems,
   calibrationSessions,
   coderAvailability,
@@ -16,7 +17,9 @@ import {
   rubricConcepts,
   rubricVersions,
   scores,
+  sectionSessions,
   users,
+  videoLocks,
   videoProvenance,
   videos,
 } from "@/db/schema";
@@ -240,6 +243,90 @@ export async function getReliabilityStats(): Promise<ReliabilityView> {
   const itemNames = Object.fromEntries(concepts.map((c) => [c.itemNo, c.name]));
 
   return { ...summary, coderNames, itemNames };
+}
+
+/* --------------------------- video locks (§45) -------------------------- */
+
+export interface ActiveLockRow {
+  id: string;
+  coderId: string;
+  coderName: string;
+  videoId: string;
+  displayCode: string;
+  startedAt: Date;
+  dataset: string;
+}
+
+/** Every coder currently holding a started video. */
+export async function listActiveLocks(): Promise<ActiveLockRow[]> {
+  const rows = await db
+    .select({
+      id: videoLocks.id,
+      coderId: videoLocks.coderId,
+      name: users.name,
+      email: users.email,
+      videoId: videoLocks.videoId,
+      displayCode: videos.displayCode,
+      startedAt: videoLocks.startedAt,
+      dataset: videoLocks.dataset,
+    })
+    .from(videoLocks)
+    .innerJoin(users, eq(users.id, videoLocks.coderId))
+    .innerJoin(videos, eq(videos.id, videoLocks.videoId))
+    .where(isNull(videoLocks.releasedAt))
+    .orderBy(asc(videoLocks.startedAt));
+  return rows.map((r) => ({
+    id: r.id,
+    coderId: r.coderId,
+    coderName: r.name ?? r.email,
+    videoId: r.videoId,
+    displayCode: r.displayCode,
+    startedAt: r.startedAt,
+    dataset: r.dataset,
+  }));
+}
+
+/**
+ * Release a coder's lock with a reason (broken link, swapped video, coder
+ * away). The observation and everything typed stay exactly as they are;
+ * open sittings on that video end as 'admin_released'. Audited.
+ */
+export async function releaseVideoLock(
+  actorId: string,
+  lockId: string,
+  reason: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const trimmed = reason.trim();
+  if (trimmed.length < 3) return { ok: false, error: "A reason is required; it is written into the audit log." };
+  const [lock] = await db
+    .select({ id: videoLocks.id, coderId: videoLocks.coderId, videoId: videoLocks.videoId, releasedAt: videoLocks.releasedAt })
+    .from(videoLocks)
+    .where(eq(videoLocks.id, lockId));
+  if (!lock) return { ok: false, error: "That lock no longer exists." };
+  if (lock.releasedAt) return { ok: false, error: "That lock was already released." };
+  const now = new Date();
+  await db
+    .update(videoLocks)
+    .set({ releasedAt: now, releasedBy: actorId, releaseReason: trimmed })
+    .where(eq(videoLocks.id, lockId));
+  await db
+    .update(sectionSessions)
+    .set({ endedAt: now, endReason: "admin_released" })
+    .where(
+      and(
+        eq(sectionSessions.coderId, lock.coderId),
+        eq(sectionSessions.videoId, lock.videoId),
+        isNull(sectionSessions.endedAt),
+      ),
+    );
+  await db.insert(auditLog).values({
+    actorId,
+    action: "video_lock_released",
+    subjectTable: "video_locks",
+    subjectId: lockId,
+    details: { coderId: lock.coderId, videoId: lock.videoId, reason: trimmed },
+  });
+  return { ok: true };
 }
 
 /* --------------------------- weekly outlook --------------------------- */

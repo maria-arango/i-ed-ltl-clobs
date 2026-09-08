@@ -5,7 +5,7 @@
  * - submission requires all 8 items and LOCKS the scores
  *   (application 409 + database trigger),
  * - dataset is stamped server-side from the account scope,
- * - only the assigned filler can write the context card.
+ * - every coder writes their own context card (Amendment §43).
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { and, eq } from "drizzle-orm";
@@ -32,6 +32,7 @@ import { PUT as putScore } from "@/app/api/coder/videos/[videoId]/scores/route";
 import { POST as postSubmit } from "@/app/api/coder/videos/[videoId]/submit/route";
 import { PUT as putCard } from "@/app/api/coder/videos/[videoId]/context-card/route";
 import { GET as getRubric } from "@/app/api/coder/rubric/route";
+import { saveContextCard, submitContextCard } from "@/lib/db/coder";
 import { purgeFixture } from "./fixtures";
 
 const FIXTURE = {
@@ -97,7 +98,7 @@ beforeAll(async () => {
   ids.assignment = assignment.id;
   await db.insert(assignmentRaters).values([
     { assignmentId: assignment.id, userId: filler.id, fillsContextCard: true },
-    { assignmentId: assignment.id, userId: other.id, fillsContextCard: false },
+    { assignmentId: assignment.id, userId: other.id, fillsContextCard: true },
   ]);
 });
 
@@ -155,7 +156,16 @@ describe("scores and submission", () => {
       );
       expect(res.status).toBe(200);
     }
-    const submit = await postSubmit(new Request("http://t", { method: "POST" }), withParams(ids.video));
+    // Completion also needs this coder's OWN submitted card (Amendment §43).
+    let submit = await postSubmit(new Request("http://t", { method: "POST" }), withParams(ids.video));
+    expect(submit.status).toBe(400);
+    await saveContextCard(ids.other, ids.video, {
+      composition: "mixed",
+      approxCount: "30",
+      adults: [{ adultNo: 1, role: "teacher", sex: "female", speaks: "yes" }],
+    });
+    await submitContextCard(ids.other, ids.video);
+    submit = await postSubmit(new Request("http://t", { method: "POST" }), withParams(ids.video));
     expect(submit.status).toBe(200);
 
     // Application refuses further edits…
@@ -189,10 +199,22 @@ describe("scores and submission", () => {
 });
 
 describe("the context card", () => {
-  it("refuses writes from the coder who is not the assigned filler", async () => {
+  it("every coder writes their OWN card (Amendment §43): the filler's save is a second, separate card", async () => {
+    // `other` submitted their card above (now read-only); the filler's own
+    // card is a separate row.
+    actAs(ids.filler);
+    const res = await putCard(jsonReq({ room: "the filler's own card", adults: [] }), withParams(ids.video));
+    expect(res.status).toBe(200);
+    const rows = await db
+      .select({ authoredBy: contextCards.authoredBy, room: contextCards.room })
+      .from(contextCards)
+      .where(eq(contextCards.videoId, ids.video));
+    expect(rows).toHaveLength(2);
+    expect(rows.find((c) => c.authoredBy === ids.filler)?.room).toBe("the filler's own card");
+    // A submitted card is read-only for its author.
     actAs(ids.other);
-    const res = await putCard(jsonReq({ room: "should not be writable", adults: [] }), withParams(ids.video));
-    expect(res.status).toBe(403);
+    const locked = await putCard(jsonReq({ room: "too late", adults: [] }), withParams(ids.video));
+    expect(locked.status).toBe(409);
   });
 
   it("accepts the filler's card with adults, reconciled by adultNo", async () => {
@@ -226,7 +248,7 @@ describe("the context card", () => {
     const card = await db
       .select({ id: contextCards.id, dataset: contextCards.dataset })
       .from(contextCards)
-      .where(eq(contextCards.videoId, ids.video));
+      .where(and(eq(contextCards.videoId, ids.video), eq(contextCards.authoredBy, ids.filler)));
     expect(card[0].dataset).toBe("test");
     const adults = await db
       .select({ adultNo: contextAdults.adultNo, deletedAt: contextAdults.deletedAt })
