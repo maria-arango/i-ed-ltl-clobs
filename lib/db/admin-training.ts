@@ -462,10 +462,7 @@ export async function createDemoVideos(
   }
 
   let created = 0;
-  for (const [suffix, fills] of [
-    ["01", true],
-    ["02", false],
-  ] as const) {
+  for (const suffix of ["01", "02"] as const) {
     const code = demoCode(user.email, suffix);
     const [existing] = await db
       .select({ id: videos.id })
@@ -493,8 +490,9 @@ export async function createDemoVideos(
       })
       .returning({ id: assignments.id });
     await db.insert(assignmentRaters).values([
-      { assignmentId: assignment.id, userId, fillsContextCard: fills },
-      { assignmentId: assignment.id, userId: partnerId, fillsContextCard: !fills },
+      // Amendment §43: both coders fill a card.
+      { assignmentId: assignment.id, userId, fillsContextCard: true },
+      { assignmentId: assignment.id, userId: partnerId, fillsContextCard: true },
     ]);
     created++;
   }

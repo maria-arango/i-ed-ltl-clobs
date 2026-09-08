@@ -2,8 +2,8 @@
 /**
  * The pairs table with an expandable "their hand" card (María,
  * 2026-09-01): one click on a row reveals, right below it, how that pair's
- * randomized assignment looks — arm mix, schools, card duties, and every
- * video code with its arm dot. The card rises in like a moment; counts
+ * randomized assignment looks — arm mix, schools, and every video code
+ * with its arm dot. The card rises in like a moment; counts
  * tick up. Admin surface: arms and school ids are unblinded by design.
  */
 import { useState, useTransition } from "react";
@@ -58,12 +58,6 @@ function HandCard({ details }: { details: PairAssignmentDetails }) {
           <NumberTicker value={details.schools} className="text-[20px] text-ink" />{" "}
           schools
         </p>
-        <p className="text-[14px] text-graphite">
-          cards:{" "}
-          <span className="mono text-ink">{details.anchorCards}</span> anchor ·{" "}
-          <span className="mono text-ink">{details.enumeratorCards}</span>{" "}
-          enumerator
-        </p>
       </div>
 
       <ul className="flex flex-wrap gap-x-5 gap-y-1">
@@ -85,7 +79,7 @@ function HandCard({ details }: { details: PairAssignmentDetails }) {
           <li
             key={v.displayCode}
             className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-paper px-2.5 py-1"
-            title={`school ${v.sid} · ${v.arm ?? "no arm"} · card: ${v.cardFiller}`}
+            title={`school ${v.sid} · ${v.arm ?? "no arm"}`}
           >
             <span
               aria-hidden
@@ -93,22 +87,12 @@ function HandCard({ details }: { details: PairAssignmentDetails }) {
               style={{ background: v.arm ? ARM_COLOR[v.arm] : "var(--clobs-ash)" }}
             />
             <span className="video-code text-[12px] text-ink">{v.displayCode}</span>
-            {v.cardFiller === "anchor" && (
-              <span
-                className="text-[10px] font-semibold uppercase tracking-[0.04em]"
-                style={{ color: "var(--clobs-forest)" }}
-                title="The anchor fills this card"
-              >
-                card
-              </span>
-            )}
           </li>
         ))}
       </ul>
       <p className="text-[12px] text-smoke">
-        Each dot is the video&apos;s treatment arm; &ldquo;card&rdquo; marks
-        the ones where the anchor fills the context card (the rest are the
-        enumerator&apos;s).
+        Each dot is the video&apos;s treatment arm. Both coders fill a
+        context card (Amendment §43).
       </p>
     </div>
   );

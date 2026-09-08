@@ -318,10 +318,8 @@ export const assignmentRaters = pgTable(
       .defaultNow(),
   },
   (t) => [
-    // Amendment A: exactly one card-filler per assignment.
-    uniqueIndex("one_card_filler_per_assignment")
-      .on(t.assignmentId)
-      .where(sql`${t.fillsContextCard} = true`),
+    // Amendment A's "exactly one card-filler per assignment" index was
+    // dropped in migration 0009: both coders fill a card (Amendment §43).
     uniqueIndex("one_rater_row_per_user_per_assignment").on(
       t.assignmentId,
       t.userId,
@@ -461,6 +459,73 @@ export const scoreNoteCitations = pgTable(
   (t) => [primaryKey({ columns: [t.scoreId, t.noteId] })],
 );
 
+/* ---- Amendment §44: timed sections (one row per sitting) ---------- */
+
+export const sectionKindEnum = pgEnum("section_kind", ["context_card", "notes", "scores"]);
+export const sectionEndReasonEnum = pgEnum("section_end_reason", [
+  "submitted",
+  "closed",
+  "abrupt",
+  "admin_released",
+]);
+export const deviceKindEnum = pgEnum("device_kind", ["phone", "tablet", "desktop", "unknown"]);
+
+// The ODK/SurveyCTO-style "section time": start, heartbeat, end, reason.
+// A sitting whose heartbeat goes stale without an end is marked 'abrupt'
+// the next time the coder opens anything, and the coder must say why
+// before the section reopens (Amendment §45).
+export const sectionSessions = pgTable(
+  "section_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    observationId: uuid("observation_id")
+      .notNull()
+      .references(() => observations.id),
+    coderId: uuid("coder_id")
+      .notNull()
+      .references(() => users.id),
+    videoId: uuid("video_id")
+      .notNull()
+      .references(() => videos.id),
+    section: sectionKindEnum("section").notNull(),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    endReason: sectionEndReasonEnum("end_reason"),
+    resumeReason: text("resume_reason"),
+    device: deviceKindEnum("device").notNull().default("unknown"),
+    dataset: datasetEnum("dataset").notNull().default("live"),
+  },
+  (t) => [index("section_sessions_by_observation").on(t.observationId, t.section)],
+);
+
+/* ---- Amendment §45: one video at a time ---------------------------- */
+
+// Starting a video takes the coder's single lock; it is released by the
+// coder's own complete submission, or by an admin with a reason.
+export const videoLocks = pgTable(
+  "video_locks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    coderId: uuid("coder_id")
+      .notNull()
+      .references(() => users.id),
+    videoId: uuid("video_id")
+      .notNull()
+      .references(() => videos.id),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    releasedAt: timestamp("released_at", { withTimezone: true }),
+    releasedBy: uuid("released_by").references(() => users.id),
+    releaseReason: text("release_reason"),
+    dataset: datasetEnum("dataset").notNull().default("live"),
+  },
+  (t) => [
+    uniqueIndex("one_active_lock_per_coder")
+      .on(t.coderId)
+      .where(sql`${t.releasedAt} IS NULL`),
+  ],
+);
+
 // The reach-scale counting tool (addendum §4).
 export const pupilTallies = pgTable("pupil_tallies", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -479,11 +544,15 @@ export const pupilTallies = pgTable("pupil_tallies", {
 /* §4.5 Context card — one per video, no scenes (Amendments A + B)     */
 /* ------------------------------------------------------------------ */
 
-export const contextCards = pgTable("context_cards", {
+// Amendment §43 (2026-09-07): BOTH coders fill a card → one card per video
+// PER CODER (unique on video_id + authored_by; migration 0008). The
+// confirm/flag columns remain for the pre-§43 rows and are no longer set.
+export const contextCards = pgTable(
+  "context_cards",
+  {
   id: uuid("id").primaryKey().defaultRandom(),
   videoId: uuid("video_id")
     .notNull()
-    .unique()
     .references(() => videos.id),
   authoredBy: uuid("authored_by")
     .notNull()
@@ -516,7 +585,9 @@ export const contextCards = pgTable("context_cards", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+  },
+  (t) => [uniqueIndex("one_card_per_video_per_coder").on(t.videoId, t.authoredBy)],
+);
 
 export const contextAdults = pgTable(
   "context_adults",

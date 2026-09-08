@@ -28,7 +28,10 @@ export function isResponse(x: unknown): x is NextResponse {
 
 export function coderErrorResponse(e: unknown): NextResponse {
   if (e instanceof CoderError) {
-    return NextResponse.json({ error: e.message }, { status: e.status });
+    return NextResponse.json(
+      { error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.details ? { details: e.details } : {}) },
+      { status: e.status },
+    );
   }
   if (e instanceof Error && /locked since/.test(e.message)) {
     // The database trigger refused a change to a locked score.

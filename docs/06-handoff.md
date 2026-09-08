@@ -375,14 +375,45 @@ flag assigns the video to EVERY trainee, including another suite's fixture
 trainee) and failed 2 of 3 runs; `purgeFixture` also re-sweeps and retries
 the video delete. 119 tests, two consecutive green runs.
 
+## Progress (2026-09-07 — Phase 2 of docs/08: schema decisions)
+
+Amendments §43–45; migration 0008 applied to Neon; coder role re-granted
+(`section_sessions`, `video_locks`). **Both coders fill a card** (§43):
+`context_cards` unique on (video_id, authored_by); `getWorkspace.contextCard`
+is now `{ mine, partnerLocked, partner }`; save/submit operate on the
+coder's own card; submitObservation requires it; confirm/flag functions,
+routes and ReviewPanel removed (columns kept); the workspace shows the
+partner's card read-only under mine after my submission; confirmWave,
+createDemoVideos and Move work set fills=true for both seats; the "card"
+markers left the Assignment screen; export `clobs_context_cards` is per
+video × coder (`coder_id`, `coder_pair_role`). **Timed sections** (§44):
+`section_sessions` + `lib/device.ts`; `startSection` / `heartbeatSection` /
+`endSection` in coder.ts, route `/api/coder/videos/[id]/sections`
+(POST start, PUT heartbeat|end); `SectionGate` wraps the card and the
+scores panels ("Start …", 30 s heartbeat, end on pagehide, resume-reason
+chips when the last sitting did not end in a submission); stale heartbeat
+(>2 min) = abrupt; submits end sittings as `submitted`. Export
+`clobs_sections`. **One video at a time** (§45): `video_locks`; `startVideo`
++ route `/start`; `assertAssigned` refuses writes to another video with
+423 `locked_elsewhere`; workspace page shows `StartVideoCard` ("Do you want
+to start…?" / "Finish V-x first"); queue marks the started video and dims
+the rest; lock released on submitObservation; admins release from
+Progress → "Started videos" (`releaseVideoLock`, audited, ends open
+sittings as `admin_released`). Tests: card-secondpass.test.ts replaced by
+card-two-coders.test.ts; new sections-locks.test.ts; blinding, workflow,
+calibration, reassignment and export suites updated.
+
 ## Next up
 
-1. **Phase 2 of docs/08** (schema decisions before the simple interface):
-   card by both coders, `section_sessions` timing, single-sitting lock and
-   abrupt-end reason. Draft Amendments §43–45 for María first.
-2. **Phase 3b** embedding experiment can run any time (46 links attached).
-3. María confirms Amendments §39–42 or asks for changes; browser-check
-   Stage 4 + Phase 1 on the deployed site.
+1. **Browser-check Phase 1 + 2** on the deployed site (start a demo video,
+   card gate, resume-reason flow, lock on a second video, Progress →
+   Started videos → release). NOT browser-tested this session.
+2. **Phase 3 of docs/08**: the simple (ODK-style) interface as a prototype
+   on demo data, device-aware, with the admin "Preview as" switch gaining
+   simple/advanced. **Phase 3b** embedding experiment can run any time.
+3. Coder-side "problem with this video" action (releases the lock, flags
+   the video unusable, notifies admins) — the escape §45 needs.
+4. María confirms Amendments §39–45 or asks for changes.
 2. **Team-screen hook**: when deactivating someone with active work, show
    the pairs affected and link to Move work; admin "void calibration
    session" action with a reason (CLAUDE.md §7) so both-submitted videos

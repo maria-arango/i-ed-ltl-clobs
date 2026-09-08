@@ -6,10 +6,11 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { getProgressOverview, getReliabilityStats } from "@/lib/db/admin-progress";
+import { getProgressOverview, getReliabilityStats, listActiveLocks } from "@/lib/db/admin-progress";
 import { NumberTicker } from "@/components/ui/number-ticker";
 import { ProgressDashboard } from "./progress-dashboard";
 import { ReliabilityPanel } from "./reliability-panel";
+import { LocksPanel } from "./locks-panel";
 
 const CARDS: Array<{
   key: "codable" | "assigned" | "one_submitted" | "ready_to_calibrate" | "calibrated";
@@ -25,9 +26,10 @@ const CARDS: Array<{
 
 export default async function ProgressPage() {
   await requireAdmin();
-  const [{ totals, rows }, reliability] = await Promise.all([
+  const [{ totals, rows }, reliability, locks] = await Promise.all([
     getProgressOverview(),
     getReliabilityStats(),
+    listActiveLocks(),
   ]);
 
   return (
@@ -75,6 +77,8 @@ export default async function ProgressPage() {
       </section>
 
       <ProgressDashboard rows={rows} />
+
+      <LocksPanel locks={locks} />
 
       <ReliabilityPanel stats={reliability} />
     </div>

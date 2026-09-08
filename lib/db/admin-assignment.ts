@@ -376,7 +376,6 @@ export interface WavePreview {
     count: number;
     arms: Record<Arm, number>;
     maxSameSchool: number;
-    anchorFillsCards: number;
     sampleCodes: string[];
   }>;
 }
@@ -438,7 +437,6 @@ export async function previewWave(
           count: mine.length,
           arms: result.diagnostics.perPairArmCounts[p.id],
           maxSameSchool: result.diagnostics.perPairMaxSameSchool[p.id],
-          anchorFillsCards: mine.filter((a) => a.cardFillerId === p.anchor.id).length,
           sampleCodes: mine.slice(0, 5).map((a) => codeById.get(a.videoId) ?? "?"),
         };
       }),
@@ -476,9 +474,12 @@ export async function confirmWave(
           assignedBy: actorId,
         })
         .returning({ id: assignments.id });
+      // Amendment §43: BOTH coders fill a card. The algorithm's card-duty
+      // balancing (a.cardFillerId) is kept for reproducibility of past
+      // waves but no longer decides anything.
       const raterRows = [
-        { userId: pair.anchor.id, fills: a.cardFillerId === pair.anchor.id },
-        { userId: pair.enumerator.id, fills: a.cardFillerId === pair.enumerator.id },
+        { userId: pair.anchor.id, fills: true },
+        { userId: pair.enumerator.id, fills: true },
       ];
       for (const r of raterRows) {
         await tx.insert(assignmentRaters).values({
@@ -710,80 +711,44 @@ export interface PairAssignmentDetails {
   total: number;
   armCounts: { control: number; dispersed: number; connected: number };
   schools: number;
-  anchorCards: number;
-  enumeratorCards: number;
   videos: Array<{
     displayCode: string;
     arm: string | null;
     sid: string;
-    cardFiller: "anchor" | "enumerator";
     status: string;
   }>;
 }
 
-/** What one pair is holding: their dealt videos with arms, schools and
- *  card duties (ADMIN surface — arms and school ids are fine here). */
+/** What one pair is holding: their dealt videos with arms and schools
+ *  (ADMIN surface — arms and school ids are fine here). Card duty is no
+ *  longer a split (Amendment §43: both coders fill one). */
 export async function getPairAssignmentDetails(
   pairId: string,
 ): Promise<PairAssignmentDetails> {
-  const members = await db
-    .select({
-      userId: pairMembers.userId,
-      role: users.role,
-      isChiefCoder: users.isChiefCoder,
-    })
-    .from(pairMembers)
-    .innerJoin(users, eq(users.id, pairMembers.userId))
-    .where(eq(pairMembers.pairId, pairId));
-  const anchorId =
-    members.find((m) => m.role === "admin" || m.isChiefCoder)?.userId ?? null;
-
   const rows = await db
     .select({
-      assignmentId: assignments.id,
       status: assignments.status,
       displayCode: videos.displayCode,
       arm: videoProvenance.arm,
       sid: videoProvenance.sid,
-      fillerId: assignmentRaters.userId,
-      fills: assignmentRaters.fillsContextCard,
     })
     .from(assignments)
     .innerJoin(videos, eq(videos.id, assignments.videoId))
     .innerJoin(videoProvenance, eq(videoProvenance.videoId, videos.id))
-    .innerJoin(assignmentRaters, eq(assignmentRaters.assignmentId, assignments.id))
     .where(
       and(
         eq(assignments.pairId, pairId),
         inArray(assignments.status, ["active", "completed"]),
-        eq(assignmentRaters.fillsContextCard, true),
       ),
     )
     .orderBy(asc(videos.displayCode));
 
   const armCounts = { control: 0, dispersed: 0, connected: 0 };
   const schools = new Set<string>();
-  let anchorCards = 0;
   const out = rows.map((r) => {
     if (r.arm && r.arm in armCounts) armCounts[r.arm as keyof typeof armCounts]++;
     schools.add(r.sid);
-    const cardFiller: "anchor" | "enumerator" =
-      r.fillerId === anchorId ? "anchor" : "enumerator";
-    if (cardFiller === "anchor") anchorCards++;
-    return {
-      displayCode: r.displayCode,
-      arm: r.arm,
-      sid: r.sid,
-      cardFiller,
-      status: r.status,
-    };
+    return { displayCode: r.displayCode, arm: r.arm, sid: r.sid, status: r.status };
   });
-  return {
-    total: out.length,
-    armCounts,
-    schools: schools.size,
-    anchorCards,
-    enumeratorCards: out.length - anchorCards,
-    videos: out,
-  };
+  return { total: out.length, armCounts, schools: schools.size, videos: out };
 }

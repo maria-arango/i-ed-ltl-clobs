@@ -331,6 +331,7 @@ describe("the contract itself", () => {
       "clobs_context_cards",
       "clobs_notes",
       "clobs_calibration",
+      "clobs_sections",
       "clobs_assignments",
       "clobs_events",
       "clobs_videos",
@@ -340,8 +341,8 @@ describe("the contract itself", () => {
 
   it("matches the pilot sheet's context-card layout: video first, then the general fields, A1_…A6_ blocks, timeline", () => {
     const names = CONTEXT_CARDS.columns.map((c) => c.name);
-    expect(names.slice(0, 9)).toEqual([
-      "video", "subject", "composition", "approx_count", "uniforms",
+    expect(names.slice(0, 11)).toEqual([
+      "video", "coder_id", "coder_pair_role", "subject", "composition", "approx_count", "uniforms",
       "appearance_caveats", "room", "camera", "notes",
     ]);
     for (let n = 1; n <= 6; n++) {
@@ -442,6 +443,8 @@ describe("built tables", () => {
     const r = rows[0];
     expect(r).toMatchObject({
       video: CODE,
+      coder_id: anchorId,
+      coder_pair_role: "anchor",
       subject: "Physics",
       composition: "mixed",
       approx_count: "40-45",
@@ -486,20 +489,20 @@ describe("built tables", () => {
   });
 
   it("assignments, events, videos, coders carry the fixture", () => {
-    const assn = mine(rowsOf(built, EXPORT_TABLES[5]));
+    const assn = mine(rowsOf(built, EXPORT_TABLES[6]));
     expect(assn).toHaveLength(2);
     expect(assn[0]).toMatchObject({ action: "assign", seed: "export-seed", wave_no: 1, to_pair_id: pairId });
     expect(assn.find((r) => r.to_coder_id === anchorId)?.fills_context_card).toBe(true);
 
-    const evts = mine(rowsOf(built, EXPORT_TABLES[6]));
+    const evts = mine(rowsOf(built, EXPORT_TABLES[7]));
     expect(evts.length).toBeGreaterThanOrEqual(4);
     expect(evts.find((e) => e.kind === "score_selected")?.payload_json).toBe('{"itemNo":1}');
 
-    const vids = mine(rowsOf(built, EXPORT_TABLES[7]));
+    const vids = mine(rowsOf(built, EXPORT_TABLES[8]));
     expect(vids).toHaveLength(1);
     expect(vids[0]).toMatchObject({ raw_filename: "99001_99001_7_11_EAST_PHYSICS_comp.mp4", has_drive_link: true, excluded: false, status: "complete" });
 
-    const coders = rowsOf(built, EXPORT_TABLES[8]);
+    const coders = rowsOf(built, EXPORT_TABLES[9]);
     expect(coders.map((c) => c.coder_id)).toEqual(expect.arrayContaining([anchorId, enumId]));
     expect(coders.find((c) => c.coder_id === anchorId)).toMatchObject({ display_name: "Export Anchor", role: "admin" });
   });

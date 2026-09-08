@@ -255,6 +255,21 @@ kappa vs. master), `decided_at`. A coder without a passing row cannot receive li
 (enforced in the assignment algorithm, tested). Seeded re-checks reuse `observations.is_seeded_recheck`
 and are compared to `gold_scores` on the admin dashboard.
 
+### 4.7b Sittings and locks (migration 0008, Amendments §44–45, 2026-09-07)
+
+**`section_sessions`** — `observation_id`, `coder_id`, `video_id`, `section` ∈ {`context_card`,
+`notes`, `scores`}, `started_at`, `last_heartbeat_at`, `ended_at`, `end_reason` ∈ {`submitted`,
+`closed`, `abrupt`, `admin_released`}, `resume_reason`, `device` ∈ {`phone`, `tablet`, `desktop`,
+`unknown`}, `dataset`. One row per sitting; the export `clobs_sections` derives minutes. A heartbeat
+older than two minutes on an open row makes it `abrupt`, ended at the last heartbeat.
+
+**`video_locks`** — `coder_id`, `video_id`, `started_at`, `released_at`, `released_by`,
+`release_reason`, `dataset`; partial unique index: one unreleased lock per coder. Taken by "start this
+video", released by the coder's complete submission or by an admin with a reason (audited).
+
+**`context_cards`** (change) — unique on (`video_id`, `authored_by`): one card per video PER CODER
+(Amendment §43). The confirm/flag columns stay for pre-§43 rows and are no longer written.
+
 ### 4.8 Instrument (rubric as data, versioned)
 
 **`rubric_versions`** — `id`, `version_label` (e.g. `2026-08-22`), `source_ref` (the .tex commit),

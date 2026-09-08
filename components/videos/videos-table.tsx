@@ -48,7 +48,7 @@ function formatDuration(seconds: number | null): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-export function VideosTable({ rows }: { rows: VideoRow[] }) {
+export function VideosTable({ rows, lockedVideoId = null }: { rows: VideoRow[]; lockedVideoId?: string | null }) {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [query, setQuery] = useState("");
 
@@ -128,7 +128,7 @@ export function VideosTable({ rows }: { rows: VideoRow[] }) {
         </TableHeader>
         <TableBody>
           {visible.map((row) => (
-            <TableRow key={row.videoId}>
+            <TableRow key={row.videoId} className={lockedVideoId && lockedVideoId !== row.videoId && row.observationStatus !== "submitted" ? "opacity-60" : ""}>
               <TableCell>
                 <Link
                   href={`/videos/${row.videoId}`}
@@ -136,13 +136,23 @@ export function VideosTable({ rows }: { rows: VideoRow[] }) {
                 >
                   {row.displayCode}
                 </Link>
+                {lockedVideoId === row.videoId && (
+                  <span
+                    className="ml-2 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                    style={{ background: "var(--clobs-lake-wash)", color: "var(--clobs-lake)" }}
+                  >
+                    started
+                  </span>
+                )}
               </TableCell>
               <TableCell className="num text-smoke">
                 {formatDuration(row.durationSeconds)}
               </TableCell>
               <TableCell className="text-graphite">{row.partnerName ?? "—"}</TableCell>
               <TableCell className="text-graphite">
-                {row.fillsContextCard ? "Yours to fill" : "—"}
+                {lockedVideoId && lockedVideoId !== row.videoId && row.observationStatus !== "submitted"
+                  ? "After the started video"
+                  : "Yours to fill"}
               </TableCell>
               <TableCell>
                 <StatusPill status={row.observationStatus} />

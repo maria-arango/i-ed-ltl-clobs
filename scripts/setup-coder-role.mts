@@ -74,6 +74,9 @@ const GRANTS: Array<[string, string]> = [
   ["pupil_tallies", "SELECT, INSERT, UPDATE"],
   ["context_cards", "SELECT, INSERT, UPDATE"],
   ["context_adults", "SELECT, INSERT, UPDATE"],
+  // Amendments §44/§45: sittings and the one-video-at-a-time lock.
+  ["section_sessions", "SELECT, INSERT, UPDATE"],
+  ["video_locks", "SELECT, INSERT, UPDATE"],
   ["field_help", "SELECT"],
   ["calibration_sessions", "SELECT, INSERT, UPDATE"],
   ["calibration_presence", "SELECT, INSERT, UPDATE"],

@@ -264,11 +264,18 @@ export const SCORES_WIDE: ExportTable = {
 
 export const CONTEXT_CARDS: ExportTable = {
   name: "clobs_context_cards",
-  unit: "one row per video (one card per video, Amendments A + B §1)",
+  unit: "one row per video × coder (every coder fills their own card, Amendment §43)",
   description:
-    "The single-table card with adults flattened into A1_…A6_ blocks, matching context_cards_v3.xlsx. Videos without a card yet are absent.",
+    "The single-table card with adults flattened into A1_…A6_ blocks, matching context_cards_v3.xlsx, one row per coder who wrote one. Videos without any card yet are absent.",
   columns: [
     { name: "video", type: "str", label: "Display code (the pilot sheet's first column)" },
+    { name: "coder_id", type: "str", label: "Coder who wrote this card (UUID)" },
+    {
+      name: "coder_pair_role",
+      type: "str",
+      label: "Coder's seat in the pair: anchor or enumerator",
+      codes: PAIR_ROLE_CODES,
+    },
     { name: "subject", type: "str", label: "Subject as observed" },
     { name: "composition", type: "str", label: "Class composition", codes: COMPOSITION_CODES },
     { name: "approx_count", type: "str", label: "Approximate pupil count (number, range or unknown)" },
@@ -314,6 +321,38 @@ export const NOTES: ExportTable = {
     { name: "created_at", type: "datetime", label: "Created" },
     { name: "updated_at", type: "datetime", label: "Last saved" },
     { name: "deleted", type: "bool", label: "Soft-deleted by the coder" },
+    datasetCol,
+  ],
+};
+
+export const SECTIONS: ExportTable = {
+  name: "clobs_sections",
+  unit: "one row per sitting on a section (context card, notes, scores) by one coder on one video",
+  description:
+    "The ODK/SurveyCTO-style section times (Amendment §44): start, end, minutes, how the sitting ended (submitted, closed on purpose, abrupt = heartbeat lost, admin_released) and, when the coder came back after a non-submitted sitting, the reason they gave. The device is classified server-side from the browser.",
+  columns: [
+    { name: "section_id", type: "str", label: "Sitting id (UUID)" },
+    { name: "observation_id", type: "str", label: "Observation id (UUID)" },
+    ...videoIdentity,
+    { name: "coder_id", type: "str", label: "Coder id (UUID)" },
+    { name: "coder_pair_role", type: "str", label: "anchor or enumerator", codes: PAIR_ROLE_CODES },
+    { name: "section", type: "str", label: "context_card, notes, scores", codes: { context_card: 1, notes: 2, scores: 3 } },
+    { name: "started_at", type: "datetime", label: "Sitting start" },
+    { name: "ended_at", type: "datetime", label: "Sitting end (empty while open)" },
+    {
+      name: "minutes",
+      type: "float",
+      label: "Sitting length in minutes (empty while open)",
+      description: "(ended_at − started_at) in minutes, two decimals. For abrupt ends, ended_at is the last heartbeat received, so the figure never includes dead time.",
+    },
+    {
+      name: "end_reason",
+      type: "str",
+      label: "submitted, closed, abrupt, admin_released",
+      codes: { submitted: 1, closed: 2, abrupt: 3, admin_released: 4 },
+    },
+    { name: "resume_reason", type: "str", label: "Coder's reason for the interruption, given when resuming", long: true },
+    { name: "device", type: "str", label: "phone, tablet, desktop, unknown", codes: { phone: 1, tablet: 2, desktop: 3, unknown: 4 } },
     datasetCol,
   ],
 };
@@ -458,6 +497,7 @@ export const EXPORT_TABLES: readonly ExportTable[] = [
   CONTEXT_CARDS,
   NOTES,
   CALIBRATION,
+  SECTIONS,
   ASSIGNMENTS,
   EVENTS,
   VIDEOS,

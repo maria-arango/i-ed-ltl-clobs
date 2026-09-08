@@ -1,18 +1,16 @@
 /**
  * The coding workspace for one assigned video. Server component: reads
- * exclusively through the restricted coder layer, starts the observation
- * on first open, and hands client panels their initial state.
+ * exclusively through the restricted coder layer. The video must be
+ * STARTED first (Amendment §45: one video at a time); until then the page
+ * shows "Do you want to start this video?" or "Finish V-xxxx first".
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireSession } from "@/lib/auth-helpers";
-import {
-  ensureObservation,
-  getRubricContent,
-  getWorkspace,
-} from "@/lib/db/coder";
+import { getRubricContent, getWorkspace } from "@/lib/db/coder";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { CopyButton } from "@/components/workspace/copy-button";
+import { StartVideoCard } from "@/components/workspace/start-video-card";
 
 export default async function VideoWorkspace({
   params,
@@ -23,32 +21,19 @@ export default async function VideoWorkspace({
   const { videoId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(videoId)) notFound();
 
-  let workspace = await getWorkspace(session.user.id, videoId);
+  const workspace = await getWorkspace(session.user.id, videoId);
   if (!workspace) notFound();
 
-  // First visit starts the observation (and its event trail).
-  if (!workspace.observation) {
-    await ensureObservation(session.user.id, videoId);
-    workspace = (await getWorkspace(session.user.id, videoId))!;
-  }
+  const { video, contextCard, lock } = workspace;
+  const submitted = workspace.observation?.status === "submitted";
+  // A submitted observation no longer needs the lock; anything else does.
+  const started = submitted || lock.holder === "this";
 
   const rubric = await getRubricContent();
   if (!rubric) throw new Error("No rubric version is seeded.");
 
-  const { video, contextCard, fillsContextCard } = workspace;
-  const submitted = workspace.observation?.status === "submitted";
-
-  const cardMode: "edit" | "locked" | "readonly" = fillsContextCard
-    ? "edit"
-    : contextCard.locked || !contextCard.card
-      ? "locked"
-      : "readonly";
   const cardStatus =
-    contextCard.card?.status === "submitted"
-      ? "submitted"
-      : contextCard.card
-        ? "draft"
-        : "none";
+    contextCard.mine?.status === "submitted" ? "submitted" : contextCard.mine ? "draft" : "none";
 
   // ONE note per observation (Amendment B §16): the first row is the note.
   const note = workspace.notes[0] ?? null;
@@ -67,65 +52,65 @@ export default async function VideoWorkspace({
         <span className="video-code text-graphite">{video.displayCode}</span>
       </nav>
 
-      {/* The video link card — the darker rectangle from the brief. */}
-      <div className="elev-card card-lift flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline-strong bg-sunken p-5">
-        <div>
-          <p className="video-code text-[20px] text-ink">{video.displayCode}</p>
-          <p className="mt-1 text-[13px] text-smoke">
-            Watch in Google Drive, take notes here as you go.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {video.driveUrl ? (
-            <>
-              <a
-                href={video.driveUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
-              >
-                Open video in Drive{" "}
-                <span
-                  aria-hidden
-                  className="inline-block transition-transform duration-[150ms] ease-out-clobs group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 motion-reduce:group-hover:translate-y-0"
-                >
-                  ↗
-                </span>
-              </a>
-              <CopyButton text={video.driveUrl} />
-            </>
-          ) : (
-            <p className="text-[14px] text-graphite">
-              Drive link not attached yet. An admin will add it.
-            </p>
-          )}
-        </div>
-      </div>
+      {!started ? (
+        <StartVideoCard
+          videoId={videoId}
+          displayCode={video.displayCode}
+          lockedElsewhere={lock.holder === "other" ? lock.lockedVideo : null}
+        />
+      ) : (
+        <>
+          {/* The video link card — the darker rectangle from the brief. */}
+          <div className="elev-card card-lift flex flex-wrap items-center justify-between gap-4 rounded-lg border border-hairline-strong bg-sunken p-5">
+            <div>
+              <p className="video-code text-[20px] text-ink">{video.displayCode}</p>
+              <p className="mt-1 text-[13px] text-smoke">
+                Watch in Google Drive, take notes here as you go.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {video.driveUrl ? (
+                <>
+                  <a
+                    href={video.driveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
+                  >
+                    Open video in Drive{" "}
+                    <span
+                      aria-hidden
+                      className="inline-block transition-transform duration-[150ms] ease-out-clobs group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0 motion-reduce:group-hover:translate-y-0"
+                    >
+                      ↗
+                    </span>
+                  </a>
+                  <CopyButton text={video.driveUrl} />
+                </>
+              ) : (
+                <p className="text-[14px] text-graphite">
+                  Drive link not attached yet. An admin will add it.
+                </p>
+              )}
+            </div>
+          </div>
 
-      <WorkspaceShell
-        videoId={videoId}
-        fillsContextCard={fillsContextCard}
-        initialNote={note ? { id: note.id, body: note.body } : null}
-        initialScores={workspace.scores}
-        initialSubmitted={submitted}
-        initialCard={contextCard.card}
-        initialCardStatus={cardStatus}
-        initialCardReview={
-          contextCard.card
-            ? {
-                confirmedAt:
-                  contextCard.card.confirmedAt?.toISOString() ?? null,
-                confirmedByMe: contextCard.card.confirmedByMe,
-                flagged: contextCard.card.flagged,
-                flagReason: contextCard.card.flagReason,
-              }
-            : null
-        }
-        cardMode={cardMode}
-        concepts={rubric.concepts as never}
-        guidance={rubric.guidance}
-        fieldHelp={rubric.fieldHelp}
-      />
+          <WorkspaceShell
+            videoId={videoId}
+            initialNote={note ? { id: note.id, body: note.body } : null}
+            initialScores={workspace.scores}
+            initialSubmitted={submitted}
+            initialCard={contextCard.mine}
+            initialCardStatus={cardStatus}
+            partnerCard={contextCard.partner}
+            partnerLocked={contextCard.partnerLocked}
+            sections={workspace.sections}
+            concepts={rubric.concepts as never}
+            guidance={rubric.guidance}
+            fieldHelp={rubric.fieldHelp}
+          />
+        </>
+      )}
     </main>
   );
 }
