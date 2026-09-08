@@ -178,6 +178,8 @@ export interface Workspace {
     driveUrl: string | null;
     durationSeconds: number | null;
     status: string;
+    /** A coder reported a problem with this video (Amendment §48). */
+    problemReported: boolean;
   };
   fillsContextCard: boolean;
   observation: {
@@ -229,6 +231,7 @@ export async function getWorkspace(
       driveUrl: videos.driveUrl,
       durationSeconds: videos.durationSeconds,
       videoStatus: videos.status,
+      unusableFlaggedAt: videos.unusableFlaggedAt,
     })
     .from(assignmentRaters)
     .innerJoin(assignments, eq(assignments.id, assignmentRaters.assignmentId))
@@ -316,6 +319,7 @@ export async function getWorkspace(
       driveUrl: assigned.driveUrl,
       durationSeconds: assigned.durationSeconds,
       status: assigned.videoStatus,
+      problemReported: !!assigned.unusableFlaggedAt,
     },
     fillsContextCard: assigned.fillsContextCard,
     observation,
@@ -1091,6 +1095,36 @@ export async function startVideo(coderId: string, videoId: string) {
   }
   const observation = await ensureObservation(coderId, videoId);
   return { observationId: observation.id, lock: (await getActiveLock(coderId))! };
+}
+
+/**
+ * "Problem with this video" (Amendment §48): a broken link, wrong file,
+ * unplayable recording. Records the reason on the video for admins,
+ * releases this coder's lock so they can move on, closes their open
+ * sittings. Nothing is deleted; the assignment stays until an admin acts.
+ */
+export async function reportVideoProblem(coderId: string, videoId: string, reason: string) {
+  const trimmed = reason.trim();
+  if (trimmed.length < 3) throw new CoderError("Say briefly what is wrong with the video", 400);
+  const { dataset } = await assertAssigned(coderId, videoId);
+  const now = new Date();
+  await coderDb
+    .update(videos)
+    .set({ unusableReason: trimmed.slice(0, 500), unusableFlaggedBy: coderId, unusableFlaggedAt: now })
+    .where(eq(videos.id, videoId));
+  await coderDb
+    .update(videoLocks)
+    .set({ releasedAt: now, releasedBy: coderId, releaseReason: `video problem reported: ${trimmed.slice(0, 200)}` })
+    .where(and(eq(videoLocks.coderId, coderId), eq(videoLocks.videoId, videoId), isNull(videoLocks.releasedAt)));
+  const own = await getOwnObservation(coderId, videoId);
+  if (own) {
+    await coderDb
+      .update(sectionSessions)
+      .set({ endedAt: now, endReason: "closed" })
+      .where(and(eq(sectionSessions.observationId, own.id), isNull(sectionSessions.endedAt)));
+  }
+  await logEvent(coderId, dataset, "video_problem_reported", { videoId, observationId: own?.id }, { reason: trimmed });
+  return { reportedAt: now };
 }
 
 /* ------------------- timed sections (Amendment §44) ------------------- */

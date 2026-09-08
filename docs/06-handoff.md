@@ -424,6 +424,23 @@ Home, My videos and the workspace when the resolved mode is simple; Team
 screen has an Interface picker per coder; `/admin/preview/[id]?mode=simple`
 shows the simple My videos in a phone frame. Tests: ui-mode.test.ts.
 
+## Progress (2026-09-08, later — María's review of the prototype)
+
+Previews confirmed working. Links: Math file → V-0459 (by code), the
+double-underscore file → V-0210 (teacher 10102_9, Chemistry), so **45/46**
+attached; the last file (teacher 10401_30) has NO session in the platform
+(not in the mapping file) — María to check. Demo videos (V-DEMO-*) now carry
+a real Drive link so "Watch here" can be tried; `createDemoVideos` copies a
+live link. Simple "My videos" has three sections: **To code / Ready to
+calibrate / Done** (Done = calibration signed; trainees: submitted).
+**Amendment §48 "Problem with this video"**: `reportVideoProblem` in
+coder.ts (records unusable_reason/by/at, releases the lock, closes open
+sittings; coder role granted UPDATE on the unusable_* columns), route
+`/api/coder/videos/[id]/problem`, `VideoProblemButton` on both video
+screens, Progress → "Video problems" panel (`listVideoProblems`,
+`clearVideoProblem`, audited). Test: video-problem.test.ts. Preview page
+explains how to try the simple interface yourself (`/s`).
+
 ## Next up
 
 1. **Team meeting on the simple interface**: open Team → Preview → "Simple

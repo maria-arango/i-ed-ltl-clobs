@@ -61,9 +61,10 @@ const GRANTS: Array<[string, string]> = [
   ["pair_members", "SELECT"],
   [
     "videos",
-    // UPDATE (status) only: completing a calibration marks the video
-    // complete. Status is not disclosure; every other column stays closed.
-    "SELECT (id, display_code, drive_url, duration_seconds, dataset, status, created_at), UPDATE (status)",
+    // UPDATE (status) so completing a calibration marks the video complete;
+    // the unusable_* columns so a coder can report a problem with the video
+    // (Amendment §48). Nothing else: is_gold and provenance stay closed.
+    "SELECT (id, display_code, drive_url, duration_seconds, dataset, status, unusable_reason, unusable_flagged_at, created_at), UPDATE (status, unusable_reason, unusable_flagged_by, unusable_flagged_at)",
   ],
   ["assignments", "SELECT, UPDATE (status)"],
   ["assignment_raters", "SELECT"],

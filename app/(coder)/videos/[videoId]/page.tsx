@@ -12,6 +12,7 @@ import { getRubricContent, getWorkspace } from "@/lib/db/coder";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 import { StartVideoCard } from "@/components/workspace/start-video-card";
 import { VideoTheatre } from "@/components/workspace/video-theatre";
+import { VideoProblemButton } from "@/components/workspace/video-problem-button";
 
 export default async function VideoWorkspace({
   params,
@@ -66,6 +67,9 @@ export default async function VideoWorkspace({
         <>
           {/* The video card: watch here (Drive embed) or open in Drive (§3b). */}
           <VideoTheatre displayCode={video.displayCode} driveUrl={video.driveUrl} />
+          {!submitted && (
+            <VideoProblemButton videoId={videoId} alreadyReported={video.problemReported} afterHref="/videos" />
+          )}
 
           <WorkspaceShell
             videoId={videoId}

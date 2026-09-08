@@ -704,3 +704,15 @@ Additions of 2026-09-08 (Phase 3 of docs/08 — prototype for the team's decisio
     under `data/`. 2026-09-08: 43 of 46 files attached; one file pair is a duplicate-session
     teacher (attach by code), one filename carries a double underscore typo (rename in Drive, or
     attach by code), one has no matching session.
+
+Additions of 2026-09-08 (María's review of the prototype):
+
+48. **"Problem with this video."** On the video screen of either interface a coder can report a
+    problem (link does not open, wrong video, unplayable, other + text). The reason is recorded on
+    the video (`unusable_reason`, who, when), the coder's one-video lock is released so they can
+    move on, their open sittings close, and nothing they typed is touched. Admins see the list on
+    Progress ("Video problems", with the raw filename and link) and mark it fixed with a note
+    (audited). This is the escape §45 needed. Also: the simple interface's "My videos" now has
+    three sections, **To code / Ready to calibrate / Done**, so a submitted video is visibly not
+    finished until both coders have signed the calibration; demo videos carry a real Drive link so
+    "Watch here" can be tried.

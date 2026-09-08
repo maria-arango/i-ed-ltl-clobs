@@ -9,6 +9,7 @@ import { requireSession } from "@/lib/auth-helpers";
 import { getWorkspace } from "@/lib/db/coder";
 import { StartVideoCard } from "@/components/workspace/start-video-card";
 import { VideoTheatre } from "@/components/workspace/video-theatre";
+import { VideoProblemButton } from "@/components/workspace/video-problem-button";
 
 function Tile({
   href,
@@ -73,6 +74,9 @@ export default async function SimpleVideoHub({ params }: { params: Promise<{ vid
       ) : (
         <>
           <VideoTheatre displayCode={ws.video.displayCode} driveUrl={ws.video.driveUrl} compact />
+          {!submitted && (
+            <VideoProblemButton videoId={videoId} alreadyReported={ws.video.problemReported} afterHref="/s" />
+          )}
 
           <div className="space-y-3">
             <Tile
