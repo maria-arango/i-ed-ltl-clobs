@@ -101,10 +101,81 @@ export default async function ExportsPage() {
           </TableBody>
         </Table>
         <p className="text-[13px] text-smoke">
-          Plus codebook.json, codebook.md and manifest.json (file sizes and
-          SHA-256 checksums). The contract is defined once in
-          lib/export/contract.ts and tested.
+          Plus codebook.json, codebook.md, data_dictionary.csv and
+          manifest.json (file sizes and SHA-256 checksums). The contract is
+          defined once in lib/export/contract.ts and tested.
         </p>
+      </section>
+
+      <section aria-label="Data dictionary" className="space-y-3">
+        <h2
+          className="font-sans font-medium text-ink"
+          style={{
+            fontSize: "var(--clobs-text-heading-sm)",
+            lineHeight: "var(--clobs-leading-heading-sm)",
+            letterSpacing: "var(--clobs-tracking-heading-sm)",
+          }}
+        >
+          Data dictionary
+        </h2>
+        <p className="text-[14px] text-graphite">
+          Every column of every table, from the same contract that writes the
+          files. Open a table to read its columns; the same content ships as
+          data_dictionary.csv inside each export.
+        </p>
+        <div className="space-y-2">
+          {EXPORT_TABLES.map((t) => (
+            <details
+              key={t.name}
+              className="elev-card rounded-xl border border-hairline bg-card"
+            >
+              <summary className="cursor-pointer select-none px-5 py-3 text-[14px] text-ink marker:text-smoke">
+                <span className="mono">{t.name}</span>
+                <span className="ml-3 text-[13px] text-graphite">{t.unit}</span>
+              </summary>
+              <div className="overflow-x-auto border-t border-hairline px-5 py-3">
+                <table className="w-full border-collapse text-left text-[13px]">
+                  <thead>
+                    <tr className="border-b border-hairline">
+                      <th className="py-1.5 pr-3 text-[11px] font-semibold uppercase tracking-[0.05em] text-smoke">#</th>
+                      <th className="py-1.5 pr-3 text-[11px] font-semibold uppercase tracking-[0.05em] text-smoke">Column</th>
+                      <th className="py-1.5 pr-3 text-[11px] font-semibold uppercase tracking-[0.05em] text-smoke">Type</th>
+                      <th className="py-1.5 pr-3 text-[11px] font-semibold uppercase tracking-[0.05em] text-smoke">Meaning</th>
+                      <th className="py-1.5 text-[11px] font-semibold uppercase tracking-[0.05em] text-smoke">Codes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {t.columns.map((c, i) => (
+                      <tr key={c.name} className="border-t border-hairline first:border-t-0 align-top">
+                        <td className="mono py-1.5 pr-3 text-smoke">{i + 1}</td>
+                        <td className="mono py-1.5 pr-3 text-ink">
+                          {c.name}
+                          {c.unblinded && (
+                            <span
+                              className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em]"
+                              style={{ background: "var(--clobs-clay-wash)", color: "var(--clobs-clay)" }}
+                            >
+                              unblinded
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-1.5 pr-3 text-graphite">{c.type}{c.long ? " (long)" : ""}</td>
+                        <td className="py-1.5 pr-3 text-graphite">
+                          {c.label}
+                          {c.description && <span className="block text-[12px] text-smoke">{c.description}</span>}
+                        </td>
+                        <td className="py-1.5 text-[12px] text-smoke">
+                          {c.codes && Object.entries(c.codes).map(([k, v]) => `${v}=${k}`).join(", ")}
+                          {c.valueLabels && Object.entries(c.valueLabels).map(([k, v]) => `${k}=${v}`).join(", ")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          ))}
+        </div>
       </section>
 
       <section aria-label="Past exports" className="space-y-3">

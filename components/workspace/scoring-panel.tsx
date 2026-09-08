@@ -7,7 +7,21 @@
  * Submission requires all eight items, warns (never blocks) on empty
  * justifications, and LOCKS the scores permanently.
  */
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+
+/** Per-browser memory of the rubric disclosure (Amendment §42). */
+const RUBRIC_PREF_KEY = "clobs.rubricOpen";
+function subscribeRubricPref(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+function readRubricPref(): boolean {
+  try {
+    return window.localStorage.getItem(RUBRIC_PREF_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 import { motion, useReducedMotion } from "motion/react";
 import GlideMenu from "@/components/primitives/GlideMenu";
 import { SPRING_LAYOUT } from "@/lib/ease";
@@ -165,6 +179,21 @@ export function ScoringPanel({
   const [submitted, setSubmitted] = useState(initialSubmitted);
   const [confirming, setConfirming] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  // The rubric text is closed by default (Amendment §42: less on screen for
+  // coders); the choice is remembered per browser.
+  const rubricOpen = useSyncExternalStore(
+    subscribeRubricPref,
+    readRubricPref,
+    () => false, // server render: closed
+  );
+  const toggleRubric = () => {
+    try {
+      window.localStorage.setItem(RUBRIC_PREF_KEY, rubricOpen ? "0" : "1");
+    } catch {
+      /* storage unavailable: nothing to remember */
+    }
+    window.dispatchEvent(new Event("storage"));
+  };
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [moment, setMoment] = useState<string | null>(null);
   const [scores, setScores] = useState<Record<number, ScoreState>>(() => {
@@ -526,15 +555,14 @@ export function ScoringPanel({
           <p className="text-[12px] text-smoke">
             <span className="mono">{scoredCount}</span> of <span className="mono">8</span> scored
           </p>
-          {scoredCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setReviewOpen(true)}
-              className="mt-2 w-full rounded-md border border-hairline bg-paper px-3 py-2 text-[13px] font-medium text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
-            >
-              Enter scores as a table
-            </button>
-          )}
+          {/* Always available, from the first second (Amendment §42). */}
+          <button
+            type="button"
+            onClick={() => setReviewOpen(true)}
+            className="mt-2 w-full rounded-md border border-hairline bg-paper px-3 py-2 text-[13px] font-medium text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+          >
+            {submitted ? "See all my scores as a table" : "Enter scores as a table"}
+          </button>
           {!submitted && scoredCount === 8 && (
             <div className="mt-3 space-y-2">
               {emptyJustifications > 0 && (
@@ -597,6 +625,27 @@ export function ScoringPanel({
           >
             {concept.statement}
           </h2>
+          <button
+            type="button"
+            onClick={toggleRubric}
+            aria-expanded={rubricOpen}
+            aria-controls={`rubric-${concept.itemNo}`}
+            className="mt-4 flex w-full items-center justify-between rounded-md border border-hairline-strong bg-paper px-4 py-3 text-left text-[14px] font-medium text-ink transition-colors duration-[90ms] hover:bg-sunken active:scale-[0.99]"
+          >
+            <span>{rubricOpen ? "Hide the rubric for this concept" : "Show the rubric for this concept"}</span>
+            <span
+              aria-hidden
+              className="text-smoke transition-transform duration-150 motion-reduce:transition-none"
+              style={{ transform: rubricOpen ? "rotate(180deg)" : "none" }}
+            >
+              ▾
+            </span>
+          </button>
+          {rubricOpen && (
+          <div
+            id={`rubric-${concept.itemNo}`}
+            className="motion-safe:animate-[anchor-reveal_150ms_cubic-bezier(0.22,1,0.36,1)]"
+          >
           <h3 className="mt-5 text-[12px] font-semibold uppercase tracking-[0.02em] text-smoke">
             Importance of concept
           </h3>
@@ -643,6 +692,8 @@ export function ScoringPanel({
               </div>
             </div>
           </details>
+          </div>
+          )}
         </div>
 
         <div className="space-y-3">

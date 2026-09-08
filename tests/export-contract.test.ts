@@ -430,9 +430,9 @@ describe("built tables", () => {
       priority_batch_flag: true,
     });
     for (let i = 1; i <= 8; i++) {
-      expect(r[`c${i}`], `c${i}`).toBe(FINAL[i - 1]);
-      expect(r[`a${i}`], `a${i}`).toBe(ANCHOR[i - 1]);
-      expect(r[`b${i}`], `b${i}`).toBe(ENUM[i - 1]);
+      expect(r[`consensus_item${i}`], `consensus_item${i}`).toBe(FINAL[i - 1]);
+      expect(r[`anchor_item${i}`], `anchor_item${i}`).toBe(ANCHOR[i - 1]);
+      expect(r[`enumerator_item${i}`], `enumerator_item${i}`).toBe(ENUM[i - 1]);
     }
   });
 
@@ -521,7 +521,9 @@ describe("built tables", () => {
   it("CSV: header is the contract, rows are escaped per RFC 4180", () => {
     const rows = mine(rowsOf(built, SCORES_LONG));
     const csv = toCsv(SCORES_LONG, rows);
-    const lines = csv.split("\r\n");
+    // UTF-8 byte-order mark first (Amendment §42: Excel reads accents right).
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    const lines = csv.slice(1).split("\r\n");
     expect(lines[0]).toBe(SCORES_LONG.columns.map((c) => c.name).join(","));
     // The sentinel has a comma, quotes and a newline → one quoted field.
     expect(csv).toContain('"EXPORT-SENTINEL, with ""quotes""\nand a newline"');
@@ -625,6 +627,7 @@ describe("createExport", () => {
       ...EXPORT_TABLES.flatMap((t) => [`${t.name}.csv`, `${t.name}.dta`]),
       "codebook.json",
       "codebook.md",
+      "data_dictionary.csv",
       "manifest.json",
     ].sort();
     expect(created.files.map((f) => f.filename).sort()).toEqual(expectedFiles);

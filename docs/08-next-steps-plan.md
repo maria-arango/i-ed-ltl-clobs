@@ -22,7 +22,7 @@ Sections 1 to 5 detail each phase with the steps. Section 6 answers the question
 
 ---
 
-## 1. Phase 1 — quick fixes (one branch, one PR)
+## 1. Phase 1 — quick fixes (one branch, one PR) — **DONE 2026-09-07** (Amendment §42; branch `feat/phase1-quick-fixes`)
 
 | # | Change | Where | Notes |
 |---|---|---|---|

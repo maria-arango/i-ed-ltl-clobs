@@ -231,9 +231,8 @@ export function ContextCardForm({
       )}
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Subject" help={fieldHelp.subject}>
-          <input disabled={!editable} value={card.subject ?? ""} onChange={(e) => set("subject", e.target.value)} className={inputCls} />
-        </Field>
+        {/* Subject is not asked (Amendment §42): it comes from the video's
+            mapping-file record and is exported as mapping_subject. */}
         <Field label="Composition" help={fieldHelp.composition}>
           <select
             disabled={!editable}

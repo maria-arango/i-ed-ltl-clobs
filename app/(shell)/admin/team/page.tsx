@@ -170,6 +170,13 @@ export default async function TeamPage() {
                   {m.isActive ? "Active" : "Deactivated"}
                 </TableCell>
                 <TableCell className="text-right">
+                  <Link
+                    href={`/admin/preview/${m.id}`}
+                    className="mr-1.5 inline-block rounded-full border border-hairline-strong bg-paper px-3 py-1 text-[12px] font-medium text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"
+                    title={`See the platform as ${m.name ?? m.email} sees it (read-only)`}
+                  >
+                    Preview
+                  </Link>
                   <MemberRowActions
                     userId={m.id}
                     role={m.role}

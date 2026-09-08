@@ -55,6 +55,7 @@ import {
   type ExportTable,
 } from "@/lib/export/contract";
 import { toCsv } from "@/lib/export/csv";
+import { DICTIONARY, dictionaryRows } from "@/lib/export/dictionary";
 import { toDta } from "@/lib/export/dta";
 import { toZip } from "@/lib/export/zip";
 import { buildCodebookJson, buildCodebookMarkdown } from "@/lib/export/codebook";
@@ -488,11 +489,11 @@ export async function buildExportTables(dataset: Dataset = LIVE): Promise<BuiltT
       dataset,
     };
     for (let i = 1; i <= 8; i++) {
-      row[`c${i}`] = null;
-      row[`a${i}`] = null;
-      row[`b${i}`] = null;
+      row[`consensus_item${i}`] = null;
+      row[`anchor_item${i}`] = null;
+      row[`enumerator_item${i}`] = null;
     }
-    const fill = (prefix: "a" | "b", coderId: string | null) => {
+    const fill = (prefix: "anchor_item" | "enumerator_item", coderId: string | null) => {
       if (!coderId) return;
       const o = obsForVideo.find((x) => x.coderId === coderId);
       if (!o) return;
@@ -502,12 +503,12 @@ export async function buildExportTables(dataset: Dataset = LIVE): Promise<BuiltT
         row.rubric_version ??= rubric.labelById.get(s.rubricVersionId) ?? null;
       }
     };
-    fill("a", anchorId);
-    fill("b", enumeratorId);
+    fill("anchor_item", anchorId);
+    fill("enumerator_item", enumeratorId);
     if (sess) {
       for (const it of itemRows) {
         if (it.sessionId !== sess.id) continue;
-        row[`c${it.itemNo}`] = it.finalScoreNum;
+        row[`consensus_item${it.itemNo}`] = it.finalScoreNum;
       }
       if (sess.rubricVersionId) row.rubric_version = rubric.labelById.get(sess.rubricVersionId) ?? row.rubric_version;
     }
@@ -863,6 +864,11 @@ export async function createExport(actorId: string): Promise<CreatedExport> {
       filename: "codebook.md",
       contentType: "text/markdown; charset=utf-8",
       bytes: enc.encode(buildCodebookMarkdown(codebookInput)),
+    });
+    files.push({
+      filename: "data_dictionary.csv",
+      contentType: "text/csv; charset=utf-8",
+      bytes: enc.encode(toCsv(DICTIONARY, dictionaryRows())),
     });
     const manifest = {
       export_id: exp.id,
