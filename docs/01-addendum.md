@@ -780,3 +780,12 @@ Decision of 2026-10-29 (María):
     screens live in the original shell and sidebar with the original colours, fonts, buttons, tables
     and pills (DESIGN_SYSTEM §11). Admins land on the original Home (Scoring home). Functionality is
     unchanged.
+
+60. **Codes are fixed; admins get the emailed code** (María, 2026-10-29). The 4-digit codes are
+    assigned by the master team and shared across the study's platforms, so nobody can change their
+    own code (the "Change code" page is removed). On the Team screen an admin types a person's code
+    ("Set code" / "Change code") and can "Unlock" an account after too many wrong tries without
+    changing it. On the sign-in page, after the email, admins and any account without an assigned
+    code automatically get the emailed 6-digit code; people with an assigned code get the 4-digit
+    step (unknown emails too, so the page reveals nothing about them). This supersedes the PIN
+    rules of §53 that relied on random or self-chosen PINs, and §56's "change your PIN" mitigation.

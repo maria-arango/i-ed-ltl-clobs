@@ -508,6 +508,15 @@ Amendments §56–§58.
   - `CRON_SECRET` and `DRIVE_BACKUP_FOLDER_ID` appended to `.env.local`.
 - Branch pushed and pull request opened. 215 tests.
 
+## Progress (2026-10-29, evening — design restored, fixed codes)
+
+- PR #30 restored the original design (Amendment §59).
+- This branch implements Amendment §60:
+  - codes are fixed; no self-change;
+  - the Team screen has Set/Change code (typed) and Unlock;
+  - sign-in sends the emailed 6-digit code automatically to admins and to accounts without a code
+    (`/api/signin-method`).
+
 ## Next up (2026-10-29)
 
 1. María: merge the pull request (docs/09 §D), then add the 3 Vercel env vars and redeploy

@@ -264,6 +264,8 @@ export interface SignInPageProps {
 	mode?: "email-code" | "pin";
 	/** Optional quiet link under the email form (e.g. the email-code option). */
 	footer?: React.ReactNode;
+	/** Line under the title on the email step (defaults to the original wording). */
+	subtitle?: string;
 }
 
 export const SignInPage = ({
@@ -275,6 +277,7 @@ export const SignInPage = ({
 	codeError,
 	mode = "email-code",
 	footer,
+	subtitle,
 }: SignInPageProps) => {
 	const reduce = useReducedMotion();
 	const pin = mode === "pin";
@@ -282,7 +285,10 @@ export const SignInPage = ({
 	const blank = () => Array.from({ length: LEN }, () => "");
 	const [email, setEmail] = useState("");
 	const [step, setStep] = useState<"email" | "code" | "success">("email");
-	const [code, setCode] = useState<string[]>(blank);
+	const [codeState, setCode] = useState<string[]>(blank);
+	// The mode can be decided after the email step (admins → emailed code),
+	// so the boxes always follow the current mode's length.
+	const code = Array.from({ length: LEN }, (_, i) => codeState[i] ?? "");
 	const codeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 	const [initialCanvasVisible, setInitialCanvasVisible] = useState(true);
 	const [reverseCanvasVisible, setReverseCanvasVisible] = useState(false);
@@ -398,7 +404,7 @@ export const SignInPage = ({
 										LTL Classroom Observations
 									</h1>
 									<p className="text-[17px] text-graphite">
-										{pin ? "Sign in with your email and your 4-digit code" : "Sign in with your work email"}
+										{subtitle ?? (pin ? "Sign in with your email and your 4-digit code" : "Sign in with your work email")}
 									</p>
 								</div>
 
