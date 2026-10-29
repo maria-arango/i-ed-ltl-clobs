@@ -1,119 +1,87 @@
 # 09 — Putting the Narratives workspace live (step by step)
 
-> For María. Written 2026-10-29 with the `feat/narratives-workspace` branch. Nothing here has
-> been done yet: each step that touches the live site or the live database needs your go-ahead.
-> Hosting stays on Vercel + Neon (ADR 0004).
+> For María. Hosting stays on Vercel + Neon (ADR 0004).
 
-## The order matters
+## Where things stand (2026-10-29)
 
-The new code expects three new database changes (migrations `0011`, `0012`, `0013`). They only
-**add** things, so the current site keeps working with them in place. Run them **before** the
-new code goes live. If the code goes live first, every page fails until they are run.
+| Step | Status |
+|---|---|
+| A. Migrations 0011–0013 on the live database | **Done** 2026-10-29 with your approval. Additive only; existing data unchanged; the 4 existing coder accounts were recorded as Scoring team |
+| B. Restricted role refreshed | **Done**. Same password, so the live site is unaffected; it cannot read lesson IDs |
+| C. The eight Narratives enumerators | **Done**. Accounts created, Narratives team, the PINs you chose (Amendment §56) |
+| D. Merge the pull request | **You**: one click (below). Vercel then puts the new site live by itself |
+| E. Three settings in Vercel for the nightly Drive copy | **You**: about 5 minutes (below) |
+| F. Load the narratives and assign them | **You**, when the final set is chosen |
 
-1. Run the three migrations on the live database (step A).
-2. Refresh the restricted database role's permissions (step B).
-3. Merge the pull request. Vercel then puts the new code live by itself, in about 2 minutes.
-4. Add the Narratives team and give everyone a PIN (steps C–D).
-5. Load the narratives and assign them (step E).
+## D. Merge the pull request
 
-## A. Run the migrations (about 1 minute)
+1. Go to <https://github.com/maria-arango/i-ed-ltl-clobs/pulls>.
+2. Click the pull request **"Narratives workspace, Scoring section, teams, PIN sign-in, daily Drive copies"**.
+3. Wait until the checks at the bottom show a green tick (CI runs the tests, about 3 minutes).
+4. Click **Merge pull request**, then **Confirm merge**.
+5. About 2 minutes later, open <https://i-ed-ltl-clobs.vercel.app>. You should see the new white
+   landing page with **Sign in**.
 
-**What it does:** creates the team, narrative and PIN tables, adds a start time to sign-in
-sessions, and records every existing coder as a Scoring-team member so nobody loses access. It
-deletes and changes nothing that exists.
+Admins sign in with an email code at `/signin/email`, or press **New PIN** on your own row on the
+Team screen and use email + PIN like everyone else.
 
-1. In the editor, open the terminal: **Terminal → New Terminal**.
-2. Make sure you are on the right branch. Type `git status` and press Enter. The first line must say
-   `On branch feat/narratives-workspace`.
-3. Type exactly:
+## E. Turn on the nightly copy into the Harvard Drive
 
-   ```
-   npx drizzle-kit migrate
-   ```
+The copy runs every night at 02:00 Uganda time. It puts two files into the shared-drive folder
+`HGSE Nourani Lab Embedded Development Lab › 01-LTL › Classroom-Observation-Coding › 01_Training ›
+05_Application › _platform-backups`:
 
-   - **Success:** the last line says `migrations applied successfully!`
-   - **Most likely error:** `password authentication failed`. Your `.env.local` is missing or out
-     of date. Do not retry; tell me.
+- `clobs-narratives_<date>.zip`: every assigned narrative as Word, plus `MANIFEST.csv`;
+- `clobs-narratives-data_<date>.json.gz`: all the narrative data, so any review can be rebuilt.
 
-## B. Refresh the restricted role (about 10 seconds)
+The connection was tested on 2026-10-29: the test file `clobs-backup-connection-test.txt` in that
+folder came from the platform, and you can delete it.
 
-**What it does:** lets the enumerator-facing part of the site read and save narratives, without
-ever seeing lesson IDs. It keeps the role's current password, so the live site is not affected.
+1. Go to <https://vercel.com> → sign in → click the project **i-ed-ltl-clobs** → **Settings**
+   (top menu) → **Environment Variables** (left menu).
+2. Add three variables. For each one, type the **Key**, paste the **Value**, leave
+   **Production** ticked, and click **Save**:
 
-```
-node scripts/setup-coder-role.mts
-```
+   | Key | Value — where to copy it from |
+   |---|---|
+   | `CRON_SECRET` | In the editor, open `.env.local`. Copy everything after `CRON_SECRET=` on that line |
+   | `DRIVE_BACKUP_FOLDER_ID` | In `.env.local`, everything after `DRIVE_BACKUP_FOLDER_ID=` |
+   | `GOOGLE_SERVICE_ACCOUNT_JSON` | Open `data/service-account.json` in the editor, select all (Cmd+A), copy (Cmd+C), paste. It starts with `{` and ends with `}` |
 
-**Success:** `Granted on 34 tables (and nothing else).`
+3. Make Vercel pick them up: top menu **Deployments** → on the first row click **⋯** →
+   **Redeploy** → **Redeploy**.
+4. Test it: open the site → **Narratives** → **Copy everything to the Harvard Drive now**.
+   - **Success:** "Copied 2 files to the Drive folder…", and the two files appear in the folder.
+   - **Most likely error:** "not configured". One of the three keys is misspelled, or the
+     redeploy has not finished. Check the keys, wait a minute, and try again.
 
-## C. Add the Narratives team
+**Your daily manual copy** (on top of the nightly one): on the dashboard, **Submitted in the last 24
+hours (.zip)** downloads what was finished since yesterday. Save it into the same Drive folder.
 
-**Option 1, the Team screen** (any number of people):
+## F. Load and assign narratives
 
-1. Go to the site → **Team** in the left menu (or the top bar, from the Narratives area).
-2. In **Add a teammate**, enter the email and full name, tick **Narratives** under Teams, and
-   press **Add teammate**.
-3. For people who are already listed, click **Narratives** in their **Teams** column. It turns blue.
+1. **Narratives** → scroll to **Load narratives** → choose the `NARRATIVE.md` files → **Check** →
+   read the table → **Load**.
+2. Lesson IDs are always removed (Amendment §57). Right after loading, a yellow box offers
+   **Download the code list**. Download it and save it in the Harvard Drive: it is the only record of
+   which N-code is which lesson, and it is shown only once.
+3. Assign each narrative:
+   - **one at a time:** **Assign** on its row (reviewer, order, the Drive link or file id of the video);
+   - **all at once:** **Assign from a sheet** with a CSV like `00_assignments.csv`. Put the
+     **N-code** (from the code list) in `video_id`, and the reviewer's email or exact full name in
+     `reviewer`.
+4. To rehearse, load the three placeholder files from `db/seed/narratives/` (invented content) and
+   assign one to yourself: tick **Narratives** on your own row on the Team screen first.
 
-**Option 2, from your roster spreadsheet** (fastest for many people):
+## Accounts and PINs later
 
-1. Open `Enumerator_Teams_Oct2026.xlsx` → **File → Save As** → format **CSV UTF-8** → save it
-   inside the project's `data` folder as `enumerator-teams.csv`. The `data` folder is never
-   uploaded to GitHub.
-2. Preview (writes nothing; it shows only counts):
-
-   ```
-   node scripts/import-enumerators.mts data/enumerator-teams.csv
-   ```
-
-3. If the counts look right, write:
-
-   ```
-   node scripts/import-enumerators.mts data/enumerator-teams.csv --apply
-   ```
-
-   - "Rubric" becomes Scoring, "Context Card" becomes Context cards, and "Narratives" becomes
-     Narratives.
-   - "Reserve" and "Out" rows are skipped.
-   - Running it twice changes nothing the second time.
-
-## D. Give each person a PIN
-
-1. **Team** → each person's row → **Set PIN**.
-2. A 4-digit PIN appears **once**. Send it to that person privately (a direct message, not a
-   group). Then press **Done**.
-3. They sign in at the site's address with **their email + that PIN**. They can change it under
-   **Change PIN** at the top of the page.
-4. **Forgotten PIN or a locked account** (5 wrong tries lock it for 15 minutes; 10 lock it until
-   you act): press **New PIN** (or **Unlock + new PIN**) and send the new one.
-5. You and other admins can keep signing in with the email code at `/signin/email`, or set your
-   own PIN the same way.
-
-## E. Load and assign narratives
-
-1. Top bar → **Narratives** → scroll to **Load narratives**.
-2. Choose the `NARRATIVE.md` files.
-   - Leave **Remove lesson IDs** ticked if the platform should store no lesson IDs (decision D2).
-     Each narrative is then known only by its code (N-0001…), so keep your own note of which code
-     is which lesson. The Word download's file name then uses the code too.
-3. Press **Check**, read the table, then press **Load**.
-4. Assign each narrative:
-   - **one at a time:** **Assign** on the narrative's row (reviewer, order, video link or Drive id);
-   - **all at once:** **Assign from a sheet** with a CSV like `00_assignments.csv`
-     (`order, reviewer, video_id, video_drive_id`). Use the email or the exact full name in
-     `reviewer`, and the N-code in `video_id` if lesson IDs were removed.
-5. To test first, load the three placeholder files from `db/seed/narratives/` (invented content),
-   assign one to yourself (tick Narratives on your own Team row), and try it.
+- **New person:** Team → **Add a teammate** (tick their team) → **Set PIN** → send them the PIN privately.
+- **Many people:** save a sheet with `Name, Email, Team, 4-digit code` as CSV in `data/` and run
+  `node scripts/import-enumerators.mts data/<file>.csv` (preview), then the same with `--apply`.
+- **Forgotten PIN or a locked account:** Team → **New PIN** (or **Unlock + new PIN**).
+- Anyone can change their own PIN under **Change PIN** at the top of the page.
 
 ## Downloads
 
-- **One narrative:** **Word** on its row, or **Download Word** on its page. A submitted narrative
-  downloads exactly as submitted.
-- **Everything submitted:** **Download submitted (.zip)**. It includes `MANIFEST.csv` (who, when,
-  version, edit counts, and a checksum of each file).
-
-## Recommended follow-up (not built)
-
-A nightly copy of the database and of the submitted Word files into the Harvard Google Drive.
-That way a copy always sits on Harvard storage, not only at Neon. About 1 day of work, using the
-Google service account that already exists.
+- **One narrative:** **Word** on its row. A submitted narrative downloads exactly as submitted.
+- **Everything submitted:** **Download submitted (.zip)**, with `MANIFEST.csv`.

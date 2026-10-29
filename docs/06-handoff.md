@@ -490,12 +490,30 @@ Branch `feat/narratives-workspace` (from main @ PR #28). Read `docs/STATUS.md`, 
   - real narratives (placeholders for now, D7);
   - Q2-bis (default for "remove lesson IDs").
 
+## Progress (2026-10-29, later — María's decisions, live database, Drive copies)
+
+Amendments §56–§58.
+- Lesson IDs are now always removed; the import offers the code list once.
+- The nightly Drive copy runs as Vercel Cron `/api/cron/backup` (23:00 UTC) using the
+  `clobs-backup` service account into `…/01_Training/05_Application/_platform-backups` in the
+  Nourani Lab shared drive (id in `.env.local` as `DRIVE_BACKUP_FOLDER_ID`). A live test upload
+  succeeded.
+- The dashboard adds "Copy everything to the Harvard Drive now" and "Submitted in the last 24
+  hours (.zip)".
+- `scripts/import-enumerators.mts` reads stdin plus a PIN column.
+- **Live Neon (approved by María):**
+  - migrations 0011–0013 applied (14 total), with existing counts unchanged;
+  - coder role refreshed (connection string unchanged);
+  - the 8 Narratives enumerators created with the PINs María chose (verified 8/8);
+  - `CRON_SECRET` and `DRIVE_BACKUP_FOLDER_ID` appended to `.env.local`.
+- Branch pushed and pull request opened. 215 tests.
+
 ## Next up (2026-10-29)
 
-1. María: answer Q2-bis and approve pushing the branch (Vercel builds a preview of it).
-2. With approval: run migrations 0011–0013 + `setup-coder-role.mts` on Neon, then merge.
-3. Team + PINs (docs/09 §C–D). Load the final narratives and assign (§E).
-4. Nightly export of the database and submitted Word files into the Harvard Drive (recommended).
+1. María: merge the pull request (docs/09 §D), then add the 3 Vercel env vars and redeploy
+   (§E), then press "Copy … now" once to confirm.
+2. Recommend that the 8 enumerators change their PINs (their codes are their ODK IDs, §56).
+3. Load the final narratives, save the code list to Drive, assign (§F).
 
 ## Earlier "next up" lists (history)
 
