@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   assignAction,
+  backupNowAction,
   confirmImportAction,
   confirmSheetAction,
   previewImportAction,
@@ -56,7 +57,7 @@ export function ImportPanel() {
   const router = useRouter();
   const [files, setFiles] = useState<Array<{ name: string; text: string }>>([]);
   const [rows, setRows] = useState<ImportPreviewRow[] | null>(null);
-  const [removeIds, setRemoveIds] = useState(true);
+  const [codes, setCodes] = useState<Array<{ displayCode: string; lessonId: string; file: string }>>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
 
@@ -82,16 +83,18 @@ export function ImportPanel() {
   const confirm = () =>
     start(async () => {
       const importable = files.filter((_, i) => rows?.[i]?.importable);
-      let loaded = 0;
+      const got: Array<{ displayCode: string; lessonId: string; file: string }> = [];
       for (const b of batches(importable)) {
-        const r = await confirmImportAction(b, removeIds);
+        const r = await confirmImportAction(b);
         if (!r.ok) {
           setMsg({ ok: false, text: r.error ?? "Failed." });
+          setCodes(got);
           return;
         }
-        loaded += Number(r.message?.match(/^(\d+)/)?.[1] ?? 0);
+        got.push(...(r.codes ?? []));
       }
-      setMsg({ ok: true, text: `${loaded} narrative${loaded === 1 ? "" : "s"} loaded.` });
+      setCodes(got);
+      setMsg({ ok: true, text: `${got.length} narrative${got.length === 1 ? "" : "s"} loaded.` });
       setFiles([]);
       setRows(null);
       router.refresh();
@@ -110,13 +113,11 @@ export function ImportPanel() {
         className="block text-[14px]"
         aria-label="NARRATIVE.md files"
       />
-      <label className="flex items-start gap-2 text-[14px]">
-        <input type="checkbox" checked={removeIds} onChange={(e) => setRemoveIds(e.target.checked)} className="mt-1" />
-        <span>
-          Remove lesson IDs from the narratives. The platform then stores no lesson ID; each narrative is known by
-          its code (N-0001…). Keep your own sheet of which code is which lesson.
-        </span>
-      </label>
+      <p className="text-[14px]">
+        Lesson IDs are removed from every narrative: the platform stores none, and each narrative is known by its
+        code (N-0001…). After loading you can download the list of which code is which lesson. Save it in the
+        Harvard Drive; the platform does not keep it.
+      </p>
       <div className="flex gap-2">
         <button type="button" disabled={!files.length || pending} onClick={preview} className={nxButtonClass("secondary")}>
           {pending && !rows ? "Checking…" : `Check ${files.length || ""} file${files.length === 1 ? "" : "s"}`}
@@ -166,6 +167,48 @@ export function ImportPanel() {
           </table>
         </div>
       )}
+      <Message ok={msg?.ok ?? true} text={msg?.text ?? null} />
+      {codes.length > 0 && <CodeListDownload codes={codes} />}
+    </div>
+  );
+}
+
+/** The code ↔ lesson list, built in the browser from this import only. */
+function CodeListDownload({ codes }: { codes: Array<{ displayCode: string; lessonId: string; file: string }> }) {
+  const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const csv =
+    "\uFEFFcode,lesson_id,file\r\n" +
+    codes.map((c) => [c.displayCode, c.lessonId, c.file].map(cell).join(",")).join("\r\n") +
+    "\r\n";
+  const href = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
+  return (
+    <div className="rounded-md border border-nx-warn bg-nx-warn-wash px-3 py-2 text-[14px]">
+      <a href={href} download={`narrative-codes_${new Date().toISOString().slice(0, 10)}.csv`} className="font-medium text-nx-accent underline">
+        Download the code list ({codes.length})
+      </a>{" "}
+      and save it in the Harvard Drive now. It is shown only once and is not stored in the platform.
+    </div>
+  );
+}
+
+export function BackupNowButton() {
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            const r = await backupNowAction();
+            setMsg({ ok: r.ok, text: r.ok ? (r.message ?? "Done.") : (r.error ?? "Failed.") });
+          })
+        }
+        className={nxButtonClass("secondary")}
+      >
+        {pending ? "Copying…" : "Copy everything to the Harvard Drive now"}
+      </button>
       <Message ok={msg?.ok ?? true} text={msg?.text ?? null} />
     </div>
   );

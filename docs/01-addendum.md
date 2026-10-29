@@ -748,9 +748,26 @@ Decisions of 2026-10-28 (three teams; the Narratives workspace; docs/STATUS.md a
     hashed. Lockout and throttling apply, sessions are short, and the signed-in name is always on
     screen. This is a deliberate deviation from NIST SP 800-63B-4's minimum length, with
     compensating controls (ADR 0003).
-54. **Lesson IDs in narratives.** The importer can remove the raw lesson ID from a narrative so
-    the platform stores none; the mapping then lives only in the admin's assignment sheet.
-    Default and final wording to be confirmed by María.
+54. **Lesson IDs in narratives.** The importer removes the raw lesson ID from a narrative so the
+    platform stores none (made mandatory by §57).
 55. **Hosting stays on Vercel + Neon** (a Harvard server would take months). Resend is no longer
     needed for enumerators. Narrative data lives in the same Postgres. Placeholder (synthetic)
     narratives are used until the final set is chosen.
+
+Decisions of 2026-10-29 (María, after reviewing the build):
+
+56. **Initial PINs are the codes María chose** for the eight Narratives enumerators (their ODK
+    codes), loaded from the roster via standard input so they exist in no file; only scrypt hashes
+    are stored. Known risk, accepted by María: the ODK codes are the enumerators' IDs, which other
+    enumerators have seen (handouts, ODK lists), so a colleague could sign in as someone else. The
+    mitigations available are each person changing their PIN under "Change PIN", or an admin
+    pressing "New PIN" on the Team screen for a random one.
+57. **Lesson IDs are always removed** from imported narratives (no switch). At import the admin
+    downloads the code ↔ lesson list once and keeps it in the Harvard Drive; the platform keeps no
+    copy.
+58. **Daily copies.** Every night (23:00 UTC = 02:00 in Uganda) a Vercel Cron job uploads two files
+    into the Harvard shared-drive folder `…/05_Application/_platform-backups`, using the existing
+    service account: every assigned narrative as Word (+ manifest) and the narrative tables as
+    compressed data. The dashboard adds "Copy everything to the Harvard Drive now" and "Submitted
+    in the last 24 hours (.zip)" for the coordinator's daily manual download. The scoring tabs'
+    autosave weaknesses (STATUS §5) stay unfixed while scoring is unused.

@@ -14,6 +14,7 @@ import {
   reassignNarrative,
   reopenNarrative,
   restoreRevision,
+  runNightlyBackup,
   updateNarrativeAssignment,
   voidNarrative,
   type ImportFile,
@@ -51,13 +52,39 @@ export async function previewImportAction(batch: ImportFile[]): Promise<ImportPr
   return previewNarrativeImport(f);
 }
 
-export async function confirmImportAction(batch: ImportFile[], removeLessonIds: boolean): Promise<ActionResult> {
+/**
+ * Lesson IDs are ALWAYS removed (Amendment §57): the platform stores none.
+ * The code ↔ lesson list is returned once so the admin can keep it in the
+ * Harvard Drive; it is not saved here.
+ */
+export async function confirmImportAction(
+  batch: ImportFile[],
+): Promise<ActionResult & { codes?: Array<{ displayCode: string; lessonId: string; file: string }> }> {
   const session = await requireAdmin();
   const f = files(batch);
   if (!f) return { ok: false, error: "Invalid upload." };
-  const r = await confirmNarrativeImport(session.user.id, f, { removeLessonIds: removeLessonIds === true });
+  const r = await confirmNarrativeImport(session.user.id, f, { removeLessonIds: true });
   refresh();
-  return r.ok ? { ok: true, message: `${r.created.length} loaded, ${r.skipped} skipped.` } : { ok: false, error: r.error };
+  return r.ok
+    ? {
+        ok: true,
+        message: `${r.created.length} loaded, ${r.skipped} skipped.`,
+        codes: r.created.map(({ displayCode, lessonId, file }) => ({ displayCode, lessonId, file })),
+      }
+    : { ok: false, error: r.error };
+}
+
+/** "Copy to the Harvard Drive now" — the nightly copy, on demand (§58). */
+export async function backupNowAction(): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const r = await runNightlyBackup({
+    actorId: session.user.id,
+    serviceAccountJson: process.env.GOOGLE_SERVICE_ACCOUNT_JSON,
+    folderId: process.env.DRIVE_BACKUP_FOLDER_ID,
+  });
+  return r.ok
+    ? { ok: true, message: `Copied ${r.files.length} files to the Drive folder (${r.files.map((x) => x.name).join(", ")}).` }
+    : { ok: false, error: r.error };
 }
 
 export async function previewSheetAction(csv: string): Promise<SheetRowPreview[]> {

@@ -22,5 +22,6 @@ configuration to the account owner. The narrative review cannot wait that long.
 - Third parties holding data stay at exactly two: Vercel (in transit) and Neon (at rest).
 - The move to Harvard hosting remains a `pg_dump` plus a container image away. ADR 0001's
   Dockerfile is still owed if that day comes.
-- **Recommended follow-up:** a nightly export into the Harvard Google Drive, so that a copy of the
-  data sits on Harvard-controlled storage.
+- **Nightly copy into the Harvard Google Drive** (built 2026-10-29, Amendment §58): Vercel Cron →
+  `/api/cron/backup` → the service account uploads into a folder in the Nourani Lab shared drive.
+  No new third party: the job runs on Vercel, and the files land on Harvard storage.

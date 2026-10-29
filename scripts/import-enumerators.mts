@@ -5,6 +5,11 @@
  *
  *   node scripts/import-enumerators.mts data/enumerator-teams.csv          # preview only
  *   node scripts/import-enumerators.mts data/enumerator-teams.csv --apply  # write
+ *   ... | node scripts/import-enumerators.mts - --apply                    # read from stdin
+ *
+ * Optional PIN column ("4-digit code", "PIN" or "code"): sets each person's
+ * sign-in PIN (scrypt hash only, ADR 0003). Reading from stdin keeps PINs out
+ * of every file; they are never printed. Weak PINs (1234, 1111…) are refused.
  *
  * Columns (header row anywhere in the first lines): Name, Email, Team.
  * Team values: "Rubric" → scoring, "Context Card" → context_cards,
@@ -18,6 +23,7 @@ import { readFileSync } from "node:fs";
 import { config } from "dotenv";
 import { Pool } from "pg";
 import { hardenSslMode } from "../lib/pg-url.ts";
+import { hashPin, isPinFormat, isWeakPin } from "../lib/pin.ts";
 
 config({ path: ".env.local" });
 
@@ -68,7 +74,7 @@ const TEAM: Record<string, string | null> = {
   out: null,
 };
 
-const rows = parseCsv(readFileSync(file, "utf8").replace(/^﻿/, ""));
+const rows = parseCsv(readFileSync(file === "-" ? 0 : file, "utf8").replace(/^\uFEFF/, ""));
 const headerAt = rows.findIndex((r) => r.some((c) => /^email$/i.test(c.trim())));
 if (headerAt < 0) {
   console.error("No header row with an 'Email' column found.");
@@ -76,18 +82,26 @@ if (headerAt < 0) {
 }
 const header = rows[headerAt].map((h) => h.trim().toLowerCase());
 const col = (name: string) => header.indexOf(name);
+const pinCol = header.findIndex((h) => ["4-digit code", "pin", "code", "4 digit code"].includes(h));
 const people = rows
   .slice(headerAt + 1)
   .map((r) => ({
     name: (r[col("name")] ?? "").trim(),
     email: (r[col("email")] ?? "").trim().toLowerCase(),
     teamRaw: (r[col("team")] ?? "").trim().toLowerCase(),
+    pin: pinCol >= 0 ? (r[pinCol] ?? "").trim() : "",
   }))
   .filter((p) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email));
 
 const unknownTeams = people.filter((p) => !(p.teamRaw in TEAM));
 if (unknownTeams.length) {
   console.error(`${unknownTeams.length} row(s) have an unrecognised Team value; fix the sheet first.`);
+  process.exit(1);
+}
+
+const badPins = people.filter((p) => p.pin && (!isPinFormat(p.pin) || isWeakPin(p.pin)));
+if (badPins.length) {
+  console.error(`${badPins.length} row(s) have a PIN that is not 4 digits or is too easy to guess; fix the sheet first.`);
   process.exit(1);
 }
 
@@ -105,6 +119,7 @@ let created = 0;
 let teamAdded = 0;
 let unchanged = 0;
 let skipped = 0;
+let pinsSet = 0;
 try {
   if (apply) await c.query("BEGIN");
   for (const p of people) {
@@ -129,6 +144,22 @@ try {
         );
       }
     }
+    if (p.pin) {
+      pinsSet++;
+      if (apply && id) {
+        const pinHash = await hashPin(p.pin);
+        await c.query(
+          `INSERT INTO pin_credentials (user_id, pin_hash) VALUES ($1, $2)
+           ON CONFLICT (user_id) DO UPDATE SET pin_hash = EXCLUDED.pin_hash, set_at = now(),
+             failed_count = 0, locked_until = NULL, locked_at = NULL`,
+          [id, pinHash],
+        );
+        await c.query(
+          "INSERT INTO audit_log (action, subject_table, subject_id, details) VALUES ('pin_set', 'users', $1, $2)",
+          [id, JSON.stringify({ via: "scripts/import-enumerators.mts" })],
+        );
+      }
+    }
     if (!team) {
       unchanged++;
       continue;
@@ -150,7 +181,7 @@ try {
   await pool.end();
 }
 console.log(
-  `New accounts: ${created}. Team memberships to add: ${teamAdded}. Already in place: ${unchanged}. Skipped (Reserve/Out, no account): ${skipped}.`,
+  `New accounts: ${created}. Team memberships to add: ${teamAdded}. PINs to set: ${pinsSet}. Already in place: ${unchanged}. Skipped (Reserve/Out, no account): ${skipped}.`,
 );
 if (!apply) console.log("Preview only. Re-run with --apply to write.");
-else console.log("Done. Next: set each person's PIN on the Team screen.");
+else console.log(pinsSet ? "Done. PINs are set (stored as hashes only)." : "Done. Next: set each person's PIN on the Team screen.");

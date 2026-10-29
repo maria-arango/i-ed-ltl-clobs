@@ -27,7 +27,7 @@ import type { NarrativeTemplate } from "@/lib/narratives/template";
 type Dataset = "live" | "test" | "training";
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
-async function audit(actorId: string, action: string, subjectTable: string, subjectId: string, details: Record<string, unknown>) {
+async function audit(actorId: string | null, action: string, subjectTable: string, subjectId: string, details: Record<string, unknown>) {
   await db.insert(auditLog).values({ actorId, action, subjectTable, subjectId, details });
 }
 
@@ -139,11 +139,13 @@ export async function confirmNarrativeImport(
   actorId: string,
   files: ImportFile[],
   opts: { removeLessonIds: boolean; dataset?: Dataset },
-): Promise<Result<{ created: Array<{ displayCode: string; label: string }>; skipped: number }>> {
+): Promise<Result<{ created: Array<{ displayCode: string; label: string; lessonId: string; file: string }>; skipped: number }>> {
   const preview = await previewNarrativeImport(files);
   const todo = files.filter((_, i) => preview[i].importable);
   const codes = await nextDisplayCodes(todo.length);
-  const created: Array<{ displayCode: string; label: string }> = [];
+  // lessonId/file are RETURNED (so the admin can save the code list) but,
+  // with removeLessonIds, never stored.
+  const created: Array<{ displayCode: string; label: string; lessonId: string; file: string }> = [];
   for (let i = 0; i < todo.length; i++) {
     const displayCode = codes[i];
     const parsed0 = parseNarrative(todo[i].text);
@@ -165,7 +167,7 @@ export async function confirmNarrativeImport(
       dataset: opts.dataset ?? "live",
       importedBy: actorId,
     });
-    created.push({ displayCode, label });
+    created.push({ displayCode, label, lessonId, file: todo[i].name });
   }
   await audit(actorId, "narratives_imported", "narratives", created.map((c) => c.displayCode).join(","), {
     count: created.length,
@@ -771,7 +773,7 @@ export interface DocxFile {
  * One narrative as .docx. A submitted narrative is exported exactly as
  * submitted (its 'submit' revision); anything else as the current copy.
  */
-export async function buildNarrativeDocx(actorId: string, assignmentId: string, audited = true): Promise<DocxFile | null> {
+export async function buildNarrativeDocx(actorId: string | null, assignmentId: string, audited = true): Promise<DocxFile | null> {
   const view = await getAdminNarrative(assignmentId);
   if (!view) return null;
   let { doc, answers, comments, revision } = view;
@@ -823,14 +825,22 @@ function csvCell(v: unknown): string {
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-/** All submitted (or all assigned) narratives as one .zip with a manifest. */
+/**
+ * All submitted (or all assigned) narratives as one .zip with a manifest.
+ * `since` keeps only narratives submitted at or after that moment (the
+ * dashboard's "submitted in the last 24 hours" download).
+ */
 export async function buildNarrativesZip(
-  actorId: string,
+  actorId: string | null,
   which: "submitted" | "all",
   dataset: Dataset = "live",
+  since?: Date,
 ): Promise<{ filename: string; bytes: Uint8Array; count: number }> {
   const rows = (await getNarrativeDashboard(dataset)).filter(
-    (r) => r.assignmentId && (which === "all" || r.status === "submitted"),
+    (r) =>
+      r.assignmentId &&
+      (which === "all" || r.status === "submitted") &&
+      (!since || (r.submittedAt !== null && r.submittedAt >= since)),
   );
   const { toZip } = await import("@/lib/export/zip");
   const entries: Array<{ name: string; data: Uint8Array }> = [];
@@ -866,6 +876,112 @@ export async function buildNarrativesZip(
   const csv = "﻿" + manifest.map((row) => row.map(csvCell).join(",")).join("\r\n") + "\r\n";
   entries.push({ name: "MANIFEST.csv", data: new TextEncoder().encode(csv) });
   const stamp = new Date().toISOString().slice(0, 10);
-  await audit(actorId, "narratives_zip_downloaded", "narrative_assignments", which, { count: rows.length });
-  return { filename: `narratives_${which}_${stamp}.zip`, bytes: toZip(entries), count: rows.length };
+  const label = since ? `${which}_last24h` : which;
+  await audit(actorId, "narratives_zip_downloaded", "narrative_assignments", label, { count: rows.length });
+  return { filename: `narratives_${label}_${stamp}.zip`, bytes: toZip(entries), count: rows.length };
+}
+
+/* ------------------------------------------------------------------ */
+/* Nightly copy into the Harvard Drive (Amendment §58)                 */
+/* ------------------------------------------------------------------ */
+
+export interface BackupFile {
+  name: string;
+  mimeType: string;
+  data: Uint8Array;
+}
+
+/**
+ * What the nightly copy contains:
+ *  1. clobs-narratives_<date>.zip — every assigned narrative as Word (the
+ *     submitted version when submitted, otherwise the current text) with
+ *     MANIFEST.csv;
+ *  2. clobs-narratives-data_<date>.json.gz — the narrative tables as data:
+ *     narratives (no lesson IDs are stored, Amendment §57), assignments,
+ *     working copies, the versions that matter for recovery (submit,
+ *     reopen, restore, conflict copies) in full, the rest as metadata, and
+ *     measured sittings — enough to rebuild every review.
+ */
+export async function buildNightlyBackup(dataset: Dataset = "live", now = new Date()): Promise<BackupFile[]> {
+  const { gzipSync } = await import("node:zlib");
+  const stamp = now.toISOString().slice(0, 10);
+  const zip = await buildNarrativesZip(null, "all", dataset);
+  const ns = await db
+    .select({
+      id: narratives.id,
+      displayCode: narratives.displayCode,
+      label: narratives.label,
+      durationLabel: narratives.durationLabel,
+      episodeCount: narratives.episodeCount,
+      initialDoc: narratives.initialDoc,
+      importedAt: narratives.importedAt,
+      voidedAt: narratives.voidedAt,
+      voidReason: narratives.voidReason,
+    })
+    .from(narratives)
+    .where(eq(narratives.dataset, dataset));
+  const ids = ns.map((n) => n.id);
+  const asg = ids.length
+    ? await db
+        .select({ a: narrativeAssignments, name: users.name, email: users.email })
+        .from(narrativeAssignments)
+        .innerJoin(users, eq(users.id, narrativeAssignments.assigneeId))
+        .where(inArray(narrativeAssignments.narrativeId, ids))
+    : [];
+  const asgIds = asg.map((x) => x.a.id);
+  const docs = asgIds.length
+    ? await db.select().from(narrativeDocuments).where(inArray(narrativeDocuments.assignmentId, asgIds))
+    : [];
+  const revs = asgIds.length
+    ? await db.select().from(narrativeRevisions).where(inArray(narrativeRevisions.assignmentId, asgIds))
+    : [];
+  const sittings = asgIds.length
+    ? await db.select().from(narrativeSittings).where(inArray(narrativeSittings.assignmentId, asgIds))
+    : [];
+  const full = new Set(["submit", "reopen", "restore", "conflict_copy"]);
+  const data = {
+    createdAt: now.toISOString(),
+    dataset,
+    narratives: ns,
+    assignments: asg.map((x) => ({ ...x.a, assigneeName: x.name, assigneeEmail: x.email })),
+    documents: docs,
+    revisions: revs.map((r) =>
+      full.has(r.kind) ? r : { ...r, doc: undefined, answers: undefined, comments: undefined, contentOmitted: true },
+    ),
+    sittings,
+  };
+  return [
+    { name: `clobs-narratives_${stamp}.zip`, mimeType: "application/zip", data: zip.bytes },
+    {
+      name: `clobs-narratives-data_${stamp}.json.gz`,
+      mimeType: "application/gzip",
+      data: new Uint8Array(gzipSync(Buffer.from(JSON.stringify(data)))),
+    },
+  ];
+}
+
+/** Build the nightly copy and upload it; audited either way. */
+export async function runNightlyBackup(opts: {
+  actorId: string | null;
+  serviceAccountJson: string | undefined;
+  folderId: string | undefined;
+  fetchImpl?: typeof fetch;
+}): Promise<Result<{ files: Array<{ id: string; name: string; bytes: number }> }>> {
+  const { getAccessToken, parseServiceAccount, uploadToDrive } = await import("@/lib/backup/google-drive");
+  const sa = parseServiceAccount(opts.serviceAccountJson);
+  if (!sa || !opts.folderId) {
+    return { ok: false, error: "The Drive copy is not configured (GOOGLE_SERVICE_ACCOUNT_JSON and DRIVE_BACKUP_FOLDER_ID)." };
+  }
+  try {
+    const files = await buildNightlyBackup();
+    const token = await getAccessToken(sa, opts.fetchImpl);
+    const uploaded = [];
+    for (const f of files) uploaded.push(await uploadToDrive(token, opts.folderId, f, opts.fetchImpl));
+    await audit(opts.actorId, "nightly_backup_uploaded", "narratives", "drive", { files: uploaded });
+    return { ok: true, files: uploaded };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    await audit(opts.actorId, "nightly_backup_failed", "narratives", "drive", { error: error.slice(0, 500) });
+    return { ok: false, error };
+  }
 }

@@ -48,3 +48,10 @@ devices, with these compensating controls:
 - No email provider is needed for enumerators.
 - Someone who learns a colleague's PIN can act as them. This is mitigated by personal PINs,
   lockout and audit. Admins should hand PINs out privately.
+
+## Update 2026-10-29 (Amendment §56)
+
+María chose the eight Narratives enumerators' ODK codes as their initial PINs. That reverses the
+"never the ODK ID" rule above for those accounts, and she accepts the risk that a colleague who
+knows someone's ODK code can sign in as them. Recommended mitigation: each enumerator changes their
+PIN under **Change PIN** after first signing in.

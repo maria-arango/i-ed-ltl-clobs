@@ -6,7 +6,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { getNarrativeDashboard, listReviewers, type DashboardRow } from "@/lib/db/admin-narratives";
 import { NxCard, NxPageTitle, NxStatus } from "@/components/narratives/nx-ui";
-import { AssignInline, ImportPanel, SheetPanel } from "@/components/narratives/admin/panels";
+import { AssignInline, BackupNowButton, ImportPanel, SheetPanel } from "@/components/narratives/admin/panels";
 
 export const dynamic = "force-dynamic";
 
@@ -42,15 +42,21 @@ export default async function NarrativesDashboard() {
   return (
     <main className="mx-auto max-w-[1400px] space-y-8 px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <NxPageTitle sub="Progress of the narrative review, assignments, and Word downloads.">Narratives</NxPageTitle>
+        <NxPageTitle sub="Progress of the narrative review, assignments, and Word downloads. A full copy goes to the Harvard Drive every night.">Narratives</NxPageTitle>
         <div className="flex flex-wrap gap-2">
           <a href="/api/admin/narratives/bundle?which=submitted" className="rounded-md bg-nx-accent px-3.5 py-2 text-[14px] font-medium text-white hover:bg-nx-accent-hover">
             Download submitted (.zip)
+          </a>
+          <a href="/api/admin/narratives/bundle?which=submitted&since=24h" className="rounded-md border border-nx-border-strong bg-nx-surface px-3.5 py-2 text-[14px] font-medium hover:bg-nx-sunken">
+            Submitted in the last 24 hours (.zip)
           </a>
           <a href="/api/admin/narratives/bundle?which=all" className="rounded-md border border-nx-border-strong bg-nx-surface px-3.5 py-2 text-[14px] font-medium hover:bg-nx-sunken">
             Download all assigned (.zip)
           </a>
         </div>
+      </div>
+      <div className="-mt-4 flex justify-end">
+        <BackupNowButton />
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
