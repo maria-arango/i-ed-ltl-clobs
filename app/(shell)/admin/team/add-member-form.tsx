@@ -5,6 +5,7 @@
  */
 import { useActionState, useEffect, useRef } from "react";
 import { addMemberAction, type ActionResult } from "./actions";
+import { TEAMS, TEAM_LABELS } from "@/lib/teams";
 
 const inputCls =
   "w-full rounded-md border border-hairline bg-paper px-3 py-2.5 text-[15px] text-ink placeholder:text-ash focus:border-hairline-strong";
@@ -64,6 +65,22 @@ export function AddMemberForm() {
           </select>
         </label>
         <div className="flex flex-col justify-end gap-2 pb-1">
+          <fieldset className="mb-1">
+            <legend className="text-[14px] font-medium text-ink">Teams</legend>
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+              {TEAMS.map((t) => (
+                <label key={t} className="flex items-center gap-2 text-[14px] text-ink">
+                  <input
+                    type="checkbox"
+                    name="teams"
+                    value={t}
+                    className="size-4 accent-[var(--clobs-bark)]"
+                  />
+                  {TEAM_LABELS[t]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           <label className="flex items-center gap-2 text-[14px] text-ink">
             <input type="checkbox" name="chief" className="size-4 accent-[var(--clobs-bark)]" />
             Chief coder (may anchor a pair)

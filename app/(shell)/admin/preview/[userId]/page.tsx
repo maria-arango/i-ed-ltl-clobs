@@ -61,8 +61,8 @@ export default async function PreviewAsCoderPage({
   return (
     <div className="mx-auto mt-2 max-w-[980px] space-y-8">
       <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
-        <Link href="/" className="rounded-sm text-lake underline underline-offset-4">
-          Home
+        <Link href="/scoring" className="rounded-sm text-lake underline underline-offset-4">
+          Scoring
         </Link>
         <span aria-hidden> / </span>
         <Link href="/admin/team" className="rounded-sm text-lake underline underline-offset-4">

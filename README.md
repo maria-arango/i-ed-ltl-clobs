@@ -7,7 +7,29 @@ context cards, score each lesson against the LTL observation instrument, and the
 reach a consensus score. Administrators assign videos, monitor progress and inter-rater reliability, and
 export a tidy dataset for analysis and for training an automated coder.
 
-**Status:** planning. No application code yet. See `docs/` for the brief and `docs/adr/` for decisions.
+**Status (2026-10-29):** built and deployed on Vercel + Neon. Three enumerator teams use it differently:
+
+- **Narratives** (active): enumerators correct AI-written lesson narratives in a Word-like editor. Every
+  change is saved on the device and on the server. Admins download the results as Word files.
+- **Scoring** (kept for a future approved platform): coding, calibration, gold set, training and
+  progress. In 2026 this work ran in ODK, because the platform was not IRB/DAT approved in time.
+- **Context cards:** done in ODK; the platform only records team membership.
+
+Start with `docs/STATUS.md` (current state), `docs/PLAN.md` (decisions D1–D7) and
+`docs/06-handoff.md` (how to continue). Going live: `docs/09-narratives-deploy.md`.
+
+## Running it locally with synthetic data
+
+```
+# a throwaway local Postgres (Homebrew PostgreSQL), once:
+initdb -D /tmp/clobs-pg/data -U postgres --auth=trust
+pg_ctl -D /tmp/clobs-pg/data -o "-p 54329" -l /tmp/clobs-pg/log.txt start
+
+npm run test:local   # migrates, grants, seeds and runs every test against localhost:54329
+```
+
+`npm test` on its own refuses to run against a `neon.tech` database. Placeholder narratives (invented
+content) are in `db/seed/narratives/`.
 
 ---
 
@@ -48,7 +70,11 @@ before every commit.
 │   ├── rubric/                  the observation instrument (LaTeX source + compiled PDF)
 │   └── source-materials/        redacted samples showing the shape of the existing data
 ├── data/                        local working data — GITIGNORED, never committed
-└── app/                         the application (not yet created)
+├── app/                         Next.js pages and API routes (Scoring, Narratives, admin)
+├── lib/                         query layers (lib/db), narratives (parser, sync engine, Word export)
+├── components/                  UI; components/narratives/ is the Narratives area
+├── db/                          schema + synthetic seeds; drizzle/ holds the migrations
+└── tests/                       Vitest suites (blinding, teams, narratives, live saving, Word export, PIN)
 ```
 
 ## The instrument

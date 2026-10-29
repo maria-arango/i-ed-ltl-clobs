@@ -6,7 +6,8 @@
  */
 import { and, count, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { observations, users, videos } from "@/db/schema";
+import { observations, userTeams, users, videos } from "@/db/schema";
+import { isTeam, type Team } from "@/lib/teams";
 
 export interface AdminHomeStats {
   codableVideos: number;
@@ -125,6 +126,7 @@ export async function addTeamMember(
     role: "admin" | "coder";
     isChiefCoder: boolean;
     isTrainee: boolean;
+    teams?: Team[];
   },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const email = input.email.trim().toLowerCase();
@@ -139,17 +141,30 @@ export async function addTeamMember(
   if (existing[0]) {
     return { ok: false, error: "That email is already on the team." };
   }
-  await db.insert(users).values({
-    email,
-    name: input.name?.trim() || null,
-    role: input.role,
-    isChiefCoder: input.role === "coder" ? input.isChiefCoder : false,
-    datasetScope: input.isTrainee ? "training" : "live",
-  });
+  const teams = (input.teams ?? []).filter(isTeam);
+  if (input.role === "coder" && teams.length === 0) {
+    return { ok: false, error: "Choose at least one team." };
+  }
+  const [created] = await db
+    .insert(users)
+    .values({
+      email,
+      name: input.name?.trim() || null,
+      role: input.role,
+      isChiefCoder: input.role === "coder" ? input.isChiefCoder : false,
+      datasetScope: input.isTrainee ? "training" : "live",
+    })
+    .returning({ id: users.id });
+  if (teams.length > 0) {
+    await db
+      .insert(userTeams)
+      .values(teams.map((team) => ({ userId: created.id, team, addedBy: actorId })));
+  }
   await audit(actorId, "team_member_added", email, {
     role: input.role,
     chief: input.isChiefCoder,
     trainee: input.isTrainee,
+    teams,
   });
   return { ok: true };
 }
@@ -271,6 +286,8 @@ export async function deleteMemberPermanently(
   }
 
   await db.delete(coderAvailability).where(eq(coderAvailability.userId, userId));
+  // Team rows are not work (an account with no work has nothing to keep).
+  await db.delete(userTeams).where(eq(userTeams.userId, userId));
   await db.delete(users).where(eq(users.id, userId)); // sessions/accounts cascade
   await audit(actorId, "member_deleted_permanently", target.email, {});
   return { ok: true };
@@ -333,5 +350,50 @@ export async function setAvailability(
     from: effectiveFrom.toISOString().slice(0, 10),
     to: effectiveTo?.toISOString().slice(0, 10) ?? null,
   });
+  return { ok: true };
+}
+
+/* ------------------------------------------------------------------ */
+/* Teams (Amendment §49)                                               */
+/* ------------------------------------------------------------------ */
+
+/** Active teams per user id. */
+export async function getTeamMap(): Promise<Record<string, Team[]>> {
+  const rows = await db
+    .select({ userId: userTeams.userId, team: userTeams.team })
+    .from(userTeams)
+    .where(isNull(userTeams.removedAt));
+  const map: Record<string, Team[]> = {};
+  for (const r of rows) (map[r.userId] ??= []).push(r.team);
+  return map;
+}
+
+/**
+ * Join or leave a team. Leaving keeps the row (removed_at + who + why);
+ * nothing is deleted (CLAUDE.md §7). Audited. Idempotent.
+ */
+export async function setTeamMembership(
+  actorId: string,
+  userId: string,
+  team: Team,
+  member: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isTeam(team)) return { ok: false, error: "Unknown team." };
+  const [active] = await db
+    .select({ id: userTeams.id })
+    .from(userTeams)
+    .where(and(eq(userTeams.userId, userId), eq(userTeams.team, team), isNull(userTeams.removedAt)))
+    .limit(1);
+  if (member && !active) {
+    await db.insert(userTeams).values({ userId, team, addedBy: actorId });
+  } else if (!member && active) {
+    await db
+      .update(userTeams)
+      .set({ removedAt: new Date(), removedBy: actorId, removedReason: "removed on the Team screen" })
+      .where(eq(userTeams.id, active.id));
+  } else {
+    return { ok: true };
+  }
+  await audit(actorId, member ? "team_joined" : "team_left", userId, { team });
   return { ok: true };
 }

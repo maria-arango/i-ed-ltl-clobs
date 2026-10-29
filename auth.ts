@@ -5,8 +5,10 @@
  * Flow: coder enters their work email → signIn callback refuses unknown or
  * deactivated accounts BEFORE any email is sent (no self-signup, no user
  * auto-creation) → a 6-digit code is emailed → entering it establishes a
- * database session. Sessions are long-lived (30 days) on trusted devices
- * (addendum §2); admin screens add re-authentication at the screen level.
+ * database session. Since ADR 0003 the everyday sign-in is email + PIN
+ * (app/api/pin-signin), which creates the same kind of database session;
+ * this email-code flow remains as the admin fallback at /signin/email.
+ * Sessions: 2 h idle, 12 h absolute (ADR 0003).
  */
 import NextAuth from "next-auth";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
@@ -20,17 +22,34 @@ import {
 } from "@/db/schema";
 import { canSignIn, generateSignInCode } from "@/lib/auth-policy";
 import { sendSignInCode } from "@/lib/email";
+import { capSessionExpiry } from "@/lib/db/pin-auth";
+import { SESSION_IDLE_MS } from "@/lib/pin";
+
+const baseAdapter = DrizzleAdapter(db, {
+  usersTable: users,
+  accountsTable: accounts,
+  sessionsTable: sessions,
+  verificationTokensTable: verificationTokens,
+});
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
+  adapter: {
+    ...baseAdapter,
+    // Activity extends a session by the idle window, but never past 12
+    // hours after it began (ADR 0003: lent devices, short sessions).
+    async updateSession(session) {
+      const expires = session.expires
+        ? await capSessionExpiry(session.sessionToken, session.expires)
+        : session.expires;
+      return baseAdapter.updateSession!({ ...session, expires });
+    },
+  },
   session: {
     strategy: "database",
-    maxAge: 30 * 24 * 60 * 60, // 30 days on trusted devices
+    // ADR 0003: 2 hours without activity ends a session (sliding; the
+    // editor's autosave counts as activity), 12 hours ends it regardless.
+    maxAge: SESSION_IDLE_MS / 1000,
+    updateAge: 5 * 60,
   },
   trustHost: true,
   providers: [

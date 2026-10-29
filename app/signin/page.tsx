@@ -1,60 +1,40 @@
 /**
- * Sign-in. When Kimanya photographs exist in public/kimanya/, the page
- * splits: the sign-in flow on the left, a photograph of the local context
- * on the right (Amendment B §21; the brief's wish to connect coders to
- * their local context). Without photos it stays a single centered column.
+ * Sign-in: email + personal 4-digit PIN (Amendment §53, ADR 0003).
+ * The email-code sign-in remains at /signin/email for admins.
  */
-import { readdirSync } from "node:fs";
-import path from "node:path";
-import { TiltCard } from "@/components/ui/tilt-card";
-import { RequestAccess } from "./request-access";
-import { SignInClient } from "./signin-client";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { PinSignIn } from "./pin-signin";
 
-function findKimanyaPhoto(): string | null {
-  try {
-    const dir = path.join(process.cwd(), "public", "kimanya");
-    const files = readdirSync(dir)
-      .filter((f) => /\.(webp|jpe?g|png)$/i.test(f))
-      .sort();
-    return files.length > 0 ? `/kimanya/${files[0]}` : null;
-  } catch {
-    return null;
-  }
-}
-
-export default function SignInPage() {
-  const photo = findKimanyaPhoto();
-
-  if (!photo)
-    return (
-      <div className="relative">
-        <SignInClient />
-        <RequestAccess />
-      </div>
-    );
-
+export default async function SignInPage() {
+  const session = await auth();
+  if (session?.user) redirect("/");
   return (
-    <div className="grid min-h-screen bg-paper lg:grid-cols-2">
-      <div className="relative">
-        <SignInClient />
-        <RequestAccess />
-      </div>
-      <aside
-        className="relative hidden overflow-hidden p-6 lg:block"
-        aria-label="Kimanya-Ngeyo"
-      >
-        <TiltCard className="relative h-full w-full overflow-hidden rounded-2xl border border-hairline">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={photo}
-            alt="A classroom of the Kimanya-Ngeyo Foundation in Uganda"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <p className="absolute bottom-0 left-0 right-0 bg-sunken/95 px-6 py-3 text-[13px] text-graphite">
-            Kimanya-Ngeyo Foundation for Science and Education, Uganda
-          </p>
-        </TiltCard>
-      </aside>
+    <div className="nx-area flex min-h-screen flex-col">
+      <header className="border-b border-nx-border bg-nx-surface">
+        <div className="mx-auto flex h-14 max-w-[1100px] items-center px-4 sm:px-6">
+          <Link href="/" className="text-[15px] font-semibold">
+            LTL Classroom Observations
+          </Link>
+        </div>
+      </header>
+      <main className="flex flex-1 items-start justify-center px-4 py-12 sm:py-20">
+        <div className="w-full max-w-[400px] rounded-md border border-nx-border bg-nx-surface p-6">
+          <h1 className="text-[22px] font-semibold">Sign in</h1>
+          <p className="mt-1 mb-5 text-[14px] text-nx-muted">Use your email and the PIN the coordinators gave you.</p>
+          <PinSignIn />
+        </div>
+      </main>
+      <footer className="border-t border-nx-border bg-nx-surface">
+        <p className="mx-auto max-w-[1100px] px-4 py-4 text-[13px] text-nx-muted sm:px-6">
+          Forgot your PIN? Ask a coordinator for a new one. Coordinators can also{" "}
+          <Link href="/signin/email" className="text-nx-accent underline">
+            sign in with an email code
+          </Link>
+          .
+        </p>
+      </footer>
     </div>
   );
 }

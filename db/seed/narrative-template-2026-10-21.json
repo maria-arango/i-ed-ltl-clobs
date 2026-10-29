@@ -1,0 +1,37 @@
+{
+  "version": "2026-10-21",
+  "source": "Word review template used by the master team, 21 Oct 2026 (STATUS §8.2)",
+  "title": "Narrative review",
+  "checkNote": "Before you begin, check that the video's filename and approximate length match the information above. If they do not, please stop and let Maria know.",
+  "howToEditLabel": "How to edit the narrative:",
+  "howToEdit": "Please keep the original AI text. Strike-through anything that is incorrect and write the correction next to it in red. Add missing information in red. If you are unsure about a detail or cannot verify it, leave a comment in the document rather than guessing. The small grey codes in the narrative are references to the AI's evidence log; you can ignore them.",
+  "questions": [
+    {
+      "key": "accuracy",
+      "title": "1. Accuracy and errors",
+      "prompt": "How accurate was the narrative overall? If you find errors, give a few examples of factual errors, such as misquoted speech, a misidentified speaker, an incorrect description of someone’s actions, or an incorrect time. You do not need to list every error, it is more important to describe any patterns you noticed, and you can draw on illustrative examples. If you could not verify a detail (e.g. audio), leave a comment at that point in the document and briefly summarize the issue or pattern here; you do not need to mention every instance. Describe missing information in (2)."
+    },
+    {
+      "key": "missing",
+      "title": "2. Missing information and additions",
+      "prompt": "What relevant information did you see or hear in the video that was missing from the narrative? Describe some of the additions you made in red and briefly explain how they could help us to better evaluate teacher practice. Additions might include speech, actions, or interactions the AI missed, or details such as tone of voice, at particular points during the lesson, that may be important for evaluating the teacher."
+    },
+    {
+      "key": "tone",
+      "title": "3. Overall lesson tone and learning environment",
+      "prompt": "In a few sentences, describe the overall feel of the lesson based on what you observed. Address both parts:",
+      "parts": [
+        {
+          "key": "toneTeacher",
+          "prompt": "(a) Describe the teacher’s manner and the tone of their questions and instructions. Descriptors might include warm or supportive, encouraging, patient, calm, matter-of-fact, animated, energetic, direct, firm, impatient, dismissive, disrespectful, rushed (or some other adjective). Include an example of something the teacher said or did that shaped your impression."
+        },
+        {
+          "key": "toneClass",
+          "prompt": "(b) Describe the classroom atmosphere, including teacher-student interactions and student engagement. Descriptors might include focused, participatory, collaborative, lively, orderly, calm, quiet, subdued, distracted, tense, unsettled, jovial (or some other adjective). Include a brief example from the video."
+        }
+      ]
+    }
+  ],
+  "timeLabel": "Time spent reviewing and correcting this narrative:",
+  "narrativeLabel": "AI NARRATIVE (copy of NARRATIVE.md; original text in black)"
+}

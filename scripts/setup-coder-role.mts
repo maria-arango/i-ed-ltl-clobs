@@ -92,6 +92,22 @@ const GRANTS: Array<[string, string]> = [
   ["rubric_examples", "SELECT"],
   ["rubric_guidance", "SELECT"],
   ["events", "INSERT"],
+  // Amendment §49: guards read team membership through this role.
+  ["user_teams", "SELECT (user_id, team, removed_at)"],
+  // Amendment §51 (ADR 0002): the Narratives workspace. lesson_id and
+  // source_text are NOT granted — enumerators can never read them.
+  [
+    "narratives",
+    "SELECT (id, display_code, label, duration_label, initial_doc, episode_count, dataset, voided_at)",
+  ],
+  [
+    "narrative_assignments",
+    "SELECT (id, narrative_id, assignee_id, order_no, video_url, status, template_id, assigned_at, started_at, submitted_at, submitted_revision, reopen_count, dataset), UPDATE (status, started_at, submitted_at, submitted_revision)",
+  ],
+  ["narrative_documents", "SELECT, INSERT, UPDATE"],
+  ["narrative_revisions", "SELECT (id, assignment_id, revision, kind, stats, created_at), INSERT"],
+  ["narrative_sittings", "SELECT, INSERT, UPDATE"],
+  ["narrative_templates", "SELECT"],
 ];
 
 const client = await pool.connect();
@@ -134,10 +150,14 @@ const coderUrl = url.toString();
 
 const envPath = ".env.local";
 let env = "";
-try {
-  env = readFileSync(envPath, "utf8");
-} catch {
-  /* no .env.local (CI) — skip writing */
+// CLOBS_SKIP_ENV_WRITE=1 (set by scripts/local-test.sh): a run against a
+// local test database must never overwrite the live DATABASE_URL_CODER.
+if (!process.env.CLOBS_SKIP_ENV_WRITE) {
+  try {
+    env = readFileSync(envPath, "utf8");
+  } catch {
+    /* no .env.local (CI) — skip writing */
+  }
 }
 if (env) {
   if (/^DATABASE_URL_CODER=/m.test(env)) {

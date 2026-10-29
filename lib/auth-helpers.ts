@@ -5,6 +5,12 @@
  */
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { getActiveTeams } from "@/lib/db/teams";
+import {
+  canAccessNarratives,
+  canAccessScoring,
+  homePathFor,
+} from "@/lib/teams";
 
 /** Any signed-in, active account. Redirects to /signin otherwise. */
 export async function requireSession() {
@@ -18,4 +24,29 @@ export async function requireAdmin() {
   const session = await requireSession();
   if (session.user.role !== "admin") redirect("/");
   return session;
+}
+
+/** Any signed-in account plus its active teams. */
+export async function requireSessionWithTeams() {
+  const session = await requireSession();
+  const teams = await getActiveTeams(session.user.id);
+  return { session, teams };
+}
+
+/** Scoring screens (Amendment §50). Others are sent to their own home. */
+export async function requireScoringAccess() {
+  const { session, teams } = await requireSessionWithTeams();
+  if (!canAccessScoring(session.user.role, teams)) {
+    redirect(homePathFor(session.user.role, teams));
+  }
+  return { session, teams };
+}
+
+/** The Narratives workspace (Amendment §51). */
+export async function requireNarrativesAccess() {
+  const { session, teams } = await requireSessionWithTeams();
+  if (!canAccessNarratives(session.user.role, teams)) {
+    redirect(homePathFor(session.user.role, teams));
+  }
+  return { session, teams };
 }

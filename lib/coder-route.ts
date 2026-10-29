@@ -5,6 +5,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { CoderError, type Dataset } from "@/lib/db/coder";
+import { getActiveTeams } from "@/lib/db/teams";
+import { canAccessScoring } from "@/lib/teams";
 
 export interface CoderIdentity {
   coderId: string;
@@ -15,6 +17,15 @@ export async function requireCoder(): Promise<CoderIdentity | NextResponse> {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  }
+  // Every /api/coder/* route is a scoring route (Amendment §50): closed to
+  // accounts that belong only to other teams, whatever the client sends.
+  const teams = await getActiveTeams(session.user.id);
+  if (!canAccessScoring(session.user.role, teams)) {
+    return NextResponse.json(
+      { error: "This account has no access to scoring", code: "no_scoring_access" },
+      { status: 403 },
+    );
   }
   return {
     coderId: session.user.id,

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth-helpers";
+import { requireScoringAccess } from "@/lib/auth-helpers";
 import { getWorkspace } from "@/lib/db/coder";
 import { NotesEditor } from "@/components/workspace/notes-editor";
 
 export default async function SimpleNotesPage({ params }: { params: Promise<{ videoId: string }> }) {
-  const session = await requireSession();
+  const { session } = await requireScoringAccess();
   const { videoId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(videoId)) notFound();
   const ws = await getWorkspace(session.user.id, videoId);

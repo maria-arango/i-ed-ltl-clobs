@@ -716,3 +716,41 @@ Additions of 2026-09-08 (María's review of the prototype):
     three sections, **To code / Ready to calibrate / Done**, so a submitted video is visibly not
     finished until both coders have signed the calibration; demo videos carry a real Drive link so
     "Watch here" can be tried.
+
+Decisions of 2026-10-28 (three teams; the Narratives workspace; docs/STATUS.md and docs/PLAN.md):
+
+49. **Three enumerator teams.** *Context Cards* (cards that feed the AI narrative pipeline),
+    *Scoring* (the rubric team; calibration has stopped adding value and is expected to end), and
+    *Narratives* (correct the AI-written narratives against the videos). An account can belong to
+    several teams; admins pass every team check. Team membership is enforced server-side on pages
+    AND APIs, never by hiding menus.
+50. **Scoring section.** Training, video tracking (Video library), Gold set, scoring (My videos +
+    workspace), Calibration and Progress, plus Assignment and Exports, are grouped under one
+    **Scoring** section, visible only to admins and Scoring-team accounts. No route, code or data
+    is deleted; URLs stay the same. These tabs went unused in production: the work ran in ODK
+    Central (`odk.gse.harvard.edu`) and Google Drive because the platform was not IRB/DAT
+    approved in time. They are kept for a future approved platform.
+51. **Narratives workspace.** Admins import the pipeline's `NARRATIVE.md` files and assign each to
+    one enumerator with an order and a video link. The enumerator corrects the narrative in a
+    Word-like editor: they pick red themselves for new text, strike through incorrect text, and
+    add comments on a selected range (no review mode, no tracked changes, matching the
+    reviewed Word documents catalogued in STATUS §8). Then they answer the template's reflection
+    questions and submit. A submitted narrative is read-only until an admin reopens it (with a
+    reason, audited). Admins download submitted narratives as .docx with real Word comments,
+    one at a time or as a .zip.
+52. **No work may be lost.** Every edit is kept on the device (IndexedDB, persistent storage
+    requested) and synced to the server within seconds. Offline edits are queued and retried; an
+    expired session keeps the edits and restores them after sign-in. Two tabs or devices never
+    silently overwrite each other (one editing tab per device; a revision check on the server,
+    with the refused version kept as a conflict copy). Version history is kept on the server.
+53. **Sign-in = email + personal 4-digit PIN** (no device registration, because tablets and laptops
+    are lent between enumerators). PINs are issued by admins, are never the ODK ID, and are stored
+    hashed. Lockout and throttling apply, sessions are short, and the signed-in name is always on
+    screen. This is a deliberate deviation from NIST SP 800-63B-4's minimum length, with
+    compensating controls (ADR 0003).
+54. **Lesson IDs in narratives.** The importer can remove the raw lesson ID from a narrative so
+    the platform stores none; the mapping then lives only in the admin's assignment sheet.
+    Default and final wording to be confirmed by María.
+55. **Hosting stays on Vercel + Neon** (a Harvard server would take months). Resend is no longer
+    needed for enumerators. Narrative data lives in the same Postgres. Placeholder (synthetic)
+    narratives are used until the final set is chosen.
