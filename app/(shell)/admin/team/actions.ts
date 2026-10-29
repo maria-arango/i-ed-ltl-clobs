@@ -5,6 +5,7 @@
  */
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth-helpers";
+import { isTeam, type Team } from "@/lib/teams";
 import {
   addTeamMember,
   setChiefCoder,
@@ -28,6 +29,7 @@ export async function addMemberAction(
     role,
     isChiefCoder: formData.get("chief") === "on",
     isTrainee: formData.get("trainee") === "on",
+    teams: formData.getAll("teams").map(String).filter(isTeam),
   });
   if (result.ok) revalidatePath("/admin/team");
   return result.ok ? { ok: true } : { ok: false, error: result.error };
@@ -102,4 +104,27 @@ export async function decideRequestAction(
     revalidatePath("/admin/training");
   }
   return result;
+}
+
+/** Join or leave a team (Amendment §49). */
+export async function setTeamAction(
+  userId: string,
+  team: Team,
+  member: boolean,
+): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const { setTeamMembership } = await import("@/lib/db/admin");
+  const result = await setTeamMembership(session.user.id, userId, team, member);
+  if (result.ok) revalidatePath("/admin/team");
+  return result;
+}
+
+/** Give someone a new random PIN, shown once (ADR 0003). Unlocks the account. */
+export async function setPinAction(userId: string): Promise<ActionResult & { pin?: string }> {
+  const session = await requireAdmin();
+  const { setPinForUser } = await import("@/lib/db/pin-auth");
+  const result = await setPinForUser(session.user.id, userId);
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidatePath("/admin/team");
+  return { ok: true, pin: result.pin };
 }

@@ -6,13 +6,13 @@
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth-helpers";
+import { requireScoringAccess } from "@/lib/auth-helpers";
 import { getRubricContent, getWorkspace } from "@/lib/db/coder";
 import { SectionGate } from "@/components/workspace/section-gate";
 import { ScoringPanel } from "@/components/workspace/scoring-panel";
 
 export default async function SimpleScoresPage({ params }: { params: Promise<{ videoId: string }> }) {
-  const session = await requireSession();
+  const { session } = await requireScoringAccess();
   const { videoId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(videoId)) notFound();
   const ws = await getWorkspace(session.user.id, videoId);

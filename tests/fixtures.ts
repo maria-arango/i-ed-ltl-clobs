@@ -33,12 +33,18 @@ import {
   scoreNoteCitations,
   scores,
   sectionSessions,
+  narrativeAssignments,
+  narrativeDocuments,
+  narrativeRevisions,
+  narratives,
+  narrativeSittings,
+  userTeams,
   users,
   videoLocks,
   videoProvenance,
   videos,
 } from "@/db/schema";
-import { like } from "drizzle-orm";
+import { like, or } from "drizzle-orm";
 
 /** Calibration rows hang off sessions; remove them before anything a
  *  session references (videos, pairs, scores). Test-dataset rows are
@@ -295,6 +301,32 @@ export async function purgeFixture(opts: {
     }
   }
 
+  if (userIds.length > 0) {
+    // Narratives imported by, or assigned to, fixture users (test dataset:
+    // the 0012 triggers allow deleting sandbox rows only).
+    const ownNarratives = await db
+      .select({ id: narratives.id })
+      .from(narratives)
+      .where(inArray(narratives.importedBy, userIds));
+    const narrativeIds = ownNarratives.map((n) => n.id);
+    const asg = await db
+      .select({ id: narrativeAssignments.id })
+      .from(narrativeAssignments)
+      .where(
+        narrativeIds.length
+          ? or(inArray(narrativeAssignments.assigneeId, userIds), inArray(narrativeAssignments.narrativeId, narrativeIds))
+          : inArray(narrativeAssignments.assigneeId, userIds),
+      );
+    const asgIds = asg.map((a) => a.id);
+    if (asgIds.length) {
+      await db.delete(narrativeRevisions).where(inArray(narrativeRevisions.assignmentId, asgIds));
+      await db.delete(narrativeSittings).where(inArray(narrativeSittings.assignmentId, asgIds));
+      await db.delete(narrativeDocuments).where(inArray(narrativeDocuments.assignmentId, asgIds));
+      await db.delete(narrativeAssignments).where(inArray(narrativeAssignments.id, asgIds));
+    }
+    if (narrativeIds.length) await db.delete(narratives).where(inArray(narratives.id, narrativeIds));
+  }
+
   for (const u of userRows) {
     await db.delete(sectionSessions).where(eq(sectionSessions.coderId, u.id));
     await db.delete(videoLocks).where(eq(videoLocks.coderId, u.id));
@@ -304,6 +336,7 @@ export async function purgeFixture(opts: {
     // Fixture users may have authored audit/assignment-log rows.
     await db.delete(auditLog).where(eq(auditLog.actorId, u.id));
     await db.delete(assignmentLog).where(eq(assignmentLog.actorId, u.id));
+    await db.delete(userTeams).where(eq(userTeams.userId, u.id));
     await db.delete(users).where(eq(users.id, u.id));
   }
 }

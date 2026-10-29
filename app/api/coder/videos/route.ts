@@ -3,14 +3,13 @@
  * Coder-facing: uses ONLY the restricted query layer (lib/db/coder).
  */
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { isResponse, requireCoder } from "@/lib/coder-route";
 import { getCoderQueue } from "@/lib/db/coder";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  }
-  const queue = await getCoderQueue(session.user.id);
+  // Session + scoring-team check (Amendment §50).
+  const who = await requireCoder();
+  if (isResponse(who)) return who;
+  const queue = await getCoderQueue(who.coderId);
   return NextResponse.json({ videos: queue });
 }

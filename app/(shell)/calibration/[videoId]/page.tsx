@@ -5,7 +5,7 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireSession } from "@/lib/auth-helpers";
+import { requireScoringAccess } from "@/lib/auth-helpers";
 import { getRubricContent } from "@/lib/db/coder";
 import { CoderError } from "@/lib/db/coder";
 import { getCalibrationRoom } from "@/lib/db/coder-calibration";
@@ -16,7 +16,7 @@ export default async function CalibrationRoomPage({
 }: {
   params: Promise<{ videoId: string }>;
 }) {
-  const session = await requireSession();
+  const { session } = await requireScoringAccess();
   const { videoId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(videoId)) notFound();
 
@@ -35,8 +35,8 @@ export default async function CalibrationRoomPage({
   return (
       <div className="space-y-6">
         <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
-          <Link href="/" className="rounded-sm text-lake underline underline-offset-4">
-            Home
+          <Link href="/scoring" className="rounded-sm text-lake underline underline-offset-4">
+            Scoring
           </Link>
           <span aria-hidden> / </span>
           <Link

@@ -441,7 +441,81 @@ screens, Progress → "Video problems" panel (`listVideoProblems`,
 `clearVideoProblem`, audited). Test: video-problem.test.ts. Preview page
 explains how to try the simple interface yourself (`/s`).
 
-## Next up
+## Progress (2026-10-28/29 — three teams, Scoring section, Narratives workspace)
+
+Branch `feat/narratives-workspace` (from main @ PR #28). Read `docs/STATUS.md`, `docs/PLAN.md`
+(decisions D1–D7 of 2026-10-28 supersede PLAN §1.2, §5, §6) and Amendments §49–§55. ADRs 0002
+(editor + sync), 0003 (email + PIN), 0004 (stay on Vercel + Neon).
+
+- **Teams** (migration 0011): `user_teams` with membership history. Scoring pages and every
+  `/api/coder/*` route are closed to accounts whose only teams are other teams (`lib/teams.ts`,
+  `requireScoringAccess`, `requireCoder`). Two coder routes that bypassed `requireCoder` were
+  fixed. Team screen: a Teams column plus team checkboxes on Add.
+- **Scoring section**: the sidebar groups all scoring tabs under "Scoring". URLs are unchanged.
+  Home moved to `/scoring`; `/` is the new landing page/router.
+- **Narratives** (migration 0012): `narratives` (immutable import; `lesson_id`/`source_text`
+  admin-only, NULL/redacted when "remove lesson IDs"), `narrative_assignments`,
+  `narrative_documents` (working copy, `revision`, frozen by trigger when submitted),
+  `narrative_revisions` (append-only), `narrative_sittings` (measured time), `narrative_templates`
+  (the review template as data).
+  - Parser: `lib/narratives/parse.ts`. Verified word-identical on all 33 real NARRATIVE.md files
+    (counts only, nothing stored).
+  - Editor: `components/narratives/*`. Tiptap MIT core + own marks: textColor, evidence, and
+    overlapping comments in the right margin. Strike is non-inclusive.
+  - Sync engine: `lib/narratives/sync-engine.ts` (IndexedDB, revision check, conflict copies,
+    Web Locks).
+  - Word export: `lib/narratives/docx.ts` (`docx`, real Word comments, no tracked changes).
+  - Dashboard: `/admin/narratives` (+ detail page with history/restore, reopen, reassign).
+- **PIN sign-in** (migration 0013): `/signin` = email + 4-digit PIN; the email code lives at
+  `/signin/email`.
+  - Lockout: 5 failures → 15 min (doubling); 10 → admin reset. Per-IP throttle.
+  - Sessions: 2 h idle / 12 h absolute, capped in the adapter's `updateSession`.
+  - Team screen: Set/New PIN (shown once). `/account`: change own PIN.
+- **Safety rails:** `npm run test:local` (local Postgres :54329); tests refuse `neon.tech`;
+  `setup-coder-role.mts` honours `CLOBS_SKIP_ENV_WRITE`. The 7 stray untracked files were moved to
+  `~/Documents/clobs-set-aside-2026-10-28/` (README inside; nothing deleted). A stale
+  `.git/index.lock` was renamed `.git/index.lock.stale-2026-09-08`.
+- **Verification:**
+  - 208 tests (24 files), lint clean, `next build` clean.
+  - Browser walkthrough (Playwright, local dev server, synthetic data): 27/27 narrative checks
+    (offline, tab close, two tabs, session expiry, submit, downloads, team access) + 7/7 PIN
+    checks.
+  - A Word export was validated with the same XML catalogue script as the real samples and
+    opened in LibreOffice.
+- **Not done / owed:**
+  - migrations 0011–0013 and the role refresh on live Neon (needs María's go-ahead,
+    docs/09-narratives-deploy.md);
+  - the nightly Drive backup;
+  - the scoring autosave defects listed in STATUS §5 (scoring is unused);
+  - real narratives (placeholders for now, D7);
+  - Q2-bis (default for "remove lesson IDs").
+
+## Progress (2026-10-29, later — María's decisions, live database, Drive copies)
+
+Amendments §56–§58.
+- Lesson IDs are now always removed; the import offers the code list once.
+- The nightly Drive copy runs as Vercel Cron `/api/cron/backup` (23:00 UTC) using the
+  `clobs-backup` service account into `…/01_Training/05_Application/_platform-backups` in the
+  Nourani Lab shared drive (id in `.env.local` as `DRIVE_BACKUP_FOLDER_ID`). A live test upload
+  succeeded.
+- The dashboard adds "Copy everything to the Harvard Drive now" and "Submitted in the last 24
+  hours (.zip)".
+- `scripts/import-enumerators.mts` reads stdin plus a PIN column.
+- **Live Neon (approved by María):**
+  - migrations 0011–0013 applied (14 total), with existing counts unchanged;
+  - coder role refreshed (connection string unchanged);
+  - the 8 Narratives enumerators created with the PINs María chose (verified 8/8);
+  - `CRON_SECRET` and `DRIVE_BACKUP_FOLDER_ID` appended to `.env.local`.
+- Branch pushed and pull request opened. 215 tests.
+
+## Next up (2026-10-29)
+
+1. María: merge the pull request (docs/09 §D), then add the 3 Vercel env vars and redeploy
+   (§E), then press "Copy … now" once to confirm.
+2. Recommend that the 8 enumerators change their PINs (their codes are their ODK IDs, §56).
+3. Load the final narratives, save the code list to Drive, assign (§F).
+
+## Earlier "next up" lists (history)
 
 1. **Team meeting on the simple interface**: open Team → Preview → "Simple
    interface (phone)" for a coder, and try `/s` on a real phone/tablet with

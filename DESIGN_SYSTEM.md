@@ -630,3 +630,32 @@ Two deliberate departures from those references, both because this is a working 
 marketing site: **compact density is admitted alongside comfortable**, and **buttons are not pills**.
 One deliberate addition they could not supply: **the ordinal score ramp**, taken from the gradient
 already in the printed observation manual so that screen and paper agree.
+
+
+## 11. The Narratives area — a second, scoped token set (amendment 2026-10-28)
+
+The landing page (`/`), sign-in (`/signin`), the Narratives workspace (`/narratives…`), the
+Narratives dashboard (`/admin/narratives…`) and `/account` follow a separate brief: a clean,
+functional research tool. **The scoring screens keep everything above unchanged.**
+
+- **Scope:** everything inside an element with the `nx-area` class. Tokens are `--nx-*` in
+  `app/globals.css`, exposed as Tailwind colours `nx-canvas`, `nx-surface`, `nx-text`,
+  `nx-muted`, `nx-accent`, `nx-red`, and so on. Building blocks are in
+  `components/narratives/nx-ui.tsx`.
+- **Look:** white surfaces on a cool grey canvas (`#F3F4F6`), near-black text, one blue accent
+  (`#1D4ED8`), hairline borders, 6 px corners, rectangular buttons, Inter throughout,
+  sentence-case headings.
+- **Excluded, by brief:**
+  - cream or off-white page backgrounds;
+  - gradient hero sections;
+  - italic accent words in headlines;
+  - numbered "01/02/03" section labels;
+  - monospace labels;
+  - pill-shaped buttons.
+- **Edits:**
+  - Reviewer red shows on screen as `#C40000` (6.3:1 on white). Pure `#FF0000` is only 4.0:1, so
+    it fails AA for body text. The Word export still writes exactly `FF0000`.
+  - Evidence codes show as `#6E6E6E` on screen and `8C8C8C` in Word.
+- **Motion:** none. These screens are tools. Status changes are instant, and the save status is
+  announced politely to screen readers.
+- **Focus:** a 2 px `--nx-accent` outline on every focusable element inside `.nx-area`.

@@ -3,7 +3,7 @@
  * frame — sidebar and top bar live HERE, so navigating between sections
  * animates only the content pane (see template.tsx), never the chrome.
  */
-import { requireSession } from "@/lib/auth-helpers";
+import { requireScoringAccess } from "@/lib/auth-helpers";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getCalibrationQueue } from "@/lib/db/coder-calibration";
 import { AppShell } from "@/components/app-shell";
@@ -13,7 +13,7 @@ export default async function ShellLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await requireSession();
+  const { session } = await requireScoringAccess();
   // Sidebar badges: what is waiting for this person right now.
   const [queue, calibration] = await Promise.all([
     getCoderQueue(session.user.id),

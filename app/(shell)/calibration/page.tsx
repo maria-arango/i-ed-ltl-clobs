@@ -3,7 +3,7 @@
  * on the way to a signed consensus. Server component; restricted layer only.
  */
 import Link from "next/link";
-import { requireSession } from "@/lib/auth-helpers";
+import { requireScoringAccess } from "@/lib/auth-helpers";
 import { getCalibrationQueue, type CalibrationStage } from "@/lib/db/coder-calibration";
 import {
   Table,
@@ -29,7 +29,7 @@ const STAGE_CLASS: Record<CalibrationStage, string> = {
 };
 
 export default async function CalibrationQueue() {
-  const session = await requireSession();
+  const { session } = await requireScoringAccess();
   const queue = await getCalibrationQueue(session.user.id);
   const done = queue.filter((q) => q.stage === "completed").length;
   const ready = queue.filter((q) => q.stage === "ready").length;
@@ -37,8 +37,8 @@ export default async function CalibrationQueue() {
   return (
       <div className="space-y-6">
         <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
-          <Link href="/" className="rounded-sm text-lake underline underline-offset-4">
-            Home
+          <Link href="/scoring" className="rounded-sm text-lake underline underline-offset-4">
+            Scoring
           </Link>
           <span aria-hidden> / </span>
           <span className="text-graphite">Calibration</span>

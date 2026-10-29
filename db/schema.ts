@@ -173,6 +173,8 @@ export const sessions = pgTable("sessions", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   expires: timestamp("expires", { withTimezone: true }).notNull(),
+  // Migration 0013: the absolute 12-hour lifetime counts from here.
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const verificationTokens = pgTable(
@@ -969,4 +971,210 @@ export const exportFiles = pgTable(
     content: bytea("content").notNull(),
   },
   (t) => [uniqueIndex("one_filename_per_export").on(t.exportId, t.filename)],
+);
+
+/* ------------------------------------------------------------------ */
+/* Teams (migration 0011, Amendment §49)                               */
+/* ------------------------------------------------------------------ */
+
+export const teamEnum = pgEnum("team", ["context_cards", "scoring", "narratives"]);
+
+// Membership history: leaving a team sets removed_at, never deletes. One
+// ACTIVE row per (user, team). Admins pass every team check without rows.
+export const userTeams = pgTable(
+  "user_teams",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    team: teamEnum("team").notNull(),
+    addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
+    addedBy: uuid("added_by").references(() => users.id),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: uuid("removed_by").references(() => users.id),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [
+    uniqueIndex("one_active_team_membership")
+      .on(t.userId, t.team)
+      .where(sql`${t.removedAt} IS NULL`),
+  ],
+);
+
+/* ------------------------------------------------------------------ */
+/* Narratives (migration 0012, Amendments §51–§54, ADR 0002)           */
+/* ------------------------------------------------------------------ */
+
+export const narrativeAssignmentStatusEnum = pgEnum("narrative_assignment_status", [
+  "not_started",
+  "in_progress",
+  "submitted",
+  "returned",
+]);
+export const narrativeRevisionKindEnum = pgEnum("narrative_revision_kind", [
+  "import",
+  "snapshot",
+  "submit",
+  "reopen",
+  "restore",
+  "conflict_copy",
+]);
+
+// The review template (instructions + reflection questions) is DATA,
+// versioned, and stamped on every assignment and export (CLAUDE.md §5).
+export const narrativeTemplates = pgTable("narrative_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  version: text("version").notNull().unique(),
+  content: jsonb("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// One imported AI narrative. Immutable after import (corrections live in
+// narrative_documents). lesson_id and source_text are ADMIN-ONLY: the
+// restricted role has no grant on them. When the importer removes lesson
+// IDs (Amendment §54) lesson_id is NULL and source_text is the redacted text.
+export const narratives = pgTable("narratives", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  displayCode: text("display_code").notNull().unique(),
+  label: text("label").notNull(),
+  lessonId: text("lesson_id"),
+  durationLabel: text("duration_label"),
+  sourceFormat: text("source_format").notNull(),
+  sourceText: text("source_text").notNull(),
+  sourceSha256: text("source_sha256").notNull().unique(),
+  initialDoc: jsonb("initial_doc").notNull(),
+  parserVersion: text("parser_version").notNull(),
+  episodeCount: integer("episode_count").notNull().default(0),
+  dataset: datasetEnum("dataset").notNull().default("live"),
+  importedBy: uuid("imported_by").references(() => users.id),
+  importedAt: timestamp("imported_at", { withTimezone: true }).notNull().defaultNow(),
+  voidedAt: timestamp("voided_at", { withTimezone: true }),
+  voidReason: text("void_reason"),
+});
+
+export const narrativeAssignments = pgTable(
+  "narrative_assignments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    narrativeId: uuid("narrative_id")
+      .notNull()
+      .references(() => narratives.id),
+    assigneeId: uuid("assignee_id")
+      .notNull()
+      .references(() => users.id),
+    orderNo: integer("order_no").notNull(),
+    videoUrl: text("video_url"),
+    status: narrativeAssignmentStatusEnum("status").notNull().default("not_started"),
+    statusReason: text("status_reason"),
+    templateId: uuid("template_id").references(() => narrativeTemplates.id),
+    assignedBy: uuid("assigned_by").references(() => users.id),
+    assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    submittedAt: timestamp("submitted_at", { withTimezone: true }),
+    submittedRevision: integer("submitted_revision"),
+    reopenCount: integer("reopen_count").notNull().default(0),
+    dataset: datasetEnum("dataset").notNull().default("live"),
+  },
+  (t) => [
+    // A narrative is reviewed by one person at a time; reassignment marks
+    // the old row 'returned' (never deleted) and opens a new one.
+    uniqueIndex("one_open_assignment_per_narrative")
+      .on(t.narrativeId)
+      .where(sql`${t.status} <> 'returned'`),
+    index("narrative_assignments_by_assignee").on(t.assigneeId, t.orderNo),
+  ],
+);
+
+// The live working copy. `revision` increments on every accepted save; a
+// save carrying a stale base revision is refused (ADR 0002). The 0012
+// trigger refuses any change while the assignment is submitted.
+export const narrativeDocuments = pgTable("narrative_documents", {
+  assignmentId: uuid("assignment_id")
+    .primaryKey()
+    .references(() => narrativeAssignments.id),
+  revision: integer("revision").notNull().default(0),
+  doc: jsonb("doc").notNull(),
+  answers: jsonb("answers").notNull().default({}),
+  comments: jsonb("comments").notNull().default([]),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedByClient: text("updated_by_client"),
+  dataset: datasetEnum("dataset").notNull().default("live"),
+});
+
+// APPEND-ONLY version history (UPDATE refused; DELETE only for sandbox data).
+export const narrativeRevisions = pgTable(
+  "narrative_revisions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    assignmentId: uuid("assignment_id")
+      .notNull()
+      .references(() => narrativeAssignments.id),
+    revision: integer("revision").notNull(),
+    kind: narrativeRevisionKindEnum("kind").notNull(),
+    doc: jsonb("doc").notNull(),
+    answers: jsonb("answers").notNull().default({}),
+    comments: jsonb("comments").notNull().default([]),
+    stats: jsonb("stats"),
+    createdBy: uuid("created_by").references(() => users.id),
+    clientId: text("client_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    dataset: datasetEnum("dataset").notNull().default("live"),
+  },
+  (t) => [index("narrative_revisions_by_assignment").on(t.assignmentId, t.createdAt)],
+);
+
+// Measured working time: one row per sitting, heartbeat while the editor
+// is open and in use (like section_sessions, Amendment §44).
+export const narrativeSittings = pgTable(
+  "narrative_sittings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    assignmentId: uuid("assignment_id")
+      .notNull()
+      .references(() => narrativeAssignments.id),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true }).notNull().defaultNow(),
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    device: deviceKindEnum("device").notNull().default("unknown"),
+    storagePersisted: boolean("storage_persisted"),
+    dataset: datasetEnum("dataset").notNull().default("live"),
+  },
+  (t) => [index("narrative_sittings_by_assignment").on(t.assignmentId)],
+);
+
+/* ------------------------------------------------------------------ */
+/* PIN sign-in (migration 0013, Amendment §53, ADR 0003)               */
+/* ------------------------------------------------------------------ */
+
+// ADMIN-ONLY. One personal PIN per account, stored as a salted scrypt hash.
+export const pinCredentials = pgTable("pin_credentials", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id),
+  pinHash: text("pin_hash").notNull(),
+  setAt: timestamp("set_at", { withTimezone: true }).notNull().defaultNow(),
+  setBy: uuid("set_by").references(() => users.id),
+  failedCount: integer("failed_count").notNull().default(0),
+  lockedUntil: timestamp("locked_until", { withTimezone: true }),
+  // Set at the 10th consecutive failure: only an admin PIN reset unlocks.
+  lockedAt: timestamp("locked_at", { withTimezone: true }),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+});
+
+// ADMIN-ONLY. Every PIN attempt (throttling + audit); IPs as keyed hashes.
+export const loginAttempts = pgTable(
+  "login_attempts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ipHash: text("ip_hash").notNull(),
+    userId: uuid("user_id").references(() => users.id),
+    success: boolean("success").notNull(),
+    reason: text("reason"),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("login_attempts_by_ip_time").on(t.ipHash, t.occurredAt)],
 );

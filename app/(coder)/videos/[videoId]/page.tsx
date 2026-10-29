@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth-helpers";
+import { requireScoringAccess } from "@/lib/auth-helpers";
 import { resolvedModeFor } from "@/lib/serve-mode";
 import { getRubricContent, getWorkspace } from "@/lib/db/coder";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
@@ -19,7 +19,7 @@ export default async function VideoWorkspace({
 }: {
   params: Promise<{ videoId: string }>;
 }) {
-  const session = await requireSession();
+  const { session } = await requireScoringAccess();
   const { videoId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(videoId)) notFound();
   // Phones and tablets (or accounts set to Simple) get the simple hub.
@@ -46,8 +46,8 @@ export default async function VideoWorkspace({
   return (
     <main className="mx-auto min-h-screen max-w-[1440px] space-y-6 bg-paper p-8">
       <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
-        <Link href="/" className="rounded-sm text-lake underline underline-offset-4">
-          Home
+        <Link href="/scoring" className="rounded-sm text-lake underline underline-offset-4">
+          Scoring
         </Link>
         <span aria-hidden> / </span>
         <Link href="/videos" className="rounded-sm text-lake underline underline-offset-4">

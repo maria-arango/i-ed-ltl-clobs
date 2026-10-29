@@ -6,22 +6,21 @@
  * exist. Coder-facing: uses ONLY the restricted query layer (lib/db/coder).
  */
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { isResponse, requireCoder } from "@/lib/coder-route";
 import { getWorkspace } from "@/lib/db/coder";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ videoId: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  }
+  // Session + scoring-team check (Amendment §50).
+  const who = await requireCoder();
+  if (isResponse(who)) return who;
   const { videoId } = await params;
   if (!/^[0-9a-f-]{36}$/.test(videoId)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  const workspace = await getWorkspace(session.user.id, videoId);
+  const workspace = await getWorkspace(who.coderId, videoId);
   if (!workspace) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

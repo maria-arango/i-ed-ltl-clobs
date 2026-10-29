@@ -7,10 +7,10 @@
  */
 import Link from "next/link";
 import { signOut } from "@/auth";
-import { requireSession } from "@/lib/auth-helpers";
+import { requireScoringAccess } from "@/lib/auth-helpers";
 
 export default async function SimpleLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireSession();
+  const { session } = await requireScoringAccess();
   const name = session.user.name ?? session.user.email ?? "";
   return (
     <div className="min-h-screen bg-paper">
@@ -22,7 +22,7 @@ export default async function SimpleLayout({ children }: { children: React.React
           <div className="flex items-center gap-3">
             <span className="hidden truncate text-[13px] text-smoke sm:inline">{name}</span>
             {session.user.role === "admin" && (
-              <Link href="/" className="rounded-sm text-[13px] text-lake underline underline-offset-4">
+              <Link href="/scoring" className="rounded-sm text-[13px] text-lake underline underline-offset-4">
                 Full view
               </Link>
             )}

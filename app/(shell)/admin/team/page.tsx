@@ -6,7 +6,8 @@
  */
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { listTeam } from "@/lib/db/admin";
+import { getTeamMap, listTeam } from "@/lib/db/admin";
+import { getPinStatusMap } from "@/lib/db/pin-auth";
 import { listPendingRequests } from "@/lib/db/admin-access";
 import {
   Table,
@@ -19,6 +20,8 @@ import {
 import { AddMemberForm } from "./add-member-form";
 import { MemberRowActions } from "./member-row-actions";
 import { RequestActions } from "./request-actions";
+import { PinButton } from "./pin-button";
+import { TeamPicker } from "./team-picker";
 import { UiModePicker } from "./ui-mode-picker";
 
 function RoleChip({
@@ -57,7 +60,12 @@ function RoleChip({
 
 export default async function TeamPage() {
   const session = await requireAdmin();
-  const [team, requests] = await Promise.all([listTeam(), listPendingRequests()]);
+  const [team, requests, teamMap, pins] = await Promise.all([
+    listTeam(),
+    listPendingRequests(),
+    getTeamMap(),
+    getPinStatusMap(),
+  ]);
   const visible = team.filter((m) => !m.email.endsWith("@example.invalid"));
 
   return (
@@ -151,6 +159,7 @@ export default async function TeamPage() {
               <TableHead>Person</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Teams</TableHead>
               <TableHead>Interface</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -172,6 +181,13 @@ export default async function TeamPage() {
                 </TableCell>
                 <TableCell>
                   {m.role === "admin" ? (
+                    <span className="text-[12px] text-smoke" title="Admins can open every section">all</span>
+                  ) : (
+                    <TeamPicker userId={m.id} value={teamMap[m.id] ?? []} />
+                  )}
+                </TableCell>
+                <TableCell>
+                  {m.role === "admin" ? (
                     <span className="text-[12px] text-smoke" title="Admins always get the full interface; use Preview to see the simple one">full</span>
                   ) : (
                     <UiModePicker userId={m.id} value={m.uiMode} />
@@ -181,6 +197,7 @@ export default async function TeamPage() {
                   {m.isActive ? "Active" : "Deactivated"}
                 </TableCell>
                 <TableCell className="text-right">
+                  <PinButton userId={m.id} hasPin={!!pins[m.id]?.hasPin} locked={pins[m.id]?.locked ?? null} />
                   <Link
                     href={`/admin/preview/${m.id}`}
                     className="mr-1.5 inline-block rounded-full border border-hairline-strong bg-paper px-3 py-1 text-[12px] font-medium text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98]"

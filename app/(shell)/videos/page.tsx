@@ -5,7 +5,7 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth-helpers";
+import { requireScoringAccess } from "@/lib/auth-helpers";
 import { resolvedModeFor } from "@/lib/serve-mode";
 import { getActiveLock, getCoderQueue, getMyCodingStats, getRubricContent } from "@/lib/db/coder";
 import { NumberTicker } from "@/components/ui/number-ticker";
@@ -14,7 +14,7 @@ import { MyDashboard } from "@/components/videos/my-dashboard";
 import { VideosTable } from "@/components/videos/videos-table";
 
 export default async function MyVideos() {
-  const session = await requireSession();
+  const { session } = await requireScoringAccess();
   // Phones and tablets (or accounts set to Simple) get the simple interface.
   const served = await resolvedModeFor(session.user);
   if (served.autoRedirect && served.mode === "simple") redirect("/s");
@@ -32,10 +32,10 @@ export default async function MyVideos() {
     <div className="space-y-6">
       <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
         <Link
-          href="/"
+          href="/scoring"
           className="rounded-sm text-lake underline underline-offset-4"
         >
-          Home
+          Scoring
         </Link>
         <span aria-hidden> / </span>
         <span className="text-graphite">My videos</span>

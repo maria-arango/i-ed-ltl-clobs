@@ -25,6 +25,10 @@ const eslintConfig = defineConfig([
       "app/(coder)/**",
       "app/(shell)/videos/**",
       "app/(shell)/calibration/**",
+      // Narratives workspace (Amendment §51): enumerator-facing, restricted role only.
+      "app/api/narratives/**",
+      "app/(narratives)/narratives/**",
+      "lib/narratives-route.ts",
     ],
     rules: {
       "no-restricted-imports": [

@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { requireSession } from "@/lib/auth-helpers";
+import { requireScoringAccess } from "@/lib/auth-helpers";
 import { resolvedModeFor } from "@/lib/serve-mode";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getAdminHomeStats } from "@/lib/db/admin";
@@ -22,7 +22,7 @@ function formatToday(): string {
 }
 
 export default async function Home() {
-  const session = await requireSession();
+  const { session } = await requireScoringAccess();
   // Phones and tablets (or accounts set to Simple) land on the simple interface.
   const served = await resolvedModeFor(session.user);
   if (served.autoRedirect && served.mode === "simple") redirect("/s");
