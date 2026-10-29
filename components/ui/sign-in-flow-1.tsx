@@ -318,6 +318,15 @@ export const SignInPage = ({
 		setTimeout(() => setStep("success"), reduce ? 0 : 1200);
 	};
 
+	const verifyCode = async (digits: string[]) => {
+		if (onVerifyCode && (await onVerifyCode(digits.join(""))) === false) {
+			setCode(blank());
+			codeInputRefs.current[0]?.focus();
+			return;
+		}
+		completeSignIn();
+	};
+
 	const handleCodeChange = async (index: number, value: string) => {
 		if (value.length > 1) return;
 		const newCode = [...code];
@@ -327,13 +336,32 @@ export const SignInPage = ({
 		if (value && index < LEN - 1) codeInputRefs.current[index + 1]?.focus();
 
 		if (index === LEN - 1 && value && newCode.every((d) => d.length === 1)) {
-			const joined = newCode.join("");
-			if (onVerifyCode && (await onVerifyCode(joined)) === false) {
-				setCode(blank());
-				codeInputRefs.current[0]?.focus();
-				return;
-			}
-			completeSignIn();
+			await verifyCode(newCode);
+		}
+	};
+
+	// Pasting a code (e.g. "482 913" copied from the email) fills the boxes
+	// from left to right; a whole code fills them all, whichever box has focus.
+	const handleCodePaste = async (
+		index: number,
+		e: React.ClipboardEvent<HTMLInputElement>,
+	) => {
+		e.preventDefault();
+		const digits = e.clipboardData.getData("text").replace(/\D/g, "");
+		if (!digits) return;
+		const start = digits.length >= LEN ? 0 : index;
+		const newCode = [...code];
+		for (let i = 0; i < digits.length && start + i < LEN; i++) {
+			newCode[start + i] = digits[i];
+		}
+		setCode(newCode);
+
+		const firstEmpty = newCode.findIndex((d) => !d);
+		if (firstEmpty === -1) {
+			codeInputRefs.current[LEN - 1]?.focus();
+			await verifyCode(newCode);
+		} else {
+			codeInputRefs.current[firstEmpty]?.focus();
 		}
 	};
 
@@ -482,6 +510,7 @@ export const SignInPage = ({
 											aria-label={`Digit ${i + 1}`}
 											onChange={(e) => handleCodeChange(i, e.target.value)}
 											onKeyDown={(e) => handleKeyDown(i, e)}
+											onPaste={(e) => handleCodePaste(i, e)}
 											className="mono h-12 w-10 rounded-md border border-hairline bg-sunken text-center text-[20px] text-ink focus:border-hairline-strong"
 										/>
 									))}
