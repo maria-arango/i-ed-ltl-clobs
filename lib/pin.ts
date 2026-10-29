@@ -1,9 +1,9 @@
 /**
- * Personal 4-digit PINs (Amendment §53, ADR 0003) — pure helpers so the
- * rules can be unit-tested: format, weak-PIN refusal, scrypt hashing and
- * the lockout schedule.
+ * 4-digit sign-in codes (Amendment §53, ADR 0003) — pure helpers so the
+ * rules can be unit-tested: format, scrypt hashing and the lockout
+ * schedule. Codes are assigned by the master team (Amendment §60).
  */
-import { randomBytes, randomInt, scrypt, timingSafeEqual } from "node:crypto";
+import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 
 export const PIN_LENGTH = 4;
 /** Failures in a row before the first temporary lock. */
@@ -14,26 +14,6 @@ export const FIRST_LOCK_MINUTES = 15;
 
 export function isPinFormat(pin: unknown): pin is string {
   return typeof pin === "string" && new RegExp(`^\\d{${PIN_LENGTH}}$`).test(pin);
-}
-
-/** Easily guessed PINs are refused: one repeated digit, runs, and pairs. */
-export function isWeakPin(pin: string): boolean {
-  if (!isPinFormat(pin)) return true;
-  const d = [...pin].map(Number);
-  if (d.every((x) => x === d[0])) return true; // 0000, 1111
-  const up = d.every((x, i) => i === 0 || x === (d[i - 1] + 1) % 10);
-  const down = d.every((x, i) => i === 0 || x === (d[i - 1] + 9) % 10);
-  if (up || down) return true; // 1234, 9876, 8901
-  if (pin.slice(0, 2) === pin.slice(2)) return true; // 1212, 6969
-  return false;
-}
-
-/** A random PIN that is not weak (cryptographically random). */
-export function generatePin(): string {
-  for (;;) {
-    const pin = String(randomInt(0, 10 ** PIN_LENGTH)).padStart(PIN_LENGTH, "0");
-    if (!isWeakPin(pin)) return pin;
-  }
 }
 
 const N = 16384;

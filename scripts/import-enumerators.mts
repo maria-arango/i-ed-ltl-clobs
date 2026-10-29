@@ -9,7 +9,7 @@
  *
  * Optional PIN column ("4-digit code", "PIN" or "code"): sets each person's
  * sign-in PIN (scrypt hash only, ADR 0003). Reading from stdin keeps PINs out
- * of every file; they are never printed. Weak PINs (1234, 1111…) are refused.
+ * of every file; they are never printed. Codes come from the master team (§60).
  *
  * Columns (header row anywhere in the first lines): Name, Email, Team.
  * Team values: "Rubric" → scoring, "Context Card" → context_cards,
@@ -23,7 +23,7 @@ import { readFileSync } from "node:fs";
 import { config } from "dotenv";
 import { Pool } from "pg";
 import { hardenSslMode } from "../lib/pg-url.ts";
-import { hashPin, isPinFormat, isWeakPin } from "../lib/pin.ts";
+import { hashPin, isPinFormat } from "../lib/pin.ts";
 
 config({ path: ".env.local" });
 
@@ -99,9 +99,9 @@ if (unknownTeams.length) {
   process.exit(1);
 }
 
-const badPins = people.filter((p) => p.pin && (!isPinFormat(p.pin) || isWeakPin(p.pin)));
+const badPins = people.filter((p) => p.pin && !isPinFormat(p.pin));
 if (badPins.length) {
-  console.error(`${badPins.length} row(s) have a PIN that is not 4 digits or is too easy to guess; fix the sheet first.`);
+  console.error(`${badPins.length} row(s) have a code that is not exactly 4 digits; fix the sheet first.`);
   process.exit(1);
 }
 

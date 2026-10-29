@@ -22,8 +22,7 @@
 5. About 2 minutes later, open <https://i-ed-ltl-clobs.vercel.app>. You should see the new white
    landing page with **Sign in**.
 
-Admins sign in with an email code at `/signin/email`, or press **New PIN** on your own row on the
-Team screen and use email + PIN like everyone else.
+Admins type their email on the sign-in page and receive the 6-digit code by email, as before.
 
 ## E. Turn on the nightly copy into the Harvard Drive
 
@@ -73,13 +72,18 @@ hours (.zip)** downloads what was finished since yesterday. Save it into the sam
 4. To rehearse, load the three placeholder files from `db/seed/narratives/` (invented content) and
    assign one to yourself: tick **Narratives** on your own row on the Team screen first.
 
-## Accounts and PINs later
+## Accounts and codes
 
-- **New person:** Team → **Add a teammate** (tick their team) → **Set PIN** → send them the PIN privately.
+- **Signing in:** type your email. Admins, and anyone without a 4-digit code (for example a
+  Scoring-team or Gmail coder account), then receive the 6-digit code by email, as before. People
+  with an assigned 4-digit code are asked for it.
+- **New person:** Team → **Add a teammate** (tick their team) → **Set code** → type the 4-digit
+  code the master team assigned → **Save**.
 - **Many people:** save a sheet with `Name, Email, Team, 4-digit code` as CSV in `data/` and run
   `node scripts/import-enumerators.mts data/<file>.csv` (preview), then the same with `--apply`.
-- **Forgotten PIN or a locked account:** Team → **New PIN** (or **Unlock + new PIN**).
-- Anyone can change their own PIN under **Change PIN** at the top of the page.
+- **Locked after too many wrong tries:** Team → **Unlock** on their row. Their code stays the same.
+- **A code needs correcting:** Team → **Change code** → type the right code → **Save**.
+- Enumerators cannot change their own code; the master team's codes stay the same everywhere.
 
 ## Downloads
 

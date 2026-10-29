@@ -55,3 +55,13 @@ María chose the eight Narratives enumerators' ODK codes as their initial PINs. 
 "never the ODK ID" rule above for those accounts, and she accepts the risk that a colleague who
 knows someone's ODK code can sign in as them. Recommended mitigation: each enumerator changes their
 PIN under **Change PIN** after first signing in.
+
+## Update 2026-10-29 (Amendment §60)
+
+- Codes are the master team's, shared across platforms. Admins set them on the Team screen; there
+  is no self-service change and no random generation. "Unlock" lifts a lock without changing the
+  code.
+- The weak-PIN blocklist is withdrawn, since the codes are assigned, not chosen.
+- Admins, and accounts without an assigned code, get the emailed 6-digit code automatically after
+  typing their email. Only accounts with a code see the 4-digit step. The page shows which step
+  applies to a known admin or code-less account; unknown emails always get the 4-digit step.

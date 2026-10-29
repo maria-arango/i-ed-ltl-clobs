@@ -1,31 +1,33 @@
 /**
  * PIN SIGN-IN — Amendment §53, ADR 0003.
  *
- *  - PINs: exactly 4 digits, weak PINs refused, stored as scrypt hashes.
+ *  - Codes: exactly 4 digits, set by an admin (the master team's code,
+ *    Amendment §60), stored as scrypt hashes; nobody changes their own.
  *  - Wrong PINs: 5 in a row lock the account for 15 minutes (doubling),
- *    10 in a row lock it until an admin sets a new PIN; a correct PIN is
- *    refused while locked.
+ *    10 in a row lock it until an admin unlocks it (same code); a correct
+ *    code is refused while locked.
  *  - Unknown, deactivated and PIN-less accounts answer exactly like a wrong
  *    PIN (no account enumeration).
  *  - A per-IP throttle stops guessing across many accounts.
  *  - Success creates an Auth.js database session (2 h idle) whose
  *    extensions are capped at 12 hours after it began.
+ *  - The sign-in page offers the emailed code to admins and to accounts
+ *    without a code, the 4-digit step to everyone else (unknown included).
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { loginAttempts, pinCredentials, sessions, users } from "@/db/schema";
 import {
-  generatePin,
   hashPin,
   isPinFormat,
-  isWeakPin,
   lockAfterFailure,
   SESSION_ABSOLUTE_MS,
   verifyPin,
 } from "@/lib/pin";
-import { capSessionExpiry, changeOwnPin, hashIp, setPinForUser, signInWithPin } from "@/lib/db/pin-auth";
+import { capSessionExpiry, hashIp, setPinForUser, signInMethodFor, signInWithPin, unlockPin } from "@/lib/db/pin-auth";
 import { POST as pinRoute } from "@/app/api/pin-signin/route";
+import { POST as methodRoute } from "@/app/api/signin-method/route";
 import { purgeFixture } from "./fixtures";
 
 const FIXTURE = {
@@ -34,7 +36,9 @@ const FIXTURE = {
   pairLabels: [] as string[],
 };
 const ids: Record<string, string> = {};
-let pinA = "";
+// Test codes (invented). Codes are set by an admin, as the master team does.
+const pinA = "1018";
+const WRONG = "1019";
 
 async function cleanup() {
   const us = await db.select({ id: users.id }).from(users).where(inArray(users.email, FIXTURE.emails));
@@ -59,10 +63,9 @@ beforeAll(async () => {
     const [u] = await db.insert(users).values({ email, role, isActive: active, datasetScope: "test" }).returning({ id: users.id });
     ids[key] = u.id;
   }
-  const r = await setPinForUser(ids.admin, ids.a);
+  const r = await setPinForUser(ids.admin, ids.a, pinA);
   if (!r.ok) throw new Error(r.error);
-  pinA = r.pin;
-  await setPinForUser(ids.admin, ids.off);
+  await setPinForUser(ids.admin, ids.off, "1030");
 });
 afterAll(cleanup);
 
@@ -71,12 +74,9 @@ describe("PIN rules (pure)", () => {
     expect(isPinFormat("4821")).toBe(true);
     for (const bad of ["482", "48210", "48a1", "", 4821]) expect(isPinFormat(bad)).toBe(false);
   });
-  it("refuses easily guessed PINs", () => {
-    for (const weak of ["0000", "1111", "1234", "6789", "9876", "8901", "1212", "6969"]) expect(isWeakPin(weak), weak).toBe(true);
-    for (const ok of ["4821", "7350", "2604"]) expect(isWeakPin(ok), ok).toBe(false);
-  });
-  it("generates only strong PINs", () => {
-    for (let i = 0; i < 200; i++) expect(isWeakPin(generatePin())).toBe(false);
+  it("an admin can only set a 4-digit code", async () => {
+    expect(await setPinForUser(ids.admin, ids.nopin, "123")).toMatchObject({ ok: false });
+    expect(await setPinForUser(ids.admin, ids.nopin, "12a4")).toMatchObject({ ok: false });
   });
   it("stores a salted hash, never the PIN", async () => {
     const h1 = await hashPin("4821");
@@ -108,17 +108,17 @@ describe("signing in", () => {
   });
 
   it("answers unknown, deactivated and PIN-less accounts exactly like a wrong PIN", async () => {
-    const wrong = await signInWithPin({ email: FIXTURE.emails[1], pin: pinA === "4821" ? "7350" : "4821", ip: "203.0.113.7" });
+    const wrong = await signInWithPin({ email: FIXTURE.emails[1], pin: WRONG, ip: "203.0.113.7" });
     const unknown = await signInWithPin({ email: "nobody-here@example.org", pin: pinA, ip: "203.0.113.7" });
     const off = await signInWithPin({ email: FIXTURE.emails[2], pin: pinA, ip: "203.0.113.7" });
     const nopin = await signInWithPin({ email: FIXTURE.emails[3], pin: "4821", ip: "203.0.113.7" });
     for (const r of [wrong, unknown, off, nopin]) expect(r).toEqual({ ok: false, reason: "invalid" });
-    // reset the wrong-PIN counter for the next test
-    await setPinForUser(ids.admin, ids.a).then((r) => r.ok && (pinA = r.pin));
+    // reset the wrong-code counter for the next test
+    await unlockPin(ids.admin, ids.a);
   });
 
   it("locks after 5 wrong PINs, refusing even the right one, until the lock ends", async () => {
-    const wrongPin = pinA === "4821" ? "7350" : "4821";
+    const wrongPin = WRONG;
     let last;
     for (let i = 0; i < 5; i++) last = await signInWithPin({ email: FIXTURE.emails[1], pin: wrongPin, ip: "203.0.113.8" });
     expect(last).toMatchObject({ ok: false, reason: "locked" });
@@ -129,14 +129,12 @@ describe("signing in", () => {
     expect((await signInWithPin({ email: FIXTURE.emails[1], pin: pinA, ip: "203.0.113.8" })).ok).toBe(true);
   });
 
-  it("hard-locks at 10 in a row until an admin sets a new PIN", async () => {
-    const wrongPin = pinA === "4821" ? "7350" : "4821";
+  it("hard-locks at 10 in a row until an admin unlocks it (same code)", async () => {
+    const wrongPin = WRONG;
     await db.update(pinCredentials).set({ failedCount: 9, lockedUntil: null }).where(eq(pinCredentials.userId, ids.a));
     expect(await signInWithPin({ email: FIXTURE.emails[1], pin: wrongPin, ip: "203.0.113.8" })).toMatchObject({ reason: "hard_locked" });
     expect(await signInWithPin({ email: FIXTURE.emails[1], pin: pinA, ip: "203.0.113.8" })).toMatchObject({ reason: "hard_locked" });
-    const reset = await setPinForUser(ids.admin, ids.a);
-    expect(reset.ok).toBe(true);
-    if (reset.ok) pinA = reset.pin;
+    expect(await unlockPin(ids.admin, ids.a)).toEqual({ ok: true });
     expect((await signInWithPin({ email: FIXTURE.emails[1], pin: pinA, ip: "203.0.113.8" })).ok).toBe(true);
   });
 
@@ -158,12 +156,25 @@ describe("signing in", () => {
     expect((await capSessionExpiry(token, early)).getTime()).toBe(early.getTime());
   });
 
-  it("lets a person change their own PIN only with the current one, refusing weak PINs", async () => {
-    expect(await changeOwnPin(ids.a, pinA === "4821" ? "7350" : "4821", "2604")).toMatchObject({ ok: false });
-    expect(await changeOwnPin(ids.a, pinA, "1234")).toMatchObject({ ok: false });
-    expect(await changeOwnPin(ids.a, pinA, "2604")).toEqual({ ok: true });
-    expect((await signInWithPin({ email: FIXTURE.emails[1], pin: "2604", ip: "203.0.113.8" })).ok).toBe(true);
-    pinA = "2604";
+});
+
+describe("which second step the sign-in page shows", () => {
+  it("emailed code for admins and accounts without a code; 4-digit step otherwise", async () => {
+    expect(await signInMethodFor(FIXTURE.emails[0])).toBe("email-code"); // admin
+    expect(await signInMethodFor(FIXTURE.emails[3])).toBe("email-code"); // coder, no code
+    expect(await signInMethodFor(` ${FIXTURE.emails[1].toUpperCase()} `)).toBe("pin"); // has a code
+    expect(await signInMethodFor("nobody-here@example.org")).toBe("pin"); // unknown: no hint
+    expect(await signInMethodFor(FIXTURE.emails[2])).toBe("pin"); // deactivated
+  });
+
+  it("an admin keeps the emailed code even with a code set", async () => {
+    await setPinForUser(ids.admin, ids.admin, "1001");
+    expect(await signInMethodFor(FIXTURE.emails[0])).toBe("email-code");
+  });
+
+  it("the route answers with the method only", async () => {
+    const res = await methodRoute(new Request("https://x/api/signin-method", { method: "POST", body: JSON.stringify({ email: FIXTURE.emails[1] }) }));
+    expect(await res.json()).toEqual({ method: "pin" });
   });
 });
 
@@ -178,7 +189,7 @@ describe("POST /api/pin-signin", () => {
     expect(cookie).toMatch(/HttpOnly/i);
     expect(cookie).toMatch(/Secure/);
     const bad = await pinRoute(
-      new Request("https://clobs.example/api/pin-signin", { method: "POST", body: JSON.stringify({ email: FIXTURE.emails[1], pin: "0000" }) }),
+      new Request("https://clobs.example/api/pin-signin", { method: "POST", body: JSON.stringify({ email: FIXTURE.emails[1], pin: WRONG }) }),
     );
     expect(bad.status).toBe(401);
     expect(bad.headers.get("set-cookie")).toBeNull();

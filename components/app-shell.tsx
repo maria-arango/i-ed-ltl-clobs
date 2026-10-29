@@ -2,7 +2,6 @@
  * The application frame: icon sidebar (app navigation) + a slim top bar
  * with the account and sign-out, wrapping every working screen.
  */
-import Link from "next/link";
 import { signOut } from "@/auth";
 import { AppSidebar, type SidebarBadges } from "@/components/app-sidebar";
 
@@ -45,12 +44,7 @@ export function AppShell({
             {email} · {role}
             {isChiefCoder ? " · chief coder" : ""}
           </span>
-          <Link
-            href="/account"
-            className="hidden rounded-sm text-[13px] text-lake underline underline-offset-4 sm:inline"
-          >
-            Change code
-          </Link>
+
           <form
             action={async () => {
               "use server";

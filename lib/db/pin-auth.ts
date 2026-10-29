@@ -12,12 +12,10 @@ import { db } from "@/lib/db";
 import { auditLog, loginAttempts, pinCredentials, sessions, users } from "@/db/schema";
 import {
   DUMMY_HASH,
-  generatePin,
   hashPin,
   IP_MAX_FAILURES,
   IP_WINDOW_MS,
   isPinFormat,
-  isWeakPin,
   lockAfterFailure,
   SESSION_ABSOLUTE_MS,
   SESSION_IDLE_MS,
@@ -127,11 +125,20 @@ export async function capSessionExpiry(sessionToken: string, expires: Date): Pro
   return expires > cap ? cap : expires;
 }
 
-/** Admin: give someone a new random PIN (shown once). Unlocks the account. */
-export async function setPinForUser(actorId: string, userId: string): Promise<{ ok: true; pin: string } | { ok: false; error: string }> {
+/**
+ * Admin: set a person's 4-digit code. Codes are assigned by the master team
+ * and shared across the study's platforms (Amendment §60), so the admin
+ * types the code; nobody can change their own. Setting a code also clears
+ * any lock. Stored as a scrypt hash only.
+ */
+export async function setPinForUser(
+  actorId: string,
+  userId: string,
+  pin: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!isPinFormat(pin)) return { ok: false, error: "The code must be exactly 4 digits." };
   const [u] = await db.select({ id: users.id }).from(users).where(eq(users.id, userId)).limit(1);
   if (!u) return { ok: false, error: "No such account." };
-  const pin = generatePin();
   const pinHash = await hashPin(pin);
   await db
     .insert(pinCredentials)
@@ -141,25 +148,36 @@ export async function setPinForUser(actorId: string, userId: string): Promise<{ 
       set: { pinHash, setBy: actorId, setAt: new Date(), failedCount: 0, lockedUntil: null, lockedAt: null },
     });
   await db.insert(auditLog).values({ actorId, action: "pin_set", subjectTable: "users", subjectId: userId, details: {} });
-  return { ok: true, pin };
+  return { ok: true };
 }
 
-/** Anyone signed in: change their own PIN, proving the current one. */
-export async function changeOwnPin(
-  userId: string,
-  currentPin: string,
-  newPin: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!isPinFormat(newPin)) return { ok: false, error: "The new code must be exactly 4 digits." };
-  if (isWeakPin(newPin)) return { ok: false, error: "That code is too easy to guess. Avoid repeated or consecutive digits." };
-  const [cred] = await db.select().from(pinCredentials).where(eq(pinCredentials.userId, userId)).limit(1);
-  if (!cred || !(await verifyPin(currentPin, cred.pinHash))) return { ok: false, error: "Your current code is not correct." };
-  await db
+/** Admin: lift a lock after too many wrong codes, keeping the same code. */
+export async function unlockPin(actorId: string, userId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const r = await db
     .update(pinCredentials)
-    .set({ pinHash: await hashPin(newPin), setBy: userId, setAt: new Date(), failedCount: 0, lockedUntil: null })
-    .where(eq(pinCredentials.userId, userId));
-  await db.insert(auditLog).values({ actorId: userId, action: "pin_changed", subjectTable: "users", subjectId: userId, details: {} });
+    .set({ failedCount: 0, lockedUntil: null, lockedAt: null })
+    .where(eq(pinCredentials.userId, userId))
+    .returning({ userId: pinCredentials.userId });
+  if (r.length === 0) return { ok: false, error: "This account has no code." };
+  await db.insert(auditLog).values({ actorId, action: "pin_unlocked", subjectTable: "users", subjectId: userId, details: {} });
   return { ok: true };
+}
+
+/**
+ * Which second step the sign-in page shows after the email (Amendment §60):
+ * admins, and active accounts without an assigned code, get the emailed
+ * 6-digit code; everyone else (including unknown emails) the 4-digit code
+ * step, so the page never says whether an unknown email exists.
+ */
+export async function signInMethodFor(email: string): Promise<"email-code" | "pin"> {
+  const [row] = await db
+    .select({ role: users.role, isActive: users.isActive, hasCode: pinCredentials.userId })
+    .from(users)
+    .leftJoin(pinCredentials, eq(pinCredentials.userId, users.id))
+    .where(eq(users.email, email.trim().toLowerCase()))
+    .limit(1);
+  if (!row || !row.isActive) return "pin";
+  return row.role === "admin" || !row.hasCode ? "email-code" : "pin";
 }
 
 export interface PinStatus {

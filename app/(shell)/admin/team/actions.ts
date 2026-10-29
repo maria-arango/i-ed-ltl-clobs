@@ -119,12 +119,20 @@ export async function setTeamAction(
   return result;
 }
 
-/** Give someone a new random PIN, shown once (ADR 0003). Unlocks the account. */
-export async function setPinAction(userId: string): Promise<ActionResult & { pin?: string }> {
+/** Set a person's 4-digit code (the master team's code, Amendment §60). */
+export async function setPinAction(userId: string, pin: string): Promise<ActionResult> {
   const session = await requireAdmin();
   const { setPinForUser } = await import("@/lib/db/pin-auth");
-  const result = await setPinForUser(session.user.id, userId);
-  if (!result.ok) return { ok: false, error: result.error };
-  revalidatePath("/admin/team");
-  return { ok: true, pin: result.pin };
+  const result = await setPinForUser(session.user.id, userId, String(pin).trim());
+  if (result.ok) revalidatePath("/admin/team");
+  return result;
+}
+
+/** Lift a lock after too many wrong codes; the code stays the same. */
+export async function unlockPinAction(userId: string): Promise<ActionResult> {
+  const session = await requireAdmin();
+  const { unlockPin } = await import("@/lib/db/pin-auth");
+  const result = await unlockPin(session.user.id, userId);
+  if (result.ok) revalidatePath("/admin/team");
+  return result;
 }
