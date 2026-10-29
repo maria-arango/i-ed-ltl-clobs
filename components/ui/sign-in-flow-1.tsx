@@ -257,6 +257,13 @@ export interface SignInPageProps {
 	emailError?: string | null;
 	/** Shown under the code inputs, e.g. "That code is wrong or expired." */
 	codeError?: string | null;
+	/**
+	 * "pin" (ADR 0003): the second step asks for the person's own 4-digit
+	 * code instead of an emailed one; same look, fewer boxes, masked.
+	 */
+	mode?: "email-code" | "pin";
+	/** Optional quiet link under the email form (e.g. the email-code option). */
+	footer?: React.ReactNode;
 }
 
 export const SignInPage = ({
@@ -266,11 +273,16 @@ export const SignInPage = ({
 	onContinue,
 	emailError,
 	codeError,
+	mode = "email-code",
+	footer,
 }: SignInPageProps) => {
 	const reduce = useReducedMotion();
+	const pin = mode === "pin";
+	const LEN = pin ? 4 : 6;
+	const blank = () => Array.from({ length: LEN }, () => "");
 	const [email, setEmail] = useState("");
 	const [step, setStep] = useState<"email" | "code" | "success">("email");
-	const [code, setCode] = useState(["", "", "", "", "", ""]);
+	const [code, setCode] = useState<string[]>(blank);
 	const codeInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 	const [initialCanvasVisible, setInitialCanvasVisible] = useState(true);
 	const [reverseCanvasVisible, setReverseCanvasVisible] = useState(false);
@@ -306,12 +318,12 @@ export const SignInPage = ({
 		newCode[index] = value;
 		setCode(newCode);
 
-		if (value && index < 5) codeInputRefs.current[index + 1]?.focus();
+		if (value && index < LEN - 1) codeInputRefs.current[index + 1]?.focus();
 
-		if (index === 5 && value && newCode.every((d) => d.length === 1)) {
+		if (index === LEN - 1 && value && newCode.every((d) => d.length === 1)) {
 			const joined = newCode.join("");
 			if (onVerifyCode && (await onVerifyCode(joined)) === false) {
-				setCode(["", "", "", "", "", ""]);
+				setCode(blank());
 				codeInputRefs.current[0]?.focus();
 				return;
 			}
@@ -330,7 +342,7 @@ export const SignInPage = ({
 
 	const handleBackClick = () => {
 		setStep("email");
-		setCode(["", "", "", "", "", ""]);
+		setCode(blank());
 		setReverseCanvasVisible(false);
 		setInitialCanvasVisible(true);
 	};
@@ -386,7 +398,7 @@ export const SignInPage = ({
 										LTL Classroom Observations
 									</h1>
 									<p className="text-[17px] text-graphite">
-										Sign in with your work email
+										{pin ? "Sign in with your email and your 4-digit code" : "Sign in with your work email"}
 									</p>
 								</div>
 
@@ -408,7 +420,7 @@ export const SignInPage = ({
 										type="submit"
 										className="w-full rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98]"
 									>
-										Email me a code
+										{pin ? "Continue" : "Email me a code"}
 									</button>
 									{emailError && (
 										<p role="alert" className="text-[14px] text-clay">
@@ -416,6 +428,7 @@ export const SignInPage = ({
 										</p>
 									)}
 								</form>
+								{footer}
 							</motion.div>
 						) : step === "code" ? (
 							<motion.div
@@ -435,10 +448,10 @@ export const SignInPage = ({
 											letterSpacing: "var(--clobs-tracking-display)",
 										}}
 									>
-										We sent you a code
+										{pin ? "Enter your code" : "We sent you a code"}
 									</h1>
 									<p className="text-[15px] text-graphite">
-										Enter the six digits from the email sent to{" "}
+										{pin ? "Your 4-digit code for " : "Enter the six digits from the email sent to "}
 										<span className="font-medium text-ink">{email}</span>
 									</p>
 								</div>
@@ -446,7 +459,7 @@ export const SignInPage = ({
 								<div
 									className="flex items-center justify-center gap-2"
 									role="group"
-									aria-label="Six-digit sign-in code"
+									aria-label={pin ? "Four-digit code" : "Six-digit sign-in code"}
 								>
 									{code.map((digit, i) => (
 										<input
@@ -454,7 +467,8 @@ export const SignInPage = ({
 											ref={(el) => {
 												codeInputRefs.current[i] = el;
 											}}
-											type="text"
+											type={pin ? "password" : "text"}
+											autoComplete="off"
 											inputMode="numeric"
 											pattern="[0-9]*"
 											maxLength={1}
@@ -474,12 +488,18 @@ export const SignInPage = ({
 								)}
 
 								<div className="space-y-4">
-									<button
-										type="button"
-										className="rounded-sm text-[14px] text-lake underline underline-offset-4"
-									>
-										Resend code
-									</button>
+									{pin ? (
+										<p className="text-[14px] text-graphite">
+											Forgot your code? Ask a coordinator for a new one.
+										</p>
+									) : (
+										<button
+											type="button"
+											className="rounded-sm text-[14px] text-lake underline underline-offset-4"
+										>
+											Resend code
+										</button>
+									)}
 									<div className="flex w-full gap-3">
 										<button
 											type="button"

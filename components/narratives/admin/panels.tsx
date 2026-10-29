@@ -23,12 +23,13 @@ import {
 import type { ImportPreviewRow, Reviewer, SheetRowPreview } from "@/lib/db/admin-narratives";
 import { nxButtonClass } from "../nx-ui";
 
-const input = "rounded-md border border-nx-border-strong bg-nx-surface px-2.5 py-1.5 text-[14px]";
+const input =
+  "rounded-md border border-hairline bg-paper px-3 py-2 text-[14px] text-ink placeholder:text-ash focus:border-hairline-strong";
 
 function Message({ ok, text }: { ok: boolean; text: string | null }) {
   if (!text) return null;
   return (
-    <p role={ok ? "status" : "alert"} className={`text-[14px] ${ok ? "text-nx-success" : "text-nx-danger"}`}>
+    <p role={ok ? "status" : "alert"} className={`text-[14px] ${ok ? "text-forest" : "text-clay"}`}>
       {text}
     </p>
   );
@@ -102,7 +103,7 @@ export function ImportPanel() {
   const n = rows?.filter((r) => r.importable).length ?? 0;
   return (
     <div className="space-y-3">
-      <p className="text-[14px] text-nx-muted">
+      <p className="text-[14px] text-graphite">
         Choose the pipeline&apos;s <code>NARRATIVE.md</code> files (one per lesson). Nothing is saved until you press Load.
       </p>
       <input
@@ -129,9 +130,9 @@ export function ImportPanel() {
         )}
       </div>
       {rows && (
-        <div className="overflow-x-auto rounded-md border border-nx-border">
+        <div className="elev-card overflow-x-auto rounded-xl border border-hairline bg-paper">
           <table className="w-full text-left text-[13px]">
-            <thead className="bg-nx-sunken text-nx-muted">
+            <thead className="bg-card text-smoke">
               <tr>
                 <th className="px-3 py-2 font-medium">File</th>
                 <th className="px-3 py-2 font-medium">Lesson</th>
@@ -142,21 +143,21 @@ export function ImportPanel() {
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={i} className="border-t border-nx-border align-top">
+                <tr key={i} className="border-t border-hairline align-top">
                   <td className="px-3 py-2">{r.name}</td>
                   <td className="px-3 py-2">{r.lessonId ?? "not found"}</td>
                   <td className="px-3 py-2 tabular-nums">{r.duration}</td>
                   <td className="px-3 py-2 tabular-nums">{r.episodes}</td>
                   <td className="px-3 py-2">
                     {r.importable ? (
-                      <span className="text-nx-success">New</span>
+                      <span className="text-forest">New</span>
                     ) : r.duplicateOf ? (
-                      <span className="text-nx-muted">Already loaded as {r.duplicateOf}</span>
+                      <span className="text-graphite">Already loaded as {r.duplicateOf}</span>
                     ) : (
-                      <span className="text-nx-danger">Cannot load</span>
+                      <span className="text-clay">Cannot load</span>
                     )}
                     {r.warnings.map((w, j) => (
-                      <div key={j} className="text-nx-warn">
+                      <div key={j} className="text-clay">
                         {w}
                       </div>
                     ))}
@@ -182,8 +183,8 @@ function CodeListDownload({ codes }: { codes: Array<{ displayCode: string; lesso
     "\r\n";
   const href = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
   return (
-    <div className="rounded-md border border-nx-warn bg-nx-warn-wash px-3 py-2 text-[14px]">
-      <a href={href} download={`narrative-codes_${new Date().toISOString().slice(0, 10)}.csv`} className="font-medium text-nx-accent underline">
+    <div className="rounded-xl border border-clay bg-clay-wash px-3 py-2 text-[14px] text-ink">
+      <a href={href} download={`narrative-codes_${new Date().toISOString().slice(0, 10)}.csv`} className="rounded-sm text-lake underline underline-offset-4">
         Download the code list ({codes.length})
       </a>{" "}
       and save it in the Harvard Drive now. It is shown only once and is not stored in the platform.
@@ -223,7 +224,7 @@ export function SheetPanel() {
   const ok = rows?.filter((r) => r.problems.length === 0).length ?? 0;
   return (
     <div className="space-y-3">
-      <p className="text-[14px] text-nx-muted">
+      <p className="text-[14px] text-graphite">
         A CSV with the columns <strong>order</strong>, <strong>reviewer</strong> (email or full name),{" "}
         <strong>video_id</strong> (lesson ID or N-code) and <strong>video_drive_id</strong> or{" "}
         <strong>video_link</strong>, like <code>00_assignments.csv</code>.
@@ -267,9 +268,9 @@ export function SheetPanel() {
         )}
       </div>
       {rows && (
-        <div className="overflow-x-auto rounded-md border border-nx-border">
+        <div className="elev-card overflow-x-auto rounded-xl border border-hairline bg-paper">
           <table className="w-full text-left text-[13px]">
-            <thead className="bg-nx-sunken text-nx-muted">
+            <thead className="bg-card text-smoke">
               <tr>
                 <th className="px-3 py-2 font-medium">Line</th>
                 <th className="px-3 py-2 font-medium">Order</th>
@@ -281,13 +282,13 @@ export function SheetPanel() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.line} className="border-t border-nx-border align-top">
+                <tr key={r.line} className="border-t border-hairline align-top">
                   <td className="px-3 py-2 tabular-nums">{r.line}</td>
                   <td className="px-3 py-2 tabular-nums">{r.orderNo ?? ""}</td>
                   <td className="px-3 py-2">{r.assigneeName ?? r.reviewer}</td>
                   <td className="px-3 py-2">{r.narrativeCode ?? r.lesson}</td>
                   <td className="px-3 py-2">{r.videoUrl ? "Yes" : "None"}</td>
-                  <td className="px-3 py-2 text-nx-danger">{r.problems.join("; ")}</td>
+                  <td className="px-3 py-2 text-clay">{r.problems.join("; ")}</td>
                 </tr>
               ))}
             </tbody>
@@ -309,7 +310,7 @@ export function AssignInline({ narrativeId, reviewers, nextOrder }: { narrativeI
   const [pending, start] = useTransition();
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className={nxButtonClass("secondary", "px-2.5 py-1 text-[13px]")}>
+      <button type="button" onClick={() => setOpen(true)} className={nxButtonClass("pill")}>
         Assign
       </button>
     );
@@ -341,15 +342,15 @@ export function AssignInline({ narrativeId, reviewers, nextOrder }: { narrativeI
               } else setErr(r.error ?? "Failed.");
             })
           }
-          className={nxButtonClass("primary", "px-2.5 py-1 text-[13px]")}
+          className={nxButtonClass("primary", "!px-3 !py-1.5 !text-[13px]")}
         >
           Assign
         </button>
-        <button type="button" onClick={() => setOpen(false)} className={nxButtonClass("ghost", "px-2.5 py-1 text-[13px]")}>
+        <button type="button" onClick={() => setOpen(false)} className={nxButtonClass("ghost", "text-[13px]")}>
           Cancel
         </button>
       </div>
-      {err && <p className="text-[13px] text-nx-danger">{err}</p>}
+      {err && <p className="text-[13px] text-clay">{err}</p>}
     </div>
   );
 }
@@ -389,8 +390,8 @@ export function AssignmentActions({
     <div className="space-y-5">
       {status === "submitted" && (
         <section>
-          <h3 className="text-[15px] font-semibold">Reopen for changes</h3>
-          <p className="mt-1 text-[13px] text-nx-muted">The reviewer can edit again. The submitted version stays in history.</p>
+          <h3 className="text-[15px] font-semibold text-ink">Reopen for changes</h3>
+          <p className="mt-1 text-[13px] text-smoke">The reviewer can edit again. The submitted version stays in history.</p>
           <textarea aria-label="Reason for reopening" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Why (required)" className={`${input} mt-2 w-full`} />
           <button type="button" disabled={pending || !reason.trim()} onClick={() => run(() => reopenAction(assignmentId, reason))} className={nxButtonClass("secondary", "mt-2")}>
             Reopen
@@ -399,8 +400,8 @@ export function AssignmentActions({
       )}
       {status !== "submitted" && (
         <section>
-          <h3 className="text-[15px] font-semibold">Reassign</h3>
-          <p className="mt-1 text-[13px] text-nx-muted">The new reviewer continues from the current text. This assignment is kept in the record.</p>
+          <h3 className="text-[15px] font-semibold text-ink">Reassign</h3>
+          <p className="mt-1 text-[13px] text-smoke">The new reviewer continues from the current text. This assignment is kept in the record.</p>
           <select aria-label="New reviewer" value={to} onChange={(e) => setTo(e.target.value)} className={`${input} mt-2 w-full`}>
             <option value="">Choose a reviewer…</option>
             {reviewers.filter((r) => r.id !== assigneeId).map((r) => (
@@ -416,7 +417,7 @@ export function AssignmentActions({
         </section>
       )}
       <section>
-        <h3 className="text-[15px] font-semibold">Order and video link</h3>
+        <h3 className="text-[15px] font-semibold text-ink">Order and video link</h3>
         <div className="mt-2 flex gap-2">
           <input aria-label="Order" type="number" min={1} value={order} onChange={(e) => setOrder(e.target.value)} className={`${input} w-20`} />
           <input aria-label="Video link" value={link} onChange={(e) => setLink(e.target.value)} className={`${input} min-w-0 flex-1`} />
@@ -426,8 +427,8 @@ export function AssignmentActions({
         </button>
       </section>
       <section>
-        <h3 className="text-[15px] font-semibold">Withdraw this narrative</h3>
-        <p className="mt-1 text-[13px] text-nx-muted">Hides it from everyone. Nothing is deleted.</p>
+        <h3 className="text-[15px] font-semibold text-ink">Withdraw this narrative</h3>
+        <p className="mt-1 text-[13px] text-smoke">Hides it from everyone. Nothing is deleted.</p>
         <button
           type="button"
           disabled={pending}
@@ -461,7 +462,7 @@ export function RestoreButton({ assignmentId, revisionId, disabled }: { assignme
           router.refresh();
         });
       }}
-      className={nxButtonClass("secondary", "px-2.5 py-1 text-[13px]")}
+      className={nxButtonClass("pill")}
     >
       Restore
     </button>

@@ -20,7 +20,7 @@ export function PinButton({
   if (pin) {
     return (
       <span className="mr-1.5 inline-flex items-center gap-2 rounded-md border border-hairline-strong bg-paper px-2 py-1 text-[12px]">
-        New PIN <strong className="text-[14px] tracking-[0.2em] text-ink">{pin}</strong>
+        New code <strong className="text-[14px] tracking-[0.2em] text-ink">{pin}</strong>
         <span className="text-smoke">shown once</span>
         <button type="button" onClick={() => setPin(null)} className="text-lake underline">
           Done
@@ -37,7 +37,7 @@ export function PinButton({
         type="button"
         disabled={pending}
         onClick={() => {
-          if (hasPin && !window.confirm("Give this person a new PIN? Their old PIN stops working.")) return;
+          if (hasPin && !window.confirm("Give this person a new 4-digit code? Their old code stops working.")) return;
           start(async () => {
             const r = await setPinAction(userId);
             if (r.ok && r.pin) setPin(r.pin);
@@ -46,7 +46,7 @@ export function PinButton({
         }}
         className="inline-block rounded-full border border-hairline-strong bg-paper px-3 py-1 text-[12px] font-medium text-ink hover:bg-card"
       >
-        {hasPin ? (locked ? "Unlock + new PIN" : "New PIN") : "Set PIN"}
+        {hasPin ? (locked ? "Unlock + new code" : "New code") : "Set code"}
       </button>
     </span>
   );

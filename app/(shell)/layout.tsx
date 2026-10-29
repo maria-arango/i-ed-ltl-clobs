@@ -13,7 +13,7 @@ export default async function ShellLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session } = await requireScoringAccess();
+  const { session, teams } = await requireScoringAccess();
   // Sidebar badges: what is waiting for this person right now.
   const [queue, calibration] = await Promise.all([
     getCoderQueue(session.user.id),
@@ -26,7 +26,9 @@ export default async function ShellLayout({
   return (
     <AppShell
       email={session.user.email}
+      name={session.user.name}
       role={session.user.role}
+      showMyNarratives={teams.includes("narratives")}
       isChiefCoder={session.user.isChiefCoder}
       showCalibration={session.user.datasetScope !== "training"}
       badges={badges}

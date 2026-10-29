@@ -2,33 +2,55 @@
  * The application frame: icon sidebar (app navigation) + a slim top bar
  * with the account and sign-out, wrapping every working screen.
  */
+import Link from "next/link";
 import { signOut } from "@/auth";
 import { AppSidebar, type SidebarBadges } from "@/components/app-sidebar";
 
 export function AppShell({
   email,
+  name,
   role,
   isChiefCoder,
   showCalibration = true,
+  showScoring = true,
+  showMyNarratives = false,
   badges,
   children,
 }: {
   email: string | null | undefined;
+  /** Shown first, so on a lent device it is clear whose account is open. */
+  name?: string | null;
   role: string;
   isChiefCoder: boolean;
   showCalibration?: boolean;
+  showScoring?: boolean;
+  showMyNarratives?: boolean;
   badges?: SidebarBadges;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-paper md:flex-row">
-      <AppSidebar isAdmin={role === "admin"} showCalibration={showCalibration} badges={badges} />
+      <AppSidebar
+        isAdmin={role === "admin"}
+        showCalibration={showCalibration}
+        showScoring={showScoring}
+        showMyNarratives={showMyNarratives}
+        badges={badges}
+      />
       <div className="min-w-0 flex-1">
         <header className="flex items-center justify-end gap-4 border-b border-hairline px-8 py-3">
           <span className="hidden text-[13px] text-smoke sm:inline">
+            {name ? <span className="font-medium text-ink">{name}</span> : null}
+            {name ? " · " : ""}
             {email} · {role}
             {isChiefCoder ? " · chief coder" : ""}
           </span>
+          <Link
+            href="/account"
+            className="hidden rounded-sm text-[13px] text-lake underline underline-offset-4 sm:inline"
+          >
+            Change code
+          </Link>
           <form
             action={async () => {
               "use server";

@@ -1,21 +1,26 @@
 /**
- * The Narratives area (Amendment §51): the enumerator workspace
- * (/narratives) and the admin dashboard (/admin/narratives) share this
- * plain frame. Each page enforces its own access rule server-side.
+ * The Narratives screens (Amendment §51) live in the same application frame
+ * as every other screen: the cream sidebar shell, the same top bar, the same
+ * design system. Each page enforces its own access rule server-side.
  */
 import { requireSessionWithTeams } from "@/lib/auth-helpers";
-import { NxTopbar } from "@/components/narratives/nx-topbar";
+import { canAccessScoring } from "@/lib/teams";
+import { AppShell } from "@/components/app-shell";
 
 export default async function NarrativesAreaLayout({ children }: { children: React.ReactNode }) {
   const { session, teams } = await requireSessionWithTeams();
+  const isAdmin = session.user.role === "admin";
   return (
-    <div className="nx-area min-h-screen">
-      <NxTopbar
-        displayName={session.user.name || session.user.email || "Unknown"}
-        role={session.user.role}
-        teams={teams}
-      />
+    <AppShell
+      email={session.user.email}
+      name={session.user.name}
+      role={session.user.role}
+      isChiefCoder={session.user.isChiefCoder}
+      showCalibration={session.user.datasetScope !== "training"}
+      showScoring={isAdmin || (teams.length > 0 && canAccessScoring(session.user.role, teams))}
+      showMyNarratives={teams.includes("narratives")}
+    >
       {children}
-    </div>
+    </AppShell>
   );
 }

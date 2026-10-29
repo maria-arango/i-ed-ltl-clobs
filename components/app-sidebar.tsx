@@ -77,19 +77,30 @@ function Badge({ count }: { count: number }) {
 export function AppSidebar({
   isAdmin,
   showCalibration = true,
+  showScoring = true,
+  showMyNarratives = false,
   badges,
 }: {
   isAdmin: boolean;
   /** Trainees code only — no calibration surface (Amendment B §9, §29). */
   showCalibration?: boolean;
+  /** The Scoring group (Amendment §50): admins and the Scoring team. */
+  showScoring?: boolean;
+  /** "Narratives" for members of the Narratives team (Amendment §51). */
+  showMyNarratives?: boolean;
   badges?: SidebarBadges;
 }) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
   const visible = (i: NavItem) =>
     (isAdmin || !i.adminOnly) && (showCalibration || !i.hideForTrainee);
-  const scoring = scoringItems.filter(visible);
-  const top = adminTopItems.filter(visible);
+  const scoring = showScoring ? scoringItems.filter(visible) : [];
+  const top = [
+    ...(showMyNarratives
+      ? [{ href: "/narratives", label: isAdmin ? "My narratives" : "Narratives", icon: FileText, exact: false }]
+      : []),
+    ...adminTopItems.filter(visible),
+  ];
   const badgeFor = (href: string) =>
     href === "/videos"
       ? (badges?.newVideos ?? 0)
@@ -135,7 +146,7 @@ export function AppSidebar({
       className="flex shrink-0 flex-row gap-1 border-b border-hairline bg-card px-3 py-2 md:min-h-screen md:w-56 md:flex-col md:border-b-0 md:border-r md:px-3 md:py-6"
     >
       <Link
-        href="/scoring"
+        href="/"
         className="mb-0 hidden rounded-sm px-3 pb-6 font-serif text-[19px] leading-[1.3] text-ink md:block"
       >
         LTL Classroom
@@ -147,15 +158,19 @@ export function AppSidebar({
         highlightClassName="rounded-md bg-sunken"
       >
         {top.map(renderItem)}
-        <p
-          id="nav-scoring-heading"
-          className="hidden px-3 pb-1 pt-4 text-[12px] font-semibold text-smoke md:block"
-        >
-          Scoring
-        </p>
-        <div role="group" aria-labelledby="nav-scoring-heading" className="contents">
-          {scoring.map(renderItem)}
-        </div>
+        {scoring.length > 0 && (
+          <>
+            <p
+              id="nav-scoring-heading"
+              className="hidden px-3 pb-1 pt-4 text-[12px] font-semibold text-smoke md:block"
+            >
+              Scoring
+            </p>
+            <div role="group" aria-labelledby="nav-scoring-heading" className="contents">
+              {scoring.map(renderItem)}
+            </div>
+          </>
+        )}
       </GlideMenu>
       <div className="hidden flex-1 md:block" />
       {isAdmin && (

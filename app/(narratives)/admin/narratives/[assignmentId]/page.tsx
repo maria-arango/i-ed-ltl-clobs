@@ -10,7 +10,7 @@ import { getAdminNarrative, listReviewers, listRevisions } from "@/lib/db/admin-
 import { anchoredCommentIds, docStats } from "@/lib/narratives/doc";
 import { answerFields } from "@/lib/narratives/template";
 import { DocView } from "@/components/narratives/doc-view";
-import { NxCard, NxStatus } from "@/components/narratives/nx-ui";
+import { NxCard, NxStatus, nxButtonClass } from "@/components/narratives/nx-ui";
 import { AssignmentActions, RestoreButton } from "@/components/narratives/admin/panels";
 
 export const dynamic = "force-dynamic";
@@ -42,39 +42,43 @@ export default async function AdminNarrative({ params }: Params) {
   const fields = v.template ? answerFields(v.template) : [];
 
   return (
-    <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6">
-      <nav aria-label="Breadcrumb" className="text-[14px]">
-        <Link href="/admin/narratives" className="font-medium text-nx-accent hover:underline">
-          ← Narratives
+    <div className="space-y-6">
+      <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
+        <Link href="/admin/narratives" className="rounded-sm text-lake underline underline-offset-4">
+          Narratives
         </Link>
+        <span aria-hidden> / </span>
+        <span className="text-graphite">{v.displayCode}</span>
       </nav>
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        <h1 className="text-[22px] font-semibold">{v.displayCode}</h1>
-        <span className="text-[15px] text-nx-muted">
-          {v.lessonId ?? "lesson ID removed"} · {v.durationLabel} · {v.assigneeName} · order {v.orderNo}
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <h1
+          className="mono font-medium text-ink"
+          style={{ fontSize: "var(--clobs-text-heading)", lineHeight: "var(--clobs-leading-heading)" }}
+        >
+          {v.displayCode}
+        </h1>
+        <span className="text-[14px] text-smoke">
+          {v.durationLabel} · {v.assigneeName} · order {v.orderNo}
         </span>
         <NxStatus status={v.status} />
-        <a
-          href={`/api/admin/narratives/${v.assignmentId}/docx`}
-          className="ml-auto rounded-md bg-nx-accent px-3.5 py-2 text-[14px] font-medium text-white hover:bg-nx-accent-hover"
-        >
+        <a href={`/api/admin/narratives/${v.assignmentId}/docx`} className={nxButtonClass("primary", "ml-auto")}>
           Download Word
         </a>
-      </div>
+      </header>
       {v.status === "returned" && (
-        <p className="mt-2 text-[14px] text-nx-muted">This assignment was moved: {v.statusReason}</p>
+        <p className="mt-2 text-[14px] text-graphite">This assignment was moved: {v.statusReason}</p>
       )}
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,816px)_1fr]">
-        <div className="rounded-sm border border-nx-border bg-nx-surface px-6 py-8 sm:px-12">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="rounded-xl border border-hairline bg-paper px-6 py-8 sm:px-12">
           {fields.length > 0 && (
             <section aria-label="Answers" className="mb-8 space-y-4">
               {fields.map((f) => (
                 <div key={f.key}>
-                  {f.title && <h2 className="text-[16px] font-bold">{f.title}</h2>}
-                  <p className="text-[13px] text-nx-muted">{f.prompt.slice(0, 160)}{f.prompt.length > 160 ? "…" : ""}</p>
-                  <p className="mt-1 whitespace-pre-wrap text-[15px]">
-                    {(v.answers as Record<string, string | undefined>)[f.key]?.trim() || <span className="text-nx-muted">No answer</span>}
+                  {f.title && <h2 className="text-[16px] font-semibold text-ink">{f.title}</h2>}
+                  <p className="text-[13px] text-smoke">{f.prompt.slice(0, 160)}{f.prompt.length > 160 ? "…" : ""}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-[15px] text-ink">
+                    {(v.answers as Record<string, string | undefined>)[f.key]?.trim() || <span className="text-graphite">No answer</span>}
                   </p>
                 </div>
               ))}
@@ -84,26 +88,26 @@ export default async function AdminNarrative({ params }: Params) {
         </div>
 
         <div className="space-y-6">
-          <NxCard className="p-4 text-[14px]">
+          <NxCard className="p-5 text-[14px]">
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-              <dt className="text-nx-muted">Time worked</dt>
+              <dt className="text-smoke">Time worked</dt>
               <dd className="tabular-nums">{v.activeMinutes} min</dd>
-              <dt className="text-nx-muted">First opened</dt>
+              <dt className="text-smoke">First opened</dt>
               <dd>{fmt(v.firstStart)}</dd>
-              <dt className="text-nx-muted">Last saved</dt>
+              <dt className="text-smoke">Last saved</dt>
               <dd>{fmt(v.updatedAt)}</dd>
-              <dt className="text-nx-muted">Submitted</dt>
+              <dt className="text-smoke">Submitted</dt>
               <dd>{fmt(v.submittedAt)}</dd>
-              <dt className="text-nx-muted">Red characters</dt>
+              <dt className="text-smoke">Red characters</dt>
               <dd className="tabular-nums">{stats.redChars}</dd>
-              <dt className="text-nx-muted">Struck characters</dt>
+              <dt className="text-smoke">Struck characters</dt>
               <dd className="tabular-nums">{stats.struckChars}</dd>
-              <dt className="text-nx-muted">Original words deleted</dt>
-              <dd className={`tabular-nums ${stats.originalWordsRemoved ? "font-semibold text-nx-warn" : ""}`}>{stats.originalWordsRemoved}</dd>
-              <dt className="text-nx-muted">Video</dt>
+              <dt className="text-smoke">Original words deleted</dt>
+              <dd className={`tabular-nums ${stats.originalWordsRemoved ? "font-semibold text-clay" : ""}`}>{stats.originalWordsRemoved}</dd>
+              <dt className="text-smoke">Video</dt>
               <dd className="truncate">
                 {v.videoUrl ? (
-                  <a href={v.videoUrl} target="_blank" rel="noopener noreferrer" className="text-nx-accent hover:underline">
+                  <a href={v.videoUrl} target="_blank" rel="noopener noreferrer" className="text-lake hover:underline">
                     Open
                   </a>
                 ) : (
@@ -113,19 +117,19 @@ export default async function AdminNarrative({ params }: Params) {
             </dl>
           </NxCard>
 
-          <NxCard className="p-4">
-            <h2 className="text-[16px] font-semibold">Comments ({v.comments.length})</h2>
+          <NxCard className="p-5">
+            <h2 className="text-[16px] font-semibold text-ink">Comments ({v.comments.length})</h2>
             {v.comments.length === 0 ? (
-              <p className="mt-2 text-[14px] text-nx-muted">None.</p>
+              <p className="mt-2 text-[14px] text-graphite">None.</p>
             ) : (
               <ol className="mt-2 space-y-3 text-[14px]">
                 {v.comments.map((c) => (
                   <li key={c.id}>
-                    <div className="flex gap-2 text-[13px] text-nx-muted">
-                      <span className="font-semibold text-nx-accent">{numbers.get(c.id)}</span>
+                    <div className="flex gap-2 text-[13px] text-graphite">
+                      <span className="font-semibold text-lake">{numbers.get(c.id)}</span>
                       <span>{c.authorName}</span>
                       <span>{fmt(new Date(c.updatedAt))}</span>
-                      {!anchored.has(c.id) && <span className="text-nx-warn">text removed</span>}
+                      {!anchored.has(c.id) && <span className="text-clay">text removed</span>}
                     </div>
                     <p className="whitespace-pre-wrap">{c.body}</p>
                   </li>
@@ -135,7 +139,7 @@ export default async function AdminNarrative({ params }: Params) {
           </NxCard>
 
           {v.status !== "returned" && (
-            <NxCard className="p-4">
+            <NxCard className="p-5">
               <AssignmentActions
                 assignmentId={v.assignmentId}
                 narrativeId={v.narrativeId}
@@ -148,11 +152,11 @@ export default async function AdminNarrative({ params }: Params) {
             </NxCard>
           )}
 
-          <NxCard className="overflow-x-auto p-4">
-            <h2 className="text-[16px] font-semibold">Version history</h2>
-            <p className="mt-1 text-[13px] text-nx-muted">Every version is kept. Restoring makes a new version; nothing is overwritten.</p>
+          <NxCard className="overflow-x-auto p-5">
+            <h2 className="text-[16px] font-semibold text-ink">Version history</h2>
+            <p className="mt-1 text-[13px] text-smoke">Every version is kept. Restoring makes a new version; nothing is overwritten.</p>
             <table className="mt-3 w-full text-left text-[13px]">
-              <thead className="text-nx-muted">
+              <thead className="text-graphite">
                 <tr>
                   <th className="py-1.5 pr-3 font-medium">When</th>
                   <th className="py-1.5 pr-3 font-medium">What</th>
@@ -162,11 +166,11 @@ export default async function AdminNarrative({ params }: Params) {
               </thead>
               <tbody>
                 {revisions.map((r) => (
-                  <tr key={r.id} className="border-t border-nx-border">
+                  <tr key={r.id} className="border-t border-hairline">
                     <td className="py-1.5 pr-3">{fmt(r.createdAt)}</td>
                     <td className="py-1.5 pr-3">
                       {KIND[r.kind] ?? r.kind}
-                      {r.createdByName ? <span className="text-nx-muted"> · {r.createdByName}</span> : null}
+                      {r.createdByName ? <span className="text-graphite"> · {r.createdByName}</span> : null}
                     </td>
                     <td className="py-1.5 pr-3 tabular-nums">{typeof r.stats?.totalChars === "number" ? `${r.stats.totalChars} ch` : ""}</td>
                     <td className="py-1.5 text-right">
@@ -181,6 +185,6 @@ export default async function AdminNarrative({ params }: Params) {
           </NxCard>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

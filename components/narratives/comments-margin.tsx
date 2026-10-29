@@ -56,16 +56,16 @@ function CommentCard({
       role="group"
       aria-label={`Comment by ${c.authorName || "you"}`}
       onClick={() => onActivate(c.id)}
-      className={`rounded-md border bg-nx-surface p-3 text-[14px] shadow-sm ${
-        active ? "border-nx-accent ring-1 ring-nx-accent" : "border-nx-border"
+      className={`elev-card rounded-xl border bg-paper p-3 text-[14px] ${
+        active ? "border-bark" : "border-hairline"
       }`}
     >
       <div className="flex items-baseline justify-between gap-2">
-        <span className="font-semibold text-nx-text">{c.isDraft ? "New comment" : c.authorName}</span>
-        {!c.isDraft && <span className="text-[12px] text-nx-muted">{fmt(c.updatedAt)}</span>}
+        <span className="font-semibold text-ink">{c.isDraft ? "New comment" : c.authorName}</span>
+        {!c.isDraft && <span className="text-[12px] text-smoke">{fmt(c.updatedAt)}</span>}
       </div>
       {c.top === null && !c.isDraft && (
-        <p className="mt-1 text-[12px] text-nx-warn">The text this comment was on has been removed.</p>
+        <p className="mt-1 text-[12px] text-clay">The text this comment was on has been removed.</p>
       )}
       {editing && canEdit && mine ? (
         <div className="mt-2">
@@ -85,14 +85,14 @@ function CommentCard({
                 else setEditing(false);
               }
             }}
-            className="w-full resize-y rounded border border-nx-border-strong px-2 py-1.5 text-[14px] text-nx-text"
+            className="w-full resize-y rounded-md border border-hairline bg-paper px-2.5 py-2 text-[14px] text-ink focus:border-hairline-strong"
           />
           <div className="mt-2 flex gap-2">
             <button
               type="button"
               onClick={save}
               disabled={!text.trim()}
-              className="rounded-md bg-nx-accent px-3 py-1 text-[13px] font-medium text-white hover:bg-nx-accent-hover disabled:opacity-50"
+              className="rounded-md bg-bark px-3 py-1.5 text-[13px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ash"
             >
               {c.isDraft ? "Comment" : "Save"}
             </button>
@@ -106,7 +106,7 @@ function CommentCard({
                   setEditing(false);
                 }
               }}
-              className="rounded-md border border-nx-border-strong px-3 py-1 text-[13px] font-medium hover:bg-nx-sunken"
+              className="rounded-md border border-hairline-strong bg-paper px-3 py-1.5 text-[13px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card"
             >
               Cancel
             </button>
@@ -114,13 +114,13 @@ function CommentCard({
         </div>
       ) : (
         <>
-          <p className="mt-1 whitespace-pre-wrap text-nx-text">{c.body}</p>
+          <p className="mt-1 whitespace-pre-wrap text-ink">{c.body}</p>
           {canEdit && mine && (
             <div className="mt-2 flex gap-3 text-[13px]">
-              <button type="button" onClick={() => setEditing(true)} className="font-medium text-nx-accent hover:underline">
+              <button type="button" onClick={() => setEditing(true)} className="rounded-sm text-lake underline underline-offset-4">
                 Edit
               </button>
-              <button type="button" onClick={() => onDelete(c.id)} className="font-medium text-nx-danger hover:underline">
+              <button type="button" onClick={() => onDelete(c.id)} className="rounded-sm text-clay underline underline-offset-4">
                 Delete
               </button>
             </div>
@@ -192,13 +192,13 @@ export function CommentsMargin(props: CommentsProps) {
 export function CommentsList(props: CommentsProps) {
   const ordered = [...props.comments].sort((a, b) => (a.top ?? Infinity) - (b.top ?? Infinity));
   if (ordered.length === 0) {
-    return <p className="text-[14px] text-nx-muted">No comments yet. Select text and choose Comment.</p>;
+    return <p className="text-[14px] text-graphite">No comments yet. Select text and choose Comment.</p>;
   }
   return (
     <ul className="space-y-2">
       {ordered.map((c) => (
         <li key={c.id}>
-          <p className="mb-1 line-clamp-2 text-[12px] text-nx-muted">“{c.excerpt}”</p>
+          <p className="mb-1 line-clamp-2 text-[12px] text-graphite">“{c.excerpt}”</p>
           <CommentCard c={c} active={props.activeId === c.id} {...props} />
         </li>
       ))}

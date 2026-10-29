@@ -632,30 +632,17 @@ One deliberate addition they could not supply: **the ordinal score ramp**, taken
 already in the printed observation manual so that screen and paper agree.
 
 
-## 11. The Narratives area — a second, scoped token set (amendment 2026-10-28)
+## 11. The Narratives screens use this design system (amendment 2026-10-29)
 
-The landing page (`/`), sign-in (`/signin`), the Narratives workspace (`/narratives…`), the
-Narratives dashboard (`/admin/narratives…`) and `/account` follow a separate brief: a clean,
-functional research tool. **The scoring screens keep everything above unchanged.**
+The Narratives screens (the enumerator list and editor, the admin dashboard, `/account`) and the
+sign-in follow **this design system, unchanged**. That means the same shell and sidebar, cream
+paper surfaces, Newsreader/Inter/JetBrains Mono, bark primary buttons, pill row actions, elevated
+cards, the shared table and status pills, and the original Kimanya sign-in page as the first
+screen. A separate grey/blue token set introduced on 2026-10-28 was removed at María's instruction.
 
-- **Scope:** everything inside an element with the `nx-area` class. Tokens are `--nx-*` in
-  `app/globals.css`, exposed as Tailwind colours `nx-canvas`, `nx-surface`, `nx-text`,
-  `nx-muted`, `nx-accent`, `nx-red`, and so on. Building blocks are in
-  `components/narratives/nx-ui.tsx`.
-- **Look:** white surfaces on a cool grey canvas (`#F3F4F6`), near-black text, one blue accent
-  (`#1D4ED8`), hairline borders, 6 px corners, rectangular buttons, Inter throughout,
-  sentence-case headings.
-- **Excluded, by brief:**
-  - cream or off-white page backgrounds;
-  - gradient hero sections;
-  - italic accent words in headlines;
-  - numbered "01/02/03" section labels;
-  - monospace labels;
-  - pill-shaped buttons.
-- **Edits:**
-  - Reviewer red shows on screen as `#C40000` (6.3:1 on white). Pure `#FF0000` is only 4.0:1, so
-    it fails AA for body text. The Word export still writes exactly `FF0000`.
-  - Evidence codes show as `#6E6E6E` on screen and `8C8C8C` in Word.
-- **Motion:** none. These screens are tools. Status changes are instant, and the save status is
-  announced politely to screen readers.
-- **Focus:** a 2 px `--nx-accent` outline on every focusable element inside `.nx-area`.
+Two additions, both for the review document:
+
+- `--clobs-edit-red` (`#C40000`): reviewer additions on screen (AA on paper). The Word export
+  writes exactly `FF0000`, as in the master team's documents.
+- Comment highlights use `--clobs-marker-yellow`; the active comment uses `--clobs-score-1` with a
+  bark underline. Evidence codes are `--clobs-smoke` at 0.72 em.

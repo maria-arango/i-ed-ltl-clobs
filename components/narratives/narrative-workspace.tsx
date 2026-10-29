@@ -29,7 +29,8 @@ import {
   COMMENT_SHORTCUT_EVENT,
 } from "./editor-extensions";
 import { CommentsList, CommentsMargin, type CommentView } from "./comments-margin";
-import { NxStatus } from "./nx-ui";
+import GlideMenu from "@/components/primitives/GlideMenu";
+import { NxStatus, nxButtonClass } from "./nx-ui";
 import type { NarrativeAnswers, NarrativeComment, PMNode } from "@/lib/narratives/doc";
 import { answerFields, type NarrativeTemplate } from "@/lib/narratives/template";
 import {
@@ -104,9 +105,10 @@ function ToolbarButton({
       disabled={disabled}
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={`flex h-9 min-w-9 items-center justify-center gap-1.5 rounded px-2 text-[14px] font-medium ${
-        pressed ? "bg-nx-accent-wash text-nx-accent" : "text-nx-text hover:bg-nx-sunken"
-      } disabled:opacity-40`}
+      data-menu-row
+      className={`relative z-10 flex h-8 min-w-8 items-center justify-center gap-1.5 rounded-sm px-2 text-[13px] font-medium ${
+        pressed ? "bg-lake-wash text-ink" : "text-graphite disabled:cursor-not-allowed disabled:text-ash"
+      }`}
     >
       {children}
     </button>
@@ -130,18 +132,29 @@ function Dialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div
+      className="overlay-fade fixed inset-0 z-50 flex items-center justify-center p-6"
+      style={{ background: "rgba(43, 38, 31, 0.45)" }}
+    >
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="nx-dialog-title"
-        className="w-full max-w-[520px] rounded-md border border-nx-border bg-nx-surface p-5 shadow-lg"
+        aria-labelledby="narrative-dialog-title"
+        className="moment-enter elev-card w-full max-w-md rounded-2xl border border-hairline bg-paper p-8"
       >
-        <h2 id="nx-dialog-title" className="text-[18px] font-semibold">
+        <h2
+          id="narrative-dialog-title"
+          className="font-sans font-medium text-ink"
+          style={{
+            fontSize: "var(--clobs-text-heading-sm)",
+            lineHeight: "var(--clobs-leading-heading-sm)",
+            letterSpacing: "var(--clobs-tracking-heading-sm)",
+          }}
+        >
           {title}
         </h2>
-        <div className="mt-3 text-[15px] text-nx-text">{children}</div>
+        <div className="mt-3 text-[15px] text-graphite">{children}</div>
       </div>
     </div>
   );
@@ -415,7 +428,8 @@ export function NarrativeWorkspace({
   /* ---- layout: wide margin vs narrow panel, comment positions ------- */
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 1180px)");
+    // Margin comments need room beside the sidebar and the page.
+    const mq = window.matchMedia("(min-width: 1400px)");
     const set = () => setWide(mq.matches);
     set();
     mq.addEventListener("change", set);
@@ -631,12 +645,12 @@ export function NarrativeWorkspace({
           : STATUS_TEXT[status];
   const statusTone =
     readOnly || status === "saved"
-      ? "text-nx-muted"
+      ? "text-smoke"
       : status === "saving"
-        ? "text-nx-muted"
+        ? "text-smoke"
         : status === "offline" || status === "error"
-          ? "text-nx-warn"
-          : "text-nx-danger";
+          ? "text-clay"
+          : "text-clay";
 
   // Status tag: submitted wins; a save accepted in this session means in progress.
   const headerStatus =
@@ -659,228 +673,235 @@ export function NarrativeWorkspace({
     onDelete: deleteComment,
   };
 
+  const headingStyle = {
+    fontSize: "var(--clobs-text-heading)",
+    lineHeight: "var(--clobs-leading-heading)",
+    letterSpacing: "var(--clobs-tracking-heading)",
+  };
+  const note = "rounded-xl border px-4 py-3 text-[14px]";
+
   return (
-    <div>
-      {/* Header strip: back, title, video, save status, submit */}
-      <div className="border-b border-nx-border bg-nx-surface">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
-          <Link href="/narratives" className="text-[14px] font-medium text-nx-accent hover:underline">
-            ← Narratives
-          </Link>
-          <h1 className="text-[17px] font-semibold">
-            {narrative.label}
-            {narrative.durationLabel && (
-              <span className="ml-2 text-[14px] font-normal text-nx-muted">{narrative.durationLabel}</span>
-            )}
-          </h1>
-          <NxStatus status={headerStatus} />
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            <span role="status" aria-live="polite" className={`text-[14px] ${statusTone}`}>
-              {statusText}
-            </span>
-            {narrative.videoUrl ? (
-              <a
-                href={narrative.videoUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-md border border-nx-border-strong bg-nx-surface px-3 py-1.5 text-[14px] font-medium hover:bg-nx-sunken"
-              >
-                Open video in a new tab
-              </a>
-            ) : (
-              <span className="text-[14px] text-nx-muted">No video link yet</span>
-            )}
-            {!readOnly && (
-              <button
-                type="button"
-                disabled={!ready || !!conflict}
-                onClick={() => {
-                  setSubmitError(null);
-                  setSubmitOpen(true);
-                }}
-                className="rounded-md bg-nx-accent px-3.5 py-1.5 text-[14px] font-medium text-white hover:bg-nx-accent-hover disabled:opacity-50"
-              >
-                Submit
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="space-y-5">
+      <nav aria-label="Breadcrumb" className="text-[14px] text-smoke">
+        <Link href="/narratives" className="rounded-sm text-lake underline underline-offset-4">
+          Narratives
+        </Link>
+        <span aria-hidden> / </span>
+        <span className="text-graphite">{narrative.label}</span>
+      </nav>
 
-      {/* Banners */}
-      <div className="mx-auto max-w-[1400px] space-y-2 px-4 pt-3 sm:px-6">
-        {justSubmitted && (
-          <div role="status" className="rounded-md border border-nx-success bg-nx-success-wash px-4 py-3 text-[14px]">
-            Submitted. Thank you. It is now read-only; the coordinators can reopen it if anything needs changing.{" "}
-            <Link href="/narratives" className="font-medium text-nx-accent underline">
-              Back to your list
-            </Link>
-          </div>
-        )}
-        {status === "signed_out" && (
-          <div role="alert" className="rounded-md border border-nx-danger bg-nx-danger-wash px-4 py-3 text-[14px]">
-            You were signed out. <strong>Your work is saved on this device.</strong>{" "}
-            <a href="/signin" target="_blank" rel="noopener" className="font-medium text-nx-accent underline">
-              Sign in again
-            </a>{" "}
-            (opens a new tab), then come back here: saving resumes on its own.
-          </div>
-        )}
-        {readOnly === "other_tab" && (
-          <div className="flex flex-wrap items-center gap-3 rounded-md border border-nx-border-strong bg-nx-surface px-4 py-3 text-[14px]">
-            <span>This narrative is open in another tab or window. To avoid two versions, you can only read it here.</span>
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <h1 className="font-sans font-medium text-ink" style={headingStyle}>
+          {narrative.label}
+        </h1>
+        {narrative.durationLabel && <span className="mono text-[14px] text-smoke">{narrative.durationLabel}</span>}
+        <NxStatus status={headerStatus} />
+        <div className="ml-auto flex flex-wrap items-center gap-3">
+          <span role="status" aria-live="polite" className={`text-[13px] ${statusTone}`}>
+            {statusText}
+          </span>
+          {narrative.videoUrl ? (
+            <a href={narrative.videoUrl} target="_blank" rel="noopener noreferrer" className={nxButtonClass("secondary")}>
+              Open video in a new tab
+            </a>
+          ) : (
+            <span className="text-[13px] text-smoke">No video link yet</span>
+          )}
+          {!readOnly && (
             <button
               type="button"
-              onClick={() => void takeOver()}
-              className="rounded-md border border-nx-border-strong px-3 py-1 font-medium hover:bg-nx-sunken"
-            >
-              Edit here instead
-            </button>
-          </div>
-        )}
-        {deletedNote !== null && editable && (
-          <div role="status" className="flex flex-wrap items-center gap-3 rounded-md border border-nx-warn bg-nx-warn-wash px-4 py-3 text-[14px]">
-            <span>
-              You deleted {deletedNote} characters of the original AI text. The instructions ask you to keep it and
-              strike through what is incorrect.
-            </span>
-            <button
-              type="button"
+              disabled={!ready || !!conflict}
               onClick={() => {
-                editorRef.current?.commands.undo();
-                setDeletedNote(null);
+                setSubmitError(null);
+                setSubmitOpen(true);
               }}
-              className="rounded-md border border-nx-border-strong bg-nx-surface px-3 py-1 font-medium hover:bg-nx-sunken"
+              className={nxButtonClass("primary")}
             >
-              Undo
+              Submit
             </button>
-            <button type="button" onClick={() => setDeletedNote(null)} className="font-medium text-nx-muted hover:underline">
-              Dismiss
-            </button>
-          </div>
-        )}
-        {persisted === false && !readOnly && (
-          <p className="text-[13px] text-nx-muted">
-            This browser did not grant permanent storage. Your work is still saved on the server every few seconds.
-          </p>
-        )}
-      </div>
-
-      {/* Toolbar */}
-      <div className="sticky top-0 z-20 mt-3 border-y border-nx-border bg-nx-surface">
-        <div
-          role="toolbar"
-          aria-label="Formatting"
-          className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-1 px-4 py-1.5 sm:px-6"
-        >
-          <ToolbarButton label="Undo" shortcut="Ctrl+Z" disabled={!editable || !editor?.can().undo()} onClick={() => editor?.commands.undo()}>
-            <Undo2 size={16} aria-hidden /> Undo
-          </ToolbarButton>
-          <ToolbarButton label="Redo" shortcut="Ctrl+Shift+Z" disabled={!editable || !editor?.can().redo()} onClick={() => editor?.commands.redo()}>
-            <Redo2 size={16} aria-hidden /> Redo
-          </ToolbarButton>
-          <span className="mx-1 h-6 w-px bg-nx-border" aria-hidden />
-          <ToolbarButton
-            label="Red text"
-            shortcut="Ctrl+Shift+R"
-            pressed={!!editor && isRedActive(editor)}
-            disabled={!editable}
-            onClick={() => editor && setRed(editor)}
-          >
-            <span aria-hidden className="font-bold text-nx-red underline decoration-2">A</span> Red
-          </ToolbarButton>
-          <ToolbarButton
-            label="Black text"
-            pressed={!!editor && !isRedActive(editor)}
-            disabled={!editable}
-            onClick={() => editor && setBlack(editor)}
-          >
-            <span aria-hidden className="font-bold underline decoration-2">A</span> Black
-          </ToolbarButton>
-          <ToolbarButton
-            label="Strikethrough"
-            shortcut="Ctrl+Shift+X"
-            pressed={!!editor?.isActive("strike")}
-            disabled={!editable}
-            onClick={() => editor?.chain().focus().toggleStrike().run()}
-          >
-            <Strikethrough size={16} aria-hidden /> Strikethrough
-          </ToolbarButton>
-          <ToolbarButton
-            label="Comment on the selected text"
-            shortcut="Ctrl+Alt+M"
-            disabled={!editable || !editor || editor.state.selection.empty}
-            onClick={startComment}
-          >
-            <MessageSquarePlus size={16} aria-hidden /> Comment
-          </ToolbarButton>
-          <span className="ml-auto" />
-          <label className="flex items-center gap-2 px-2 text-[13px] text-nx-muted">
-            <input type="checkbox" checked={hideEvidence} onChange={(e) => setHideEvidence(e.target.checked)} />
-            Hide grey evidence codes
-          </label>
-          {!wide && (
-            <ToolbarButton label="Show comments" pressed={panelOpen} onClick={() => setPanelOpen((v) => !v)}>
-              Comments ({comments.length})
-            </ToolbarButton>
           )}
         </div>
-      </div>
+      </header>
 
-      {/* Page + margin */}
-      <div className="mx-auto flex max-w-[1400px] justify-center gap-6 px-2 py-6 sm:px-6">
-        <div
-          ref={pageRef}
-          className="relative w-full max-w-[816px] rounded-sm border border-nx-border bg-nx-surface px-6 py-8 shadow-sm sm:px-[72px] sm:py-[64px]"
-        >
-          {template && (
-            <section aria-label="Review questions" className="mb-8 text-[15px]">
-              <h2 className="text-[22px] font-bold">
-                {template.title}: {narrative.label}
-              </h2>
-              <p className="mt-2 text-[14px]">
-                <strong>Reviewer:</strong> {userName}
-                <br />
-                <strong>Lesson length according to the narrative:</strong> {narrative.durationLabel ?? "unknown"}
-              </p>
-              <p className="mt-2 text-[14px] text-nx-muted">{template.checkNote}</p>
-              <p className="mt-3 text-[14px]">
-                <strong>{template.howToEditLabel}</strong> {template.howToEdit}
-              </p>
-              {fields.map((f) => (
-                <div key={f.key} className="mt-5">
-                  {f.title && <h3 className="text-[17px] font-bold">{f.title}</h3>}
-                  {template.questions.find((q) => q.title === f.title && q.parts?.length) && (
-                    <p className="mt-1 text-[14px] text-nx-muted">
-                      {template.questions.find((q) => q.title === f.title)!.prompt}
-                    </p>
-                  )}
-                  <label htmlFor={`answer-${f.key}`} className="mt-1 block text-[14px] text-nx-muted">
-                    {f.prompt}
-                  </label>
-                  <textarea
-                    id={`answer-${f.key}`}
-                    value={(answers as Record<string, string | undefined>)[f.key] ?? ""}
-                    readOnly={!editable}
-                    onChange={(e) => setAnswer(f.key, e.target.value)}
-                    rows={4}
-                    className="mt-2 w-full resize-y rounded border border-nx-border-strong px-3 py-2 text-[15px] read-only:bg-nx-sunken"
-                  />
-                </div>
-              ))}
-              <p className="mt-5 text-[14px]">
-                <strong>{template.timeLabel}</strong> measured by the platform while you work.
-              </p>
-              <p className="mt-8 text-[13px] font-bold text-nx-muted">{template.narrativeLabel}</p>
-            </section>
-          )}
-          <div className={`nx-doc ${hideEvidence ? "nx-hide-evidence" : ""}`}>
-            {!ready && <p className="text-nx-muted">Loading the narrative…</p>}
-            <EditorContent editor={editor} />
+      {justSubmitted && (
+        <div role="status" className={`${note} border-forest bg-forest-wash text-ink`}>
+          Submitted. Thank you. It is now read-only; the coordinators can reopen it if anything needs changing.{" "}
+          <Link href="/narratives" className="rounded-sm text-lake underline underline-offset-4">
+            Back to your list
+          </Link>
+        </div>
+      )}
+      {status === "signed_out" && (
+        <div role="alert" className={`${note} border-clay bg-clay-wash text-ink`}>
+          You were signed out. <strong>Your work is saved on this device.</strong>{" "}
+          <a href="/signin" target="_blank" rel="noopener" className="rounded-sm text-lake underline underline-offset-4">
+            Sign in again
+          </a>{" "}
+          (opens a new tab), then come back here: saving resumes on its own.
+        </div>
+      )}
+      {readOnly === "other_tab" && (
+        <div className={`${note} flex flex-wrap items-center gap-3 border-hairline-strong bg-card text-ink`}>
+          <span>This narrative is open in another tab or window. To avoid two versions, you can only read it here.</span>
+          <button type="button" onClick={() => void takeOver()} className={nxButtonClass("secondary")}>
+            Edit here instead
+          </button>
+        </div>
+      )}
+      {deletedNote !== null && editable && (
+        <div role="status" className={`${note} flex flex-wrap items-center gap-3 border-clay bg-clay-wash text-ink`}>
+          <span>
+            You deleted {deletedNote} characters of the original AI text. The instructions ask you to keep it and
+            strike through what is incorrect.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              editorRef.current?.commands.undo();
+              setDeletedNote(null);
+            }}
+            className={nxButtonClass("secondary")}
+          >
+            Undo
+          </button>
+          <button type="button" onClick={() => setDeletedNote(null)} className={nxButtonClass("ghost")}>
+            Dismiss
+          </button>
+        </div>
+      )}
+      {persisted === false && !readOnly && (
+        <p className="text-[13px] text-smoke">
+          This browser did not grant permanent storage. Your work is still saved on the server every few seconds.
+        </p>
+      )}
+
+      <div className="flex gap-6">
+        {/* The document, framed like the notes editor: toolbar on top, page below. */}
+        <div ref={pageRef} className="relative min-w-0 flex-1 rounded-xl border border-hairline bg-paper">
+          <GlideMenu
+            role="toolbar"
+            aria-label="Formatting"
+            className="sticky top-0 z-20 flex !flex-row flex-wrap items-center gap-0.5 rounded-t-xl border-b border-hairline bg-card px-2 py-1.5"
+            highlightClassName="rounded-sm bg-sunken shadow-[0_1px_3px_rgba(58,47,36,0.14)]"
+          >
+            <ToolbarButton label="Undo" shortcut="Ctrl+Z" disabled={!editable || !editor?.can().undo()} onClick={() => editor?.commands.undo()}>
+              <Undo2 size={16} aria-hidden /> Undo
+            </ToolbarButton>
+            <ToolbarButton label="Redo" shortcut="Ctrl+Shift+Z" disabled={!editable || !editor?.can().redo()} onClick={() => editor?.commands.redo()}>
+              <Redo2 size={16} aria-hidden /> Redo
+            </ToolbarButton>
+            <span aria-hidden className="mx-1 h-5 w-px bg-hairline" />
+            <ToolbarButton
+              label="Red text"
+              shortcut="Ctrl+Shift+R"
+              pressed={!!editor && isRedActive(editor)}
+              disabled={!editable}
+              onClick={() => editor && setRed(editor)}
+            >
+              <span aria-hidden className="font-bold text-edit-red underline decoration-2">A</span> Red
+            </ToolbarButton>
+            <ToolbarButton
+              label="Black text"
+              pressed={!!editor && !isRedActive(editor)}
+              disabled={!editable}
+              onClick={() => editor && setBlack(editor)}
+            >
+              <span aria-hidden className="font-bold text-ink underline decoration-2">A</span> Black
+            </ToolbarButton>
+            <ToolbarButton
+              label="Strikethrough"
+              shortcut="Ctrl+Shift+X"
+              pressed={!!editor?.isActive("strike")}
+              disabled={!editable}
+              onClick={() => editor?.chain().focus().toggleStrike().run()}
+            >
+              <Strikethrough size={16} aria-hidden /> Strikethrough
+            </ToolbarButton>
+            <ToolbarButton
+              label="Comment on the selected text"
+              shortcut="Ctrl+Alt+M"
+              disabled={!editable || !editor || editor.state.selection.empty}
+              onClick={startComment}
+            >
+              <MessageSquarePlus size={16} aria-hidden /> Comment
+            </ToolbarButton>
+            <span className="ml-auto" />
+            <label className="flex items-center gap-2 px-2 text-[13px] text-graphite">
+              <input
+                type="checkbox"
+                checked={hideEvidence}
+                onChange={(e) => setHideEvidence(e.target.checked)}
+                className="size-4 accent-[var(--clobs-bark)]"
+              />
+              Hide grey evidence codes
+            </label>
+            {!wide && (
+              <ToolbarButton label="Show comments" pressed={panelOpen} onClick={() => setPanelOpen((v) => !v)}>
+                Comments ({comments.length})
+              </ToolbarButton>
+            )}
+          </GlideMenu>
+
+          <div className="px-6 py-8 sm:px-12 sm:py-10">
+            {template && (
+              <section aria-label="Review questions" className="mb-8 text-[15px] text-ink">
+                <h2
+                  className="font-sans font-medium text-ink"
+                  style={{
+                    fontSize: "var(--clobs-text-heading-sm)",
+                    lineHeight: "var(--clobs-leading-heading-sm)",
+                    letterSpacing: "var(--clobs-tracking-heading-sm)",
+                  }}
+                >
+                  {template.title}: {narrative.label}
+                </h2>
+                <p className="mt-2 text-[14px] text-graphite">
+                  <strong className="text-ink">Reviewer:</strong> {userName}
+                  <br />
+                  <strong className="text-ink">Lesson length according to the narrative:</strong>{" "}
+                  {narrative.durationLabel ?? "unknown"}
+                </p>
+                <p className="mt-2 text-[14px] text-smoke">{template.checkNote}</p>
+                <p className="mt-3 text-[14px] text-graphite">
+                  <strong className="text-ink">{template.howToEditLabel}</strong> {template.howToEdit}
+                </p>
+                {fields.map((f) => (
+                  <div key={f.key} className="mt-6">
+                    {f.title && <h3 className="text-[17px] font-semibold text-ink">{f.title}</h3>}
+                    {template.questions.find((q) => q.title === f.title && q.parts?.length) && (
+                      <p className="mt-1 text-[14px] text-graphite">
+                        {template.questions.find((q) => q.title === f.title)!.prompt}
+                      </p>
+                    )}
+                    <label htmlFor={`answer-${f.key}`} className="mt-1 block text-[14px] text-graphite">
+                      {f.prompt}
+                    </label>
+                    <textarea
+                      id={`answer-${f.key}`}
+                      value={(answers as Record<string, string | undefined>)[f.key] ?? ""}
+                      readOnly={!editable}
+                      onChange={(e) => setAnswer(f.key, e.target.value)}
+                      rows={4}
+                      className="mt-2 w-full resize-y rounded-md border border-hairline bg-paper px-3 py-2.5 text-[15px] text-ink placeholder:text-ash focus:border-hairline-strong read-only:bg-card"
+                    />
+                  </div>
+                ))}
+                <p className="mt-6 text-[14px] text-graphite">
+                  <strong className="text-ink">{template.timeLabel}</strong> measured by the platform while you work.
+                </p>
+                <p className="mt-8 border-t border-hairline pt-4 text-[13px] font-semibold text-smoke">
+                  {template.narrativeLabel}
+                </p>
+              </section>
+            )}
+            <div className={`nx-doc ${hideEvidence ? "nx-hide-evidence" : ""}`}>
+              {!ready && <p className="text-graphite">Loading the narrative…</p>}
+              <EditorContent editor={editor} />
+            </div>
           </div>
         </div>
         {wide && (
-          <aside aria-label="Comments" className="relative w-[300px] shrink-0">
+          <aside aria-label="Comments" className="relative w-[280px] shrink-0">
             <CommentsMargin {...commentProps} />
           </aside>
         )}
@@ -890,11 +911,11 @@ export function NarrativeWorkspace({
       {!wide && panelOpen && (
         <aside
           aria-label="Comments"
-          className="fixed inset-y-0 right-0 z-40 w-full max-w-[380px] overflow-y-auto border-l border-nx-border bg-nx-canvas p-4 shadow-xl"
+          className="fixed inset-y-0 right-0 z-40 w-full max-w-[380px] overflow-y-auto border-l border-hairline bg-paper p-5 shadow-xl"
         >
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-[16px] font-semibold">Comments</h2>
-            <button type="button" onClick={() => setPanelOpen(false)} className="rounded-md border border-nx-border-strong px-3 py-1 text-[14px]">
+            <h2 className="text-[16px] font-semibold text-ink">Comments</h2>
+            <button type="button" onClick={() => setPanelOpen(false)} className={nxButtonClass("secondary")}>
               Close
             </button>
           </div>
@@ -913,7 +934,7 @@ export function NarrativeWorkspace({
             <button
               type="button"
               onClick={() => void resolve("device")}
-              className="rounded-md bg-nx-accent px-3.5 py-2 text-left text-[14px] font-medium text-white hover:bg-nx-accent-hover"
+              className={nxButtonClass("primary", "!justify-start text-left")}
             >
               Keep the version on this device
               {conflict.device && ` (last change ${timeOf(conflict.device.savedLocallyAt)})`}
@@ -921,7 +942,7 @@ export function NarrativeWorkspace({
             <button
               type="button"
               onClick={() => void resolve("server")}
-              className="rounded-md border border-nx-border-strong px-3.5 py-2 text-left text-[14px] font-medium hover:bg-nx-sunken"
+              className={nxButtonClass("secondary", "!justify-start text-left")}
             >
               Use the version saved from the other device
               {conflict.server.updatedAt && ` (saved ${timeOf(Date.parse(conflict.server.updatedAt))})`}
@@ -934,7 +955,7 @@ export function NarrativeWorkspace({
         <Dialog title="Submit this narrative?" onClose={() => !submitting && setSubmitOpen(false)}>
           <p>After submitting you cannot change it. The coordinators can reopen it if needed.</p>
           {unanswered.length > 0 && (
-            <div className="mt-3 rounded-md border border-nx-warn bg-nx-warn-wash px-3 py-2 text-[14px]">
+            <div className="mt-3 rounded-xl border border-clay bg-clay-wash px-3 py-2 text-[14px] text-ink">
               Not answered yet:
               <ul className="mt-1 list-disc pl-5">
                 {unanswered.map((f) => (
@@ -943,9 +964,9 @@ export function NarrativeWorkspace({
               </ul>
             </div>
           )}
-          {!synced && <p className="mt-3 text-[14px] text-nx-muted">Waiting for your last changes to save…</p>}
+          {!synced && <p className="mt-3 text-[14px] text-graphite">Waiting for your last changes to save…</p>}
           {submitError && (
-            <p role="alert" className="mt-3 text-[14px] text-nx-danger">
+            <p role="alert" className="mt-3 text-[14px] text-clay">
               {submitError}
             </p>
           )}
@@ -954,7 +975,7 @@ export function NarrativeWorkspace({
               type="button"
               disabled={submitting}
               onClick={() => void submit()}
-              className="rounded-md bg-nx-accent px-3.5 py-2 text-[14px] font-medium text-white hover:bg-nx-accent-hover disabled:opacity-50"
+              className={nxButtonClass("primary")}
             >
               {submitting ? "Submitting…" : unanswered.length ? "Submit anyway" : "Submit"}
             </button>
@@ -962,7 +983,7 @@ export function NarrativeWorkspace({
               type="button"
               disabled={submitting}
               onClick={() => setSubmitOpen(false)}
-              className="rounded-md border border-nx-border-strong px-3.5 py-2 text-[14px] font-medium hover:bg-nx-sunken"
+              className={nxButtonClass("secondary")}
             >
               Keep working
             </button>
