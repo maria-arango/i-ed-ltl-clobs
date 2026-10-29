@@ -40,6 +40,9 @@
   --clobs-marker-green:     #DEEADF;
   --clobs-marker-pink:      #F4D9E7;
   --clobs-marker-purple:    #E7DDF2;
+  /* Narrative review (Amendment §51): reviewer additions. On screen a red
+     dark enough for AA on paper (6:1); the Word export writes FF0000. */
+  --clobs-edit-red:         #C40000;
 
   /* Score ramp — ordinal, warm to cool, from the printed manual */
   --clobs-score-1:          #F2D3B3;
@@ -149,39 +152,6 @@
 }
 
 
-/* ------------------------------------------------------------------ */
-/* Narratives area tokens (Amendment §51; DESIGN_SYSTEM.md §11).        */
-/* A separate, scoped set for the landing page, the Narratives          */
-/* workspace and its dashboard: white surfaces on a cool grey canvas,   */
-/* one blue accent, 6px corners. The scoring screens keep --clobs-*.    */
-/* Contrast (WCAG 2.2 AA) checked against white: text 16:1, muted 7:1,  */
-/* accent 6.7:1, edit red 6.3:1, evidence grey 5.1:1.                   */
-/* ------------------------------------------------------------------ */
-:root {
-  --nx-canvas: #f3f4f6;
-  --nx-surface: #ffffff;
-  --nx-surface-sunken: #f8f9fa;
-  --nx-border: #d9dde3;
-  --nx-border-strong: #b8bfc9;
-  --nx-text: #1a1d21;
-  --nx-text-muted: #4b525c;
-  --nx-accent: #1d4ed8;
-  --nx-accent-hover: #1e40af;
-  --nx-accent-wash: #e8eefc;
-  /* On screen, reviewer red is darker than the exported FF0000 so that
-     body-size text passes AA (FF0000 on white is only 4.0:1). */
-  --nx-edit-red: #c40000;
-  --nx-evidence: #6e6e6e;
-  --nx-success: #15803d;
-  --nx-success-wash: #e7f5ec;
-  --nx-warn: #8a5000;
-  --nx-warn-wash: #fdf3e3;
-  --nx-danger: #b91c1c;
-  --nx-danger-wash: #fdecec;
-  --nx-comment: #fff2b3;
-  --nx-comment-active: #fbd85b;
-}
-
 /* Tailwind v4 theme — utility names for the tokens (bg-paper, text-ink,
    border-hairline, bg-score-1, rounded-card, ease-out-clobs, …). */
 @theme inline {
@@ -205,6 +175,7 @@
   --color-forest-wash:      var(--clobs-forest-wash);
   --color-clay:             var(--clobs-clay);
   --color-clay-wash:        var(--clobs-clay-wash);
+  --color-edit-red:         var(--clobs-edit-red);
   --color-score-1:          var(--clobs-score-1);
   --color-score-1-edge:     var(--clobs-score-1-edge);
   --color-score-2:          var(--clobs-score-2);
@@ -214,24 +185,6 @@
   --color-score-4:          var(--clobs-score-4);
   --color-score-4-edge:     var(--clobs-score-4-edge);
 
-  --color-nx-canvas:         var(--nx-canvas);
-  --color-nx-surface:        var(--nx-surface);
-  --color-nx-sunken:         var(--nx-surface-sunken);
-  --color-nx-border:         var(--nx-border);
-  --color-nx-border-strong:  var(--nx-border-strong);
-  --color-nx-text:           var(--nx-text);
-  --color-nx-muted:          var(--nx-text-muted);
-  --color-nx-accent:         var(--nx-accent);
-  --color-nx-accent-hover:   var(--nx-accent-hover);
-  --color-nx-accent-wash:    var(--nx-accent-wash);
-  --color-nx-red:            var(--nx-edit-red);
-  --color-nx-evidence:       var(--nx-evidence);
-  --color-nx-success:        var(--nx-success);
-  --color-nx-success-wash:   var(--nx-success-wash);
-  --color-nx-warn:           var(--nx-warn);
-  --color-nx-warn-wash:      var(--nx-warn-wash);
-  --color-nx-danger:         var(--nx-danger);
-  --color-nx-danger-wash:    var(--nx-danger-wash);
 
   /* Fonts — the real chains live on :root as --clobs-font-*. */
   --font-sans:  var(--clobs-font-sans);
@@ -516,76 +469,48 @@ td.num,
   font-variant-numeric: tabular-nums;
 }
 
-/* Narratives area: the whole viewport (including overscroll) takes the
-   neutral canvas, and focus rings use the area's accent. */
-html:has(.nx-area) {
-  background: var(--nx-canvas);
-}
-.nx-area {
-  background: var(--nx-canvas);
-  color: var(--nx-text);
-  font-size: 15px;
-  line-height: 1.5;
-}
-.nx-area *:focus-visible {
-  outline: 2px solid var(--nx-accent);
-  outline-offset: 2px;
-}
-.nx-area ::selection {
-  background: #cfe0ff;
-  color: inherit;
-}
-
-/* ---- The narrative page (Word/Docs-like) --------------------------- */
+/* ---- The narrative document (Amendment §51) ------------------------- */
+/* Same type and colours as the notes editor; reviewer red, struck text,
+   grey evidence codes and comment highlights mirror the Word documents. */
 .nx-doc {
-  font-family: var(--clobs-font-sans);
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--nx-text);
+  font-size: var(--clobs-text-body-lg);
+  line-height: var(--clobs-leading-body-lg);
+  color: var(--clobs-ink);
 }
 .nx-doc .ProseMirror {
   outline: none;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
-.nx-doc .ProseMirror p {
-  margin: 0 0 0.75em;
-}
+.nx-doc .ProseMirror p { margin: 0 0 0.75em; }
 .nx-doc .ProseMirror h1 {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--clobs-text-heading-sm);
+  line-height: var(--clobs-leading-heading-sm);
+  font-weight: 600;
   margin: 0 0 0.75em;
 }
 .nx-doc .ProseMirror h2 {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: var(--clobs-text-body-lg);
+  font-weight: 600;
   margin: 1.25em 0 0.35em;
 }
 .nx-doc .ProseMirror p[data-variant="given"] {
   margin: 0 0 0.25em 1.5em;
-  font-size: 13.5px;
+  font-size: 0.9em;
 }
-.nx-doc .ProseMirror p[data-variant="covers"] {
-  margin-top: -0.4em;
-}
-.nx-doc .nx-red {
-  color: var(--nx-edit-red);
-}
+.nx-doc .ProseMirror p[data-variant="covers"] { margin-top: -0.4em; }
+.nx-doc .nx-red { color: var(--clobs-edit-red); }
 .nx-doc .nx-evidence {
-  color: var(--nx-evidence);
+  color: var(--clobs-smoke);
   font-size: 0.72em;
 }
-.nx-doc.nx-hide-evidence .nx-evidence {
-  display: none;
-}
+.nx-doc.nx-hide-evidence .nx-evidence { display: none; }
 .nx-doc .nx-comment {
-  background: var(--nx-comment);
-  border-bottom: 2px solid #e8c547;
+  background: var(--clobs-marker-yellow);
+  border-bottom: 2px solid var(--clobs-hairline-strong);
 }
-.nx-doc .nx-comment[data-active="true"],
-.nx-doc .nx-comment.nx-comment-active {
-  background: var(--nx-comment-active);
+.nx-doc .nx-comment-active {
+  background: var(--clobs-score-1);
+  border-bottom-color: var(--clobs-bark);
 }
-.nx-doc s {
-  text-decoration-thickness: 1.5px;
-}
+.nx-doc s { text-decoration-thickness: 1.5px; }

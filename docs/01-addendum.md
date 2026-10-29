@@ -771,3 +771,12 @@ Decisions of 2026-10-29 (María, after reviewing the build):
     compressed data. The dashboard adds "Copy everything to the Harvard Drive now" and "Submitted
     in the last 24 hours (.zip)" for the coordinator's daily manual download. The scoring tabs'
     autosave weaknesses (STATUS §5) stay unfixed while scoring is unused.
+
+Decision of 2026-10-29 (María):
+
+59. **The platform keeps its original design.** The grey/blue look introduced for the landing page,
+    sign-in and Narratives screens on 2026-10-28 is withdrawn. The first screen is again the original
+    Kimanya sign-in page (now asking for email, then the person's 4-digit code). The Narratives
+    screens live in the original shell and sidebar with the original colours, fonts, buttons, tables
+    and pills (DESIGN_SYSTEM §11). Admins land on the original Home (Scoring home). Functionality is
+    unchanged.

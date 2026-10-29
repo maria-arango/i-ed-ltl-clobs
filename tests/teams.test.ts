@@ -89,7 +89,7 @@ describe("team rules (pure)", () => {
     expect(canAccessNarratives("coder", ["narratives"])).toBe(true);
   });
   it("sends each person to their own home", () => {
-    expect(homePathFor("admin", [])).toBe("/admin/narratives");
+    expect(homePathFor("admin", [])).toBe("/scoring");
     expect(homePathFor("coder", ["narratives"])).toBe("/narratives");
     expect(homePathFor("coder", ["narratives", "scoring"])).toBe("/narratives");
     expect(homePathFor("coder", ["scoring"])).toBe("/scoring");

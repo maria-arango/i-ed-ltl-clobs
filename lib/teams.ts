@@ -32,7 +32,8 @@ export function canAccessNarratives(role: Role, teams: readonly Team[]): boolean
 
 /** Where "/" sends a signed-in person. */
 export function homePathFor(role: Role, teams: readonly Team[]): string {
-  if (role === "admin") return "/admin/narratives";
+  // Admins land on the original Home (Scoring home); Narratives is in the sidebar.
+  if (role === "admin") return "/scoring";
   if (teams.includes("narratives")) return "/narratives";
   if (canAccessScoring(role, teams)) return "/scoring";
   return "/no-access";

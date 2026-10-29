@@ -150,10 +150,10 @@ export async function changeOwnPin(
   currentPin: string,
   newPin: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!isPinFormat(newPin)) return { ok: false, error: "The new PIN must be exactly 4 digits." };
-  if (isWeakPin(newPin)) return { ok: false, error: "That PIN is too easy to guess. Avoid repeated or consecutive digits." };
+  if (!isPinFormat(newPin)) return { ok: false, error: "The new code must be exactly 4 digits." };
+  if (isWeakPin(newPin)) return { ok: false, error: "That code is too easy to guess. Avoid repeated or consecutive digits." };
   const [cred] = await db.select().from(pinCredentials).where(eq(pinCredentials.userId, userId)).limit(1);
-  if (!cred || !(await verifyPin(currentPin, cred.pinHash))) return { ok: false, error: "Your current PIN is not correct." };
+  if (!cred || !(await verifyPin(currentPin, cred.pinHash))) return { ok: false, error: "Your current code is not correct." };
   await db
     .update(pinCredentials)
     .set({ pinHash: await hashPin(newPin), setBy: userId, setAt: new Date(), failedCount: 0, lockedUntil: null })

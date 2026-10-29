@@ -40,7 +40,7 @@ export function DocView({ doc, commentNumbers }: { doc: PMNode; commentNumbers: 
               if (m.type === "comment" && !seen.has(id)) {
                 seen.add(id);
                 kids.push(
-                  <sup key={`c-${id}`} className="ml-0.5 font-semibold text-nx-accent">
+                  <sup key={`c-${id}`} className="ml-0.5 font-semibold text-lake">
                     {commentNumbers.get(id)}
                   </sup>,
                 );

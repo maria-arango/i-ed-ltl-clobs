@@ -1,25 +1,27 @@
 /**
- * Small building blocks for the Narratives area (landing, workspace,
- * dashboard). Plain, rectangular, 6px corners, one accent (DESIGN_SYSTEM.md
- * §11). No motion: these screens are tools.
+ * Building blocks for the Narratives screens, in the platform's design
+ * system (DESIGN_SYSTEM.md): bark primary buttons, quiet bordered secondary
+ * buttons, pill row actions, elevated cards and the shared status pills.
  */
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 
-type Variant = "primary" | "secondary" | "danger" | "ghost";
+type Variant = "primary" | "secondary" | "danger" | "ghost" | "pill";
 
-const base =
-  "inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-[14px] font-medium " +
-  "disabled:cursor-not-allowed disabled:opacity-50";
 const variants: Record<Variant, string> = {
-  primary: "bg-nx-accent text-white hover:bg-nx-accent-hover",
-  secondary: "border border-nx-border-strong bg-nx-surface text-nx-text hover:bg-nx-sunken",
-  danger: "border border-nx-danger bg-nx-surface text-nx-danger hover:bg-nx-danger-wash",
-  ghost: "text-nx-text hover:bg-nx-sunken",
+  primary:
+    "rounded-md bg-bark px-[18px] py-[10px] text-[15px] font-semibold text-paper transition-colors duration-[90ms] hover:bg-bark-deep active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ash",
+  secondary:
+    "rounded-md border border-hairline-strong bg-paper px-4 py-2 text-[13px] font-semibold text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98] disabled:cursor-not-allowed disabled:text-ash",
+  danger:
+    "rounded-md border border-hairline bg-paper px-4 py-2 text-[13px] font-semibold text-clay transition-colors duration-[90ms] hover:border-clay hover:bg-card active:scale-[0.98] disabled:cursor-not-allowed disabled:text-ash",
+  ghost: "rounded-sm text-[14px] text-lake underline underline-offset-4 disabled:text-ash",
+  pill:
+    "rounded-full border border-hairline-strong bg-paper px-3 py-1 text-[12px] font-medium text-ink transition-colors duration-[90ms] hover:bg-card active:scale-[0.98] disabled:cursor-not-allowed disabled:text-ash",
 };
 
 export function nxButtonClass(variant: Variant = "secondary", extra = ""): string {
-  return `${base} ${variants[variant]} ${extra}`.trim();
+  return `inline-flex items-center justify-center gap-2 ${variants[variant]} ${extra}`.trim();
 }
 
 export function NxButton({
@@ -39,37 +41,63 @@ export function NxLinkButton({
 }
 
 export function NxCard({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-md border border-nx-border bg-nx-surface ${className}`}>{children}</div>
-  );
+  return <div className={`elev-card rounded-2xl border border-hairline bg-card ${className}`}>{children}</div>;
 }
 
 export type NarrativeStatus = "not_started" | "in_progress" | "submitted" | "returned";
 
-const STATUS: Record<NarrativeStatus, { label: string; cls: string }> = {
-  not_started: { label: "Not started", cls: "border-nx-border-strong bg-nx-surface text-nx-muted" },
-  in_progress: { label: "In progress", cls: "border-transparent bg-nx-warn-wash text-nx-warn" },
-  submitted: { label: "Submitted", cls: "border-transparent bg-nx-success-wash text-nx-success" },
-  returned: { label: "Reassigned", cls: "border-nx-border bg-nx-sunken text-nx-muted" },
+const STATUS: Record<NarrativeStatus, { bg: string; fg: string; text: string }> = {
+  not_started: { bg: "var(--clobs-sunken)", fg: "var(--clobs-graphite)", text: "Not started" },
+  in_progress: { bg: "var(--clobs-lake-wash)", fg: "var(--clobs-lake)", text: "In progress" },
+  submitted: { bg: "var(--clobs-forest-wash)", fg: "var(--clobs-forest)", text: "Submitted" },
+  returned: { bg: "var(--clobs-sunken)", fg: "var(--clobs-smoke)", text: "Reassigned" },
 };
 
-/** Status tag: rectangular, text label always present (never colour alone). */
+/** Status pill, same shape and colours as the scoring StatusPill. */
 export function NxStatus({ status }: { status: NarrativeStatus }) {
   const s = STATUS[status];
   return (
     <span
-      className={`inline-flex items-center rounded border px-2 py-0.5 text-[12px] font-medium ${s.cls}`}
+      className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-medium"
+      style={{ background: s.bg, color: s.fg }}
     >
-      {s.label}
+      {s.text}
     </span>
   );
 }
 
+/** Page heading in the platform's style (same as My videos, Progress …). */
 export function NxPageTitle({ children, sub }: { children: ReactNode; sub?: ReactNode }) {
   return (
-    <div className="mb-6">
-      <h1 className="text-[24px] font-semibold leading-tight text-nx-text">{children}</h1>
-      {sub && <p className="mt-1 text-[15px] text-nx-muted">{sub}</p>}
-    </div>
+    <header className="mb-6 space-y-1">
+      <h1
+        className="font-sans font-medium text-ink"
+        style={{
+          fontSize: "var(--clobs-text-heading)",
+          lineHeight: "var(--clobs-leading-heading)",
+          letterSpacing: "var(--clobs-tracking-heading)",
+        }}
+      >
+        {children}
+      </h1>
+      {sub && <p className="text-[14px] text-smoke">{sub}</p>}
+    </header>
+  );
+}
+
+/** Section heading (heading-sm), as on the admin screens. */
+export function NxSectionTitle({ id, children }: { id?: string; children: ReactNode }) {
+  return (
+    <h2
+      id={id}
+      className="mb-3 font-sans font-medium text-ink"
+      style={{
+        fontSize: "var(--clobs-text-heading-sm)",
+        lineHeight: "var(--clobs-leading-heading-sm)",
+        letterSpacing: "var(--clobs-tracking-heading-sm)",
+      }}
+    >
+      {children}
+    </h2>
   );
 }
