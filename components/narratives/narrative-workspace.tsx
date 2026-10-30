@@ -45,7 +45,9 @@ import { SyncEngine, type DraftRecord, type ServerCopy, type SyncStatus } from "
 export interface WorkspaceNarrative {
   assignmentId: string;
   orderNo: number;
+  /** "Video 3", or "Practice" (Amendment §61). */
   label: string;
+  practice: boolean;
   durationLabel: string | null;
   status: "not_started" | "in_progress" | "submitted" | "returned";
   videoUrl: string | null;
@@ -181,6 +183,10 @@ export function NarrativeWorkspace({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hideEvidence, setHideEvidence] = useState(false);
   const [deletedNote, setDeletedNote] = useState<number | null>(null);
+  // A review script (Amendment §61): its own instructions allow deleting a
+  // line instead of striking it, and it has no grey evidence codes.
+  const isScript = (narrative.doc.content ?? []).some((b) => b.attrs?.variant === "line");
+  const hasEvidence = JSON.stringify(narrative.doc).includes('"evidence"');
   const [conflict, setConflict] = useState<{ device: DraftRecord | null; server: ServerCopy & { updatedAt?: string } } | null>(null);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -256,7 +262,7 @@ export function NarrativeWorkspace({
     onTransaction: ({ transaction }) => {
       forceToolbar((n) => n + 1);
       if (!transaction.docChanged) return;
-      if (!transaction.getMeta("history$")) {
+      if (!transaction.getMeta("history$") && !isScript) {
         const removed = removedOriginalChars(transaction.steps, transaction.docs);
         if (removed >= 15) setDeletedNote(removed);
       }
@@ -723,6 +729,18 @@ export function NarrativeWorkspace({
         </div>
       </header>
 
+      {narrative.practice && (
+        <p className={`${note} border-hairline-strong bg-card text-ink`}>
+          <strong>Practice.</strong> This narrative is for trying the platform. It works exactly like a real one but is
+          not counted.
+        </p>
+      )}
+      {isScript && editable && (
+        <p className="text-[13px] text-smoke">
+          In the lesson lines, press Tab between the time, the speaker and the text, as in Word. Press Esc to leave
+          the document.
+        </p>
+      )}
       {justSubmitted && (
         <div role="status" className={`${note} border-forest bg-forest-wash text-ink`}>
           Submitted. Thank you. It is now read-only; the coordinators can reopen it if anything needs changing.{" "}
@@ -826,15 +844,17 @@ export function NarrativeWorkspace({
               <MessageSquarePlus size={16} aria-hidden /> Comment
             </ToolbarButton>
             <span className="ml-auto" />
-            <label className="flex items-center gap-2 px-2 text-[13px] text-graphite">
-              <input
-                type="checkbox"
-                checked={hideEvidence}
-                onChange={(e) => setHideEvidence(e.target.checked)}
-                className="size-4 accent-[var(--clobs-bark)]"
-              />
-              Hide grey evidence codes
-            </label>
+            {hasEvidence && (
+              <label className="flex items-center gap-2 px-2 text-[13px] text-graphite">
+                <input
+                  type="checkbox"
+                  checked={hideEvidence}
+                  onChange={(e) => setHideEvidence(e.target.checked)}
+                  className="size-4 accent-[var(--clobs-bark)]"
+                />
+                Hide grey evidence codes
+              </label>
+            )}
             {!wide && (
               <ToolbarButton label="Show comments" pressed={panelOpen} onClick={() => setPanelOpen((v) => !v)}>
                 Comments ({comments.length})

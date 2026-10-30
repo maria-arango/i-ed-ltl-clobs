@@ -1,6 +1,7 @@
 /**
  * /narratives — the enumerator's assigned narratives, in the order to do
- * them, with status (Amendment §51). Restricted query layer only. Same
+ * them, with status (Amendment §51), each called "Video <order>" (§61; a
+ * practice narrative is "Practice", listed first). Restricted query layer only. Same
  * table, pills and empty state as My videos.
  */
 import Link from "next/link";
@@ -17,11 +18,12 @@ const fmt = (d: Date | null) =>
 export default async function MyNarratives() {
   const { session } = await requireNarrativesAccess();
   const rows = await listMyNarratives(session.user.id);
-  const next = rows.find((r) => r.status !== "submitted");
-  const done = rows.filter((r) => r.status === "submitted").length;
+  const real = rows.filter((r) => !r.practice);
+  const next = real.find((r) => r.status !== "submitted");
+  const done = real.filter((r) => r.status === "submitted").length;
   return (
     <div className="space-y-6">
-      <NxPageTitle sub={rows.length ? `${done} of ${rows.length} submitted. Work through them in order.` : undefined}>
+      <NxPageTitle sub={real.length ? `${done} of ${real.length} submitted. Work through them in order.` : undefined}>
         My narratives
       </NxPageTitle>
       {rows.length === 0 ? (
@@ -45,7 +47,7 @@ export default async function MyNarratives() {
           <TableBody>
             {rows.map((r) => (
               <TableRow key={r.assignmentId}>
-                <TableCell className="mono text-graphite">{r.orderNo}</TableCell>
+                <TableCell className="mono text-graphite">{r.practice ? "" : r.orderNo}</TableCell>
                 <TableCell>
                   <Link
                     href={`/narratives/${r.assignmentId}`}

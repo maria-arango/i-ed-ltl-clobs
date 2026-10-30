@@ -1,10 +1,15 @@
 /**
  * ENUMERATOR query layer for the Narratives workspace (Amendments §51–§52,
  * ADR 0002). Like lib/db/coder.ts it connects as the restricted role
- * `clobs_coder`, which has no grant on narratives.lesson_id or
- * narratives.source_text, so a bug here returns a permission error, never
- * a lesson id. Every function is scoped to the acting enumerator: another
- * person's assignment is indistinguishable from one that does not exist.
+ * `clobs_coder`, which has no grant on narratives.lesson_id,
+ * narratives.source_text or the assignment's video_file. Every function is
+ * scoped to the acting enumerator: another person's assignment is
+ * indistinguishable from one that does not exist.
+ *
+ * Enumerators know each narrative as "Video <order>" ("Practice" for a
+ * practice narrative), never by its admin label or N-code (Amendment §61).
+ * The lesson id stays inside the narrative's own text, on purpose, so they
+ * can check it against the video they open.
  *
  * Saving is optimistic: a save names the revision it was built on and is
  * applied only if that is still the current revision. A refused save is
@@ -51,8 +56,9 @@ export class NarrativeError extends Error {
 export interface MyNarrativeRow {
   assignmentId: string;
   orderNo: number;
+  /** "Video 3", or "Practice". */
   label: string;
-  displayCode: string;
+  practice: boolean;
   durationLabel: string | null;
   status: NarrativeStatus;
   videoUrl: string | null;
@@ -60,14 +66,18 @@ export interface MyNarrativeRow {
   submittedAt: Date | null;
 }
 
-/** The enumerator's open assignments, in the order to do them. */
+/** What an enumerator calls a narrative (Amendment §61). */
+export function enumeratorLabel(orderNo: number, dataset: string): string {
+  return dataset === "training" ? "Practice" : `Video ${orderNo}`;
+}
+
+/** The enumerator's open assignments: practice first, then in the order to do them. */
 export async function listMyNarratives(userId: string): Promise<MyNarrativeRow[]> {
-  return db
+  const rows = await db
     .select({
       assignmentId: narrativeAssignments.id,
       orderNo: narrativeAssignments.orderNo,
-      label: narratives.label,
-      displayCode: narratives.displayCode,
+      dataset: narrativeAssignments.dataset,
       durationLabel: narratives.durationLabel,
       status: narrativeAssignments.status,
       videoUrl: narrativeAssignments.videoUrl,
@@ -85,6 +95,22 @@ export async function listMyNarratives(userId: string): Promise<MyNarrativeRow[]
       ),
     )
     .orderBy(asc(narrativeAssignments.orderNo), asc(narrativeAssignments.assignedAt));
+  return rows
+    .map(({ dataset, ...r }) => ({ ...r, label: enumeratorLabel(r.orderNo, dataset), practice: dataset === "training" }))
+    .sort((a, b) => Number(b.practice) - Number(a.practice));
+}
+
+/**
+ * Does this person have any open narrative? An admin with one (a practice
+ * narrative, say) sees "My narratives" without joining the team.
+ */
+export async function hasOpenNarratives(userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: narrativeAssignments.id })
+    .from(narrativeAssignments)
+    .where(and(eq(narrativeAssignments.assigneeId, userId), ne(narrativeAssignments.status, "returned")))
+    .limit(1);
+  return !!row;
 }
 
 /* ------------------------------------------------------------------ */
@@ -94,8 +120,9 @@ export async function listMyNarratives(userId: string): Promise<MyNarrativeRow[]
 export interface MyNarrative {
   assignmentId: string;
   orderNo: number;
+  /** "Video 3", or "Practice". */
   label: string;
-  displayCode: string;
+  practice: boolean;
   durationLabel: string | null;
   status: NarrativeStatus;
   videoUrl: string | null;
@@ -119,8 +146,6 @@ async function ownAssignment(userId: string, assignmentId: string) {
       dataset: narrativeAssignments.dataset,
       narrativeId: narrativeAssignments.narrativeId,
       startedAt: narrativeAssignments.startedAt,
-      label: narratives.label,
-      displayCode: narratives.displayCode,
       durationLabel: narratives.durationLabel,
       initialDoc: narratives.initialDoc,
     })
@@ -159,8 +184,8 @@ export async function getMyNarrative(userId: string, assignmentId: string): Prom
   return {
     assignmentId: a.id,
     orderNo: a.orderNo,
-    label: a.label,
-    displayCode: a.displayCode,
+    label: enumeratorLabel(a.orderNo, a.dataset),
+    practice: a.dataset === "training",
     durationLabel: a.durationLabel,
     status: a.status,
     videoUrl: a.videoUrl,

@@ -162,12 +162,6 @@ export function parseNarrative(raw: string): ParsedNarrative {
   return out;
 }
 
-/** Replace every occurrence of the lesson id (Amendment §54). */
-export function redactLessonId(raw: string, lessonId: string, replacement: string): string {
-  if (!lessonId) return raw;
-  return raw.split(lessonId).join(replacement);
-}
-
 /* ------------------------------------------------------------------ */
 /* To the editor document                                              */
 /* ------------------------------------------------------------------ */

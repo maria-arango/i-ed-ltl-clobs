@@ -19,9 +19,12 @@ import {
   users,
 } from "@/db/schema";
 import templateSeed from "@/db/seed/narrative-template-2026-10-21.json";
+import { driveNameLookup } from "@/lib/backup/google-drive";
 import { csvObjects, normaliseVideoLink } from "@/lib/narratives/csv";
 import { docStats, type DocStats, type NarrativeAnswers, type NarrativeComment, type PMNode } from "@/lib/narratives/doc";
-import { narrativeToDoc, parseNarrative, PARSER_VERSION, redactLessonId } from "@/lib/narratives/parse";
+import { narrativeToDoc, parseNarrative, PARSER_VERSION } from "@/lib/narratives/parse";
+import { parseReviewScript, SCRIPT_FORMAT, SCRIPT_PARSER_VERSION, scriptSourceText, scriptToDoc } from "@/lib/narratives/script";
+import { checkVideo, sidOf, type DriveLookup, type VideoCheckResult } from "@/lib/narratives/video-check";
 import type { NarrativeTemplate } from "@/lib/narratives/template";
 
 type Dataset = "live" | "test" | "training";
@@ -58,15 +61,22 @@ export async function getActiveTemplate(): Promise<{ id: string; content: Narrat
 /* Import                                                              */
 /* ------------------------------------------------------------------ */
 
+/**
+ * One uploaded file: a pipeline NARRATIVE.md as text, or a review script
+ * Word file (Amendment §61) as base64.
+ */
 export interface ImportFile {
   name: string;
-  text: string;
+  text?: string;
+  dataBase64?: string;
 }
 
 export interface ImportPreviewRow {
   name: string;
+  format: "script" | "narrative";
   lessonId: string | null;
   duration: string | null;
+  /** Episodes of a NARRATIVE.md, lines of a review script. */
   episodes: number;
   givenFacts: number;
   warnings: string[];
@@ -74,51 +84,105 @@ export interface ImportPreviewRow {
   importable: boolean;
 }
 
-function sha256(s: string): string {
-  return createHash("sha256").update(s, "utf8").digest("hex");
+function sha256(s: string | Uint8Array): string {
+  return createHash("sha256").update(s).digest("hex");
 }
 
 const MAX_FILE_BYTES = 2_000_000;
 
-/** Look before writing: what each file contains, and whether it is new. */
-export async function previewNarrativeImport(files: ImportFile[]): Promise<ImportPreviewRow[]> {
-  const rows: ImportPreviewRow[] = [];
+/** What one file holds, in a shape common to both formats. */
+interface ReadFile {
+  format: "script" | "narrative";
+  lessonId: string | null;
+  duration: string | null;
+  units: number;
+  givenFacts: number;
+  warnings: string[];
+  bytes: number;
+  sha: string;
+  sourceText: string;
+  initialDoc: PMNode;
+}
+
+async function readImportFile(f: ImportFile): Promise<ReadFile> {
+  if (f.dataBase64 !== undefined) {
+    const data = new Uint8Array(Buffer.from(f.dataBase64, "base64"));
+    const p = await parseReviewScript(data);
+    return {
+      format: "script",
+      lessonId: p.lessonId,
+      duration: p.duration,
+      units: p.lineCount,
+      givenFacts: 0,
+      warnings: p.warnings,
+      bytes: data.length,
+      sha: sha256(data),
+      sourceText: scriptSourceText(p),
+      initialDoc: scriptToDoc(p),
+    };
+  }
+  const text = f.text ?? "";
+  const p = parseNarrative(text);
+  return {
+    format: "narrative",
+    lessonId: p.lessonId,
+    duration: p.duration,
+    units: p.episodes.length,
+    givenFacts: p.given.length,
+    warnings: p.warnings,
+    bytes: Buffer.byteLength(text, "utf8"),
+    sha: sha256(text),
+    sourceText: text,
+    initialDoc: narrativeToDoc(p),
+  };
+}
+
+/**
+ * Look before writing: what each file contains, and whether it is new in
+ * the target dataset ('training' = practice narratives).
+ */
+export async function previewNarrativeImport(files: ImportFile[], dataset: Dataset = "live"): Promise<ImportPreviewRow[]> {
+  const read = await Promise.all(files.map(readImportFile));
   const existingByLesson = new Map<string, string>();
-  const lessonIds = files.map((f) => parseNarrative(f.text).lessonId).filter((x): x is string => !!x);
+  const lessonIds = read.map((r) => r.lessonId).filter((x): x is string => !!x);
   if (lessonIds.length) {
     const found = await db
       .select({ lessonId: narratives.lessonId, code: narratives.displayCode })
       .from(narratives)
-      .where(and(inArray(narratives.lessonId, lessonIds), isNull(narratives.voidedAt)));
+      .where(and(inArray(narratives.lessonId, lessonIds), isNull(narratives.voidedAt), eq(narratives.dataset, dataset)));
     for (const f of found) if (f.lessonId) existingByLesson.set(f.lessonId, f.code);
   }
-  const shas = files.map((f) => sha256(f.text));
   const bySha = new Map<string, string>();
-  if (shas.length) {
+  if (read.length) {
     const found = await db
       .select({ sha: narratives.sourceSha256, code: narratives.displayCode })
       .from(narratives)
-      .where(inArray(narratives.sourceSha256, shas));
+      .where(and(inArray(narratives.sourceSha256, read.map((r) => r.sha)), eq(narratives.dataset, dataset)));
     for (const f of found) bySha.set(f.sha, f.code);
   }
-  files.forEach((f, i) => {
-    const p = parseNarrative(f.text);
-    const tooBig = Buffer.byteLength(f.text, "utf8") > MAX_FILE_BYTES;
-    const dup = bySha.get(shas[i]) ?? (p.lessonId ? existingByLesson.get(p.lessonId) : undefined) ?? null;
-    const warnings = [...p.warnings];
+  const seenInBatch = new Map<string, string>();
+  return read.map((r, i) => {
+    const tooBig = r.bytes > MAX_FILE_BYTES;
+    const warnings = [...r.warnings];
     if (tooBig) warnings.push("File is larger than 2 MB.");
-    rows.push({
-      name: f.name,
-      lessonId: p.lessonId,
-      duration: p.duration,
-      episodes: p.episodes.length,
-      givenFacts: p.given.length,
+    let dup = bySha.get(r.sha) ?? (r.lessonId ? existingByLesson.get(r.lessonId) : undefined) ?? null;
+    if (!dup && r.lessonId && seenInBatch.has(r.lessonId)) {
+      warnings.push(`Same lesson as ${seenInBatch.get(r.lessonId)} in this upload.`);
+      dup = seenInBatch.get(r.lessonId)!;
+    }
+    if (r.lessonId && !seenInBatch.has(r.lessonId)) seenInBatch.set(r.lessonId, files[i].name);
+    return {
+      name: files[i].name,
+      format: r.format,
+      lessonId: r.lessonId,
+      duration: r.duration,
+      episodes: r.units,
+      givenFacts: r.givenFacts,
       warnings,
       duplicateOf: dup,
-      importable: !tooBig && p.episodes.length > 0 && !!p.lessonId && !dup,
-    });
+      importable: !tooBig && r.units > 0 && !!r.lessonId && !dup,
+    };
   });
-  return rows;
 }
 
 async function nextDisplayCodes(n: number): Promise<string[]> {
@@ -131,48 +195,45 @@ async function nextDisplayCodes(n: number): Promise<string[]> {
 }
 
 /**
- * Import the importable files. With `removeLessonIds` (Amendment §54) the
- * lesson id is replaced by the display code everywhere in the text and is
- * stored NOWHERE in the platform.
+ * Import the importable files. The lesson id (tr_id) is kept as the label
+ * and in lesson_id, both admin-only, and stays in the narrative's own text
+ * so enumerators can check it against the video (Amendment §61, replacing
+ * §57). Enumerators see their narratives as "Video 1, 2, 3…".
  */
 export async function confirmNarrativeImport(
   actorId: string,
   files: ImportFile[],
-  opts: { removeLessonIds: boolean; dataset?: Dataset },
-): Promise<Result<{ created: Array<{ displayCode: string; label: string; lessonId: string; file: string }>; skipped: number }>> {
-  const preview = await previewNarrativeImport(files);
+  opts: { dataset?: Dataset } = {},
+): Promise<Result<{ created: Array<{ displayCode: string; lessonId: string; file: string }>; skipped: number }>> {
+  const dataset = opts.dataset ?? "live";
+  const preview = await previewNarrativeImport(files, dataset);
   const todo = files.filter((_, i) => preview[i].importable);
   const codes = await nextDisplayCodes(todo.length);
-  // lessonId/file are RETURNED (so the admin can save the code list) but,
-  // with removeLessonIds, never stored.
-  const created: Array<{ displayCode: string; label: string; lessonId: string; file: string }> = [];
+  const created: Array<{ displayCode: string; lessonId: string; file: string }> = [];
   for (let i = 0; i < todo.length; i++) {
     const displayCode = codes[i];
-    const parsed0 = parseNarrative(todo[i].text);
-    const lessonId = parsed0.lessonId!;
-    const stored = opts.removeLessonIds ? redactLessonId(todo[i].text, lessonId, displayCode) : todo[i].text;
-    const parsed = opts.removeLessonIds ? parseNarrative(stored) : parsed0;
-    const label = opts.removeLessonIds ? displayCode : lessonId;
+    const r = await readImportFile(todo[i]);
+    const lessonId = r.lessonId!;
     await db.insert(narratives).values({
       displayCode,
-      label,
-      lessonId: opts.removeLessonIds ? null : lessonId,
-      durationLabel: parsed.duration,
-      sourceFormat: "hapi-narrative-md",
-      sourceText: stored,
-      sourceSha256: sha256(stored),
-      initialDoc: narrativeToDoc(parsed),
-      parserVersion: PARSER_VERSION,
-      episodeCount: parsed.episodes.length,
-      dataset: opts.dataset ?? "live",
+      label: lessonId,
+      lessonId,
+      durationLabel: r.duration,
+      sourceFormat: r.format === "script" ? SCRIPT_FORMAT : "hapi-narrative-md",
+      sourceText: r.sourceText,
+      sourceSha256: r.sha,
+      initialDoc: r.initialDoc,
+      parserVersion: r.format === "script" ? SCRIPT_PARSER_VERSION : PARSER_VERSION,
+      episodeCount: r.units,
+      dataset,
       importedBy: actorId,
     });
-    created.push({ displayCode, label, lessonId, file: todo[i].name });
+    created.push({ displayCode, lessonId, file: todo[i].name });
   }
   await audit(actorId, "narratives_imported", "narratives", created.map((c) => c.displayCode).join(","), {
     count: created.length,
     skipped: files.length - todo.length,
-    removeLessonIds: opts.removeLessonIds,
+    dataset,
   });
   return { ok: true, created, skipped: files.length - todo.length };
 }
@@ -202,10 +263,62 @@ async function isReviewer(userId: string): Promise<boolean> {
   return (await listReviewers()).some((r) => r.id === userId);
 }
 
+/**
+ * The order numbers a person's open narratives already use, per dataset.
+ * Enumerators know a narrative as "Video <order>", so an order is used at
+ * most once per person (practice narratives are numbered separately).
+ */
+async function usedOrders(assigneeId: string, dataset: Dataset, exceptAssignmentId?: string): Promise<Set<number>> {
+  const rows = await db
+    .select({ id: narrativeAssignments.id, orderNo: narrativeAssignments.orderNo })
+    .from(narrativeAssignments)
+    .where(
+      and(
+        eq(narrativeAssignments.assigneeId, assigneeId),
+        eq(narrativeAssignments.dataset, dataset),
+        ne(narrativeAssignments.status, "returned"),
+      ),
+    );
+  return new Set(rows.filter((r) => r.id !== exceptAssignmentId).map((r) => r.orderNo));
+}
+
+const nextFree = (used: Set<number>) => {
+  let k = 1;
+  while (used.has(k)) k++;
+  return k;
+};
+
+/** Each reviewer's next free order number (real narratives and practice). */
+export async function nextOrders(): Promise<{ live: Record<string, number>; training: Record<string, number> }> {
+  const rows = await db
+    .select({ assigneeId: narrativeAssignments.assigneeId, orderNo: narrativeAssignments.orderNo, dataset: narrativeAssignments.dataset })
+    .from(narrativeAssignments)
+    .where(ne(narrativeAssignments.status, "returned"));
+  const used = { live: new Map<string, Set<number>>(), training: new Map<string, Set<number>>() };
+  for (const r of rows) {
+    if (r.dataset !== "live" && r.dataset !== "training") continue;
+    const m = used[r.dataset];
+    (m.get(r.assigneeId) ?? m.set(r.assigneeId, new Set()).get(r.assigneeId)!).add(r.orderNo);
+  }
+  const out = { live: {} as Record<string, number>, training: {} as Record<string, number> };
+  for (const k of ["live", "training"] as const) for (const [id, set] of used[k]) out[k][id] = nextFree(set);
+  return out;
+}
+
+/** The Drive name lookup for video checks; null when no service account is configured. */
+export function defaultDriveLookup(): DriveLookup | null {
+  return driveNameLookup(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+}
+
+function videoNote(v: VideoCheckResult): string | undefined {
+  return v.ok && v.method === null ? v.note : undefined;
+}
+
 export async function assignNarrative(
   actorId: string,
-  input: { narrativeId: string; assigneeId: string; orderNo: number; videoUrl: string | null },
-): Promise<Result<{ assignmentId: string }>> {
+  input: { narrativeId: string; assigneeId: string; orderNo: number; videoUrl: string | null; videoFile?: string | null },
+  lookup: DriveLookup | null = defaultDriveLookup(),
+): Promise<Result<{ assignmentId: string; videoNote?: string }>> {
   if (!Number.isInteger(input.orderNo) || input.orderNo < 1 || input.orderNo > 10_000) {
     return { ok: false, error: "Order must be a whole number from 1." };
   }
@@ -213,6 +326,8 @@ export async function assignNarrative(
   if (input.videoUrl && !videoUrl) return { ok: false, error: "The video link must be an https link or a Drive file id." };
   const [n] = await db.select().from(narratives).where(eq(narratives.id, input.narrativeId)).limit(1);
   if (!n || n.voidedAt) return { ok: false, error: "No such narrative." };
+  const video = await checkVideo({ lessonId: n.lessonId, videoUrl, sheetFile: input.videoFile ?? null, lookup });
+  if (!video.ok) return { ok: false, error: `Wrong video: ${video.problem}.` };
   if (!(await isReviewer(input.assigneeId))) {
     return { ok: false, error: "That person is not an active member of the Narratives team." };
   }
@@ -222,7 +337,16 @@ export async function assignNarrative(
     .where(and(eq(narrativeAssignments.narrativeId, n.id), ne(narrativeAssignments.status, "returned")))
     .limit(1);
   if (open) return { ok: false, error: "This narrative is already assigned. Use Reassign." };
-  const template = await getActiveTemplate();
+  const used = await usedOrders(input.assigneeId, n.dataset);
+  if (used.has(input.orderNo)) {
+    return {
+      ok: false,
+      error: `This person already has a Video ${input.orderNo}. Use order ${nextFree(used)} (their next free number) or another free one.`,
+    };
+  }
+  // Review scripts carry their own instructions and have no questions
+  // (María, 2026-10-30); NARRATIVE.md narratives keep the review template.
+  const templateId = n.sourceFormat === SCRIPT_FORMAT ? null : (await getActiveTemplate()).id;
   const assignmentId = await db.transaction(async (tx) => {
     const [a] = await tx
       .insert(narrativeAssignments)
@@ -231,7 +355,9 @@ export async function assignNarrative(
         assigneeId: input.assigneeId,
         orderNo: input.orderNo,
         videoUrl,
-        templateId: template.id,
+        videoFile: video.fileName,
+        videoCheck: video.method,
+        templateId,
         assignedBy: actorId,
         dataset: n.dataset,
       })
@@ -251,8 +377,9 @@ export async function assignNarrative(
     narrative: n.displayCode,
     assigneeId: input.assigneeId,
     orderNo: input.orderNo,
+    videoCheck: video.method,
   });
-  return { ok: true, assignmentId };
+  return { ok: true, assignmentId, videoNote: videoNote(video) };
 }
 
 /** Change order or video link of an open assignment. */
@@ -260,20 +387,45 @@ export async function updateNarrativeAssignment(
   actorId: string,
   assignmentId: string,
   input: { orderNo?: number; videoUrl?: string | null },
-): Promise<Result> {
-  const patch: { orderNo?: number; videoUrl?: string | null } = {};
+  lookup: DriveLookup | null = defaultDriveLookup(),
+): Promise<Result<{ videoNote?: string }>> {
+  const patch: { orderNo?: number; videoUrl?: string | null; videoFile?: string | null; videoCheck?: string | null } = {};
+  let note: string | undefined;
   if (input.orderNo !== undefined) {
     if (!Number.isInteger(input.orderNo) || input.orderNo < 1) return { ok: false, error: "Order must be a whole number from 1." };
     patch.orderNo = input.orderNo;
   }
+  const [row] = await db
+    .select({
+      videoUrl: narrativeAssignments.videoUrl,
+      lessonId: narratives.lessonId,
+      assigneeId: narrativeAssignments.assigneeId,
+      dataset: narrativeAssignments.dataset,
+    })
+    .from(narrativeAssignments)
+    .innerJoin(narratives, eq(narratives.id, narrativeAssignments.narrativeId))
+    .where(eq(narrativeAssignments.id, assignmentId))
+    .limit(1);
+  if (!row) return { ok: false, error: "No such assignment." };
+  if (patch.orderNo !== undefined) {
+    const used = await usedOrders(row.assigneeId, row.dataset, assignmentId);
+    if (used.has(patch.orderNo)) return { ok: false, error: `This person already has a Video ${patch.orderNo}. Choose a free number.` };
+  }
   if (input.videoUrl !== undefined) {
     const v = input.videoUrl ? normaliseVideoLink(input.videoUrl) : null;
     if (input.videoUrl && !v) return { ok: false, error: "The video link must be an https link or a Drive file id." };
-    patch.videoUrl = v;
+    if (v !== row.videoUrl) {
+      const video = await checkVideo({ lessonId: row.lessonId, videoUrl: v, sheetFile: null, lookup });
+      if (!video.ok) return { ok: false, error: `Wrong video: ${video.problem}.` };
+      patch.videoUrl = v;
+      patch.videoFile = video.fileName;
+      patch.videoCheck = video.method;
+      note = videoNote(video);
+    }
   }
   await db.update(narrativeAssignments).set(patch).where(eq(narrativeAssignments.id, assignmentId));
   await audit(actorId, "narrative_assignment_updated", "narrative_assignments", assignmentId, patch);
-  return { ok: true };
+  return { ok: true, videoNote: note };
 }
 
 /**
@@ -296,6 +448,10 @@ export async function reassignNarrative(
     return { ok: false, error: "That person is not an active member of the Narratives team." };
   }
   const [doc] = await db.select().from(narrativeDocuments).where(eq(narrativeDocuments.assignmentId, assignmentId)).limit(1);
+  // Keep the order if the new reviewer has it free, else their next free number.
+  const used = await usedOrders(input.assigneeId, old.dataset);
+  const wanted = input.orderNo ?? old.orderNo;
+  const orderNo = used.has(wanted) ? nextFree(used) : wanted;
   const newId = await db.transaction(async (tx) => {
     await tx
       .update(narrativeAssignments)
@@ -310,8 +466,10 @@ export async function reassignNarrative(
       .values({
         narrativeId: old.narrativeId,
         assigneeId: input.assigneeId,
-        orderNo: input.orderNo ?? old.orderNo,
+        orderNo,
         videoUrl: old.videoUrl,
+        videoFile: old.videoFile,
+        videoCheck: old.videoCheck,
         templateId: old.templateId,
         assignedBy: actorId,
         dataset: old.dataset,
@@ -400,9 +558,18 @@ export interface SheetRowPreview {
   lesson: string;
   narrativeId: string | null;
   narrativeCode: string | null;
+  lessonId: string | null;
+  sid: string | null;
   assigneeId: string | null;
   assigneeName: string | null;
   videoUrl: string | null;
+  /** The sheet's video_file column. */
+  sheetFile: string | null;
+  /** The file name the video was checked against, and how. */
+  videoFile: string | null;
+  videoCheck: "drive" | "sheet" | null;
+  /** Why the video could not be checked (the row can still be assigned). */
+  videoNote: string | null;
   problems: string[];
 }
 
@@ -412,17 +579,25 @@ const pick = (r: Record<string, string>, keys: string[]) => {
 };
 
 /**
- * Read an assignment sheet with columns like 00_assignments.csv:
- * order, reviewer (email or full name), video_id / lesson (lesson id or
- * N-code), video_drive_id / video_link. Nothing is written.
+ * Read an assignment sheet with columns like 00_assignments.csv: order,
+ * reviewer (email or full name), video_id (the lesson's tr_id, or an
+ * N-code), video_file and video_drive_id / video_link. Each row's video is
+ * checked against the narrative's own lesson id (Amendment §61): by the
+ * name Google Drive reports for the linked file, and by video_file. A row
+ * whose video belongs to another lesson cannot be assigned. Nothing is
+ * written. Practice narratives are assigned one at a time, not by sheet.
  */
-export async function previewAssignmentSheet(csv: string): Promise<SheetRowPreview[]> {
+export async function previewAssignmentSheet(
+  csv: string,
+  lookup: DriveLookup | null = defaultDriveLookup(),
+  dataset: Dataset = "live",
+): Promise<SheetRowPreview[]> {
   const rows = csvObjects(csv);
   const reviewers = await listReviewers();
   const all = await db
     .select({ id: narratives.id, code: narratives.displayCode, lessonId: narratives.lessonId })
     .from(narratives)
-    .where(isNull(narratives.voidedAt));
+    .where(and(isNull(narratives.voidedAt), eq(narratives.dataset, dataset)));
   const assigned = new Set(
     (
       await db
@@ -431,52 +606,87 @@ export async function previewAssignmentSheet(csv: string): Promise<SheetRowPrevi
         .where(ne(narrativeAssignments.status, "returned"))
     ).map((r) => r.id),
   );
-  return rows.map((r, i) => {
-    const problems: string[] = [];
-    const orderRaw = pick(r, ["order", "order_no"]);
-    const orderNo = /^\d+$/.test(orderRaw) ? Number(orderRaw) : null;
-    if (orderNo === null) problems.push("order is missing or not a number");
-    const reviewer = pick(r, ["reviewer", "email", "reviewer_email", "enumerator"]);
-    const rl = reviewer.toLowerCase();
-    const matches = reviewers.filter((p) => p.email.toLowerCase() === rl || (p.name ?? "").toLowerCase() === rl);
-    if (matches.length === 0) problems.push("reviewer not found in the Narratives team");
-    if (matches.length > 1) problems.push("reviewer name matches more than one person; use the email");
-    const lesson = pick(r, ["lesson", "lesson_id", "video_id", "narrative"]);
-    const n = all.find((x) => x.lessonId === lesson || x.code === lesson);
-    if (!n) problems.push("no imported narrative with that lesson id or N-code");
-    else if (assigned.has(n.id)) problems.push("already assigned (use Reassign on the dashboard)");
-    const linkRaw = pick(r, ["video_link", "video_url", "link", "video_drive_id"]);
-    const videoUrl = linkRaw ? normaliseVideoLink(linkRaw) : null;
-    if (linkRaw && !videoUrl) problems.push("video link is not an https link or Drive id");
-    return {
-      line: i + 2,
-      orderNo,
-      reviewer,
-      lesson,
-      narrativeId: n?.id ?? null,
-      narrativeCode: n?.code ?? null,
-      assigneeId: matches.length === 1 ? matches[0].id : null,
-      assigneeName: matches.length === 1 ? matches[0].name || matches[0].email : null,
-      videoUrl,
-      problems,
-    };
-  });
+  const seen = new Map<string, number>();
+  const orderSeen = new Map<string, number>();
+  const usedBy = new Map<string, Set<number>>();
+  for (const id of new Set(reviewers.map((r) => r.id))) usedBy.set(id, await usedOrders(id, dataset));
+  return Promise.all(
+    rows.map(async (r, i) => {
+      const problems: string[] = [];
+      const orderRaw = pick(r, ["order", "order_no"]);
+      const orderNo = /^\d+$/.test(orderRaw) ? Number(orderRaw) : null;
+      if (orderNo === null) problems.push("order is missing or not a number");
+      const reviewer = pick(r, ["reviewer", "email", "reviewer_email", "enumerator"]);
+      const rl = reviewer.toLowerCase();
+      const matches = reviewers.filter((p) => p.email.toLowerCase() === rl || (p.name ?? "").toLowerCase() === rl);
+      if (matches.length === 0) problems.push("reviewer not found in the Narratives team");
+      if (matches.length > 1) problems.push("reviewer name matches more than one person; use the email");
+      const lesson = pick(r, ["video_id", "lesson", "lesson_id", "tr_id", "narrative"]);
+      const n = all.find((x) => x.lessonId === lesson || x.code === lesson);
+      if (!n) problems.push("no loaded narrative with that lesson id (tr_id) or N-code");
+      else if (assigned.has(n.id)) problems.push("already assigned (use Reassign on the dashboard)");
+      if (n) {
+        if (seen.has(n.id)) problems.push(`the same narrative is on line ${seen.get(n.id)} too`);
+        else seen.set(n.id, i + 2);
+      }
+      if (matches.length === 1 && orderNo !== null) {
+        const key = `${matches[0].id}:${orderNo}`;
+        if (usedBy.get(matches[0].id)?.has(orderNo)) problems.push(`this reviewer already has a Video ${orderNo}`);
+        else if (orderSeen.has(key)) problems.push(`line ${orderSeen.get(key)} gives this reviewer Video ${orderNo} too`);
+        else orderSeen.set(key, i + 2);
+      }
+      const linkRaw = pick(r, ["video_link", "video_url", "link", "video_drive_id"]);
+      const videoUrl = linkRaw ? normaliseVideoLink(linkRaw) : null;
+      if (linkRaw && !videoUrl) problems.push("video link is not an https link or Drive id");
+      const sheetFile = pick(r, ["video_file", "video_filename", "file"]) || null;
+      let video: VideoCheckResult | null = null;
+      if (n && (!linkRaw || videoUrl)) {
+        video = await checkVideo({ lessonId: n.lessonId, videoUrl, sheetFile, lookup });
+        if (!video.ok) problems.push(video.problem);
+      }
+      return {
+        line: i + 2,
+        orderNo,
+        reviewer,
+        lesson,
+        narrativeId: n?.id ?? null,
+        narrativeCode: n?.code ?? null,
+        lessonId: n?.lessonId ?? null,
+        sid: n?.lessonId ? sidOf(n.lessonId) : null,
+        assigneeId: matches.length === 1 ? matches[0].id : null,
+        assigneeName: matches.length === 1 ? matches[0].name || matches[0].email : null,
+        videoUrl,
+        sheetFile,
+        videoFile: video?.ok ? video.fileName : null,
+        videoCheck: video?.ok ? video.method : null,
+        videoNote: video?.ok && video.method === null ? video.note : null,
+        problems,
+      };
+    }),
+  );
 }
 
 export async function confirmAssignmentSheet(
   actorId: string,
   csv: string,
+  lookup: DriveLookup | null = defaultDriveLookup(),
+  dataset: Dataset = "live",
 ): Promise<Result<{ assigned: number; skipped: number }>> {
-  const preview = await previewAssignmentSheet(csv);
+  const preview = await previewAssignmentSheet(csv, lookup, dataset);
   let assigned = 0;
   for (const row of preview) {
     if (row.problems.length || !row.narrativeId || !row.assigneeId || row.orderNo === null) continue;
-    const r = await assignNarrative(actorId, {
-      narrativeId: row.narrativeId,
-      assigneeId: row.assigneeId,
-      orderNo: row.orderNo,
-      videoUrl: row.videoUrl,
-    });
+    const r = await assignNarrative(
+      actorId,
+      {
+        narrativeId: row.narrativeId,
+        assigneeId: row.assigneeId,
+        orderNo: row.orderNo,
+        videoUrl: row.videoUrl,
+        videoFile: row.sheetFile,
+      },
+      lookup,
+    );
     if (r.ok) assigned++;
   }
   return { ok: true, assigned, skipped: preview.length - assigned };
@@ -491,6 +701,8 @@ export interface DashboardRow {
   displayCode: string;
   label: string;
   lessonId: string | null;
+  sid: string | null;
+  format: "script" | "narrative";
   durationLabel: string | null;
   episodes: number;
   importedAt: Date;
@@ -499,6 +711,8 @@ export interface DashboardRow {
   assigneeName: string | null;
   orderNo: number | null;
   videoUrl: string | null;
+  videoFile: string | null;
+  videoCheck: string | null;
   status: "unassigned" | "not_started" | "in_progress" | "submitted";
   updatedAt: Date | null;
   submittedAt: Date | null;
@@ -560,6 +774,8 @@ export async function getNarrativeDashboard(dataset: Dataset = "live"): Promise<
       displayCode: n.displayCode,
       label: n.label,
       lessonId: n.lessonId,
+      sid: n.lessonId ? sidOf(n.lessonId) : null,
+      format: n.sourceFormat === SCRIPT_FORMAT ? "script" : "narrative",
       durationLabel: n.durationLabel,
       episodes: n.episodeCount,
       importedAt: n.importedAt,
@@ -568,6 +784,8 @@ export async function getNarrativeDashboard(dataset: Dataset = "live"): Promise<
       assigneeName: x ? x.name || x.email : null,
       orderNo: x?.a.orderNo ?? null,
       videoUrl: x?.a.videoUrl ?? null,
+      videoFile: x?.a.videoFile ?? null,
+      videoCheck: x?.a.videoCheck ?? null,
       status: x ? x.a.status === "returned" ? "unassigned" : x.a.status : "unassigned",
       updatedAt: x && x.revision ? x.updatedAt : null,
       submittedAt: x?.a.submittedAt ?? null,
@@ -593,11 +811,16 @@ export interface AdminNarrativeView {
   displayCode: string;
   label: string;
   lessonId: string | null;
+  sid: string | null;
+  format: "script" | "narrative";
+  practice: boolean;
   durationLabel: string | null;
   assigneeId: string;
   assigneeName: string;
   orderNo: number;
   videoUrl: string | null;
+  videoFile: string | null;
+  videoCheck: string | null;
   status: "not_started" | "in_progress" | "submitted" | "returned";
   statusReason: string | null;
   revision: number;
@@ -642,11 +865,16 @@ export async function getAdminNarrative(assignmentId: string): Promise<AdminNarr
     displayCode: row.n.displayCode,
     label: row.n.label,
     lessonId: row.n.lessonId,
+    sid: row.n.lessonId ? sidOf(row.n.lessonId) : null,
+    format: row.n.sourceFormat === SCRIPT_FORMAT ? "script" : "narrative",
+    practice: row.n.dataset === "training",
     durationLabel: row.n.durationLabel,
     assigneeId: row.a.assigneeId,
     assigneeName: row.name || row.email,
     orderNo: row.a.orderNo,
     videoUrl: row.a.videoUrl,
+    videoFile: row.a.videoFile,
+    videoCheck: row.a.videoCheck,
     status: row.a.status,
     statusReason: row.a.statusReason,
     revision: row.d.revision,
@@ -807,7 +1035,7 @@ export async function buildNarrativeDocx(actorId: string | null, assignmentId: s
     lastEnd: view.lastEnd,
     submittedAt: view.submittedAt,
   });
-  const filename = docxFilename(view.orderNo, view.lessonId ?? view.label, view.assigneeName);
+  const filename = docxFilename(view.orderNo, view.lessonId ?? view.label, view.assigneeName, view.format === "script");
   const file = { filename, bytes, sha256: createHash("sha256").update(bytes).digest("hex"), view, version, revision };
   if (audited) {
     await audit(actorId, "narrative_docx_downloaded", "narrative_assignments", assignmentId, {
@@ -845,7 +1073,7 @@ export async function buildNarrativesZip(
   const { toZip } = await import("@/lib/export/zip");
   const entries: Array<{ name: string; data: Uint8Array }> = [];
   const manifest = [
-    ["file", "narrative_code", "label", "lesson_id", "reviewer", "order", "status", "version", "revision", "submitted_at", "active_minutes", "red_chars", "struck_chars", "comments", "original_words_removed", "sha256"],
+    ["file", "sid", "tr_id", "video_file", "video_link", "video_check", "format", "narrative_code", "reviewer", "order", "status", "version", "revision", "submitted_at", "active_minutes", "red_chars", "struck_chars", "comments", "original_words_removed", "sha256"],
   ];
   for (const r of rows) {
     const f = await buildNarrativeDocx(actorId, r.assignmentId!, false);
@@ -856,9 +1084,13 @@ export async function buildNarrativesZip(
     entries.push({ name, data: new Uint8Array(f.bytes) });
     manifest.push([
       name,
-      r.displayCode,
-      r.label,
+      r.sid ?? "",
       r.lessonId ?? "",
+      r.videoFile ?? "",
+      r.videoUrl ?? "",
+      r.videoCheck ?? "not checked",
+      r.format,
+      r.displayCode,
       r.assigneeName ?? "",
       String(r.orderNo ?? ""),
       r.status,
@@ -897,7 +1129,8 @@ export interface BackupFile {
  *     submitted version when submitted, otherwise the current text) with
  *     MANIFEST.csv;
  *  2. clobs-narratives-data_<date>.json.gz — the narrative tables as data:
- *     narratives (no lesson IDs are stored, Amendment §57), assignments,
+ *     narratives (with their lesson ids, Amendment §61), assignments (with
+ *     the video file each was checked against),
  *     working copies, the versions that matter for recovery (submit,
  *     reopen, restore, conflict copies) in full, the rest as metadata, and
  *     measured sittings — enough to rebuild every review.
@@ -911,6 +1144,8 @@ export async function buildNightlyBackup(dataset: Dataset = "live", now = new Da
       id: narratives.id,
       displayCode: narratives.displayCode,
       label: narratives.label,
+      lessonId: narratives.lessonId,
+      sourceFormat: narratives.sourceFormat,
       durationLabel: narratives.durationLabel,
       episodeCount: narratives.episodeCount,
       initialDoc: narratives.initialDoc,

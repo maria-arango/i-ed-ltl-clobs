@@ -27,6 +27,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -1031,27 +1032,35 @@ export const narrativeTemplates = pgTable("narrative_templates", {
 });
 
 // One imported AI narrative. Immutable after import (corrections live in
-// narrative_documents). lesson_id and source_text are ADMIN-ONLY: the
-// restricted role has no grant on them. When the importer removes lesson
-// IDs (Amendment §54) lesson_id is NULL and source_text is the redacted text.
-export const narratives = pgTable("narratives", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  displayCode: text("display_code").notNull().unique(),
-  label: text("label").notNull(),
-  lessonId: text("lesson_id"),
-  durationLabel: text("duration_label"),
-  sourceFormat: text("source_format").notNull(),
-  sourceText: text("source_text").notNull(),
-  sourceSha256: text("source_sha256").notNull().unique(),
-  initialDoc: jsonb("initial_doc").notNull(),
-  parserVersion: text("parser_version").notNull(),
-  episodeCount: integer("episode_count").notNull().default(0),
-  dataset: datasetEnum("dataset").notNull().default("live"),
-  importedBy: uuid("imported_by").references(() => users.id),
-  importedAt: timestamp("imported_at", { withTimezone: true }).notNull().defaultNow(),
-  voidedAt: timestamp("voided_at", { withTimezone: true }),
-  voidReason: text("void_reason"),
-});
+// narrative_documents). lesson_id (the tr_id) and source_text are
+// ADMIN-ONLY: the restricted role has no grant on them. Since Amendment §61
+// the lesson id is kept (it also stays in the narrative's own title, which
+// enumerators see); narratives imported earlier under §57 have none.
+// source_format is 'hapi-narrative-md' (NARRATIVE.md) or
+// 'review-script-docx' (the review script Word file); episode_count counts
+// a script's lines. Dataset 'training' marks a practice narrative.
+export const narratives = pgTable(
+  "narratives",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    displayCode: text("display_code").notNull().unique(),
+    label: text("label").notNull(),
+    lessonId: text("lesson_id"),
+    durationLabel: text("duration_label"),
+    sourceFormat: text("source_format").notNull(),
+    sourceText: text("source_text").notNull(),
+    sourceSha256: text("source_sha256").notNull(),
+    initialDoc: jsonb("initial_doc").notNull(),
+    parserVersion: text("parser_version").notNull(),
+    episodeCount: integer("episode_count").notNull().default(0),
+    dataset: datasetEnum("dataset").notNull().default("live"),
+    importedBy: uuid("imported_by").references(() => users.id),
+    importedAt: timestamp("imported_at", { withTimezone: true }).notNull().defaultNow(),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidReason: text("void_reason"),
+  },
+  (t) => [unique("narratives_source_sha256_dataset_key").on(t.sourceSha256, t.dataset)],
+);
 
 export const narrativeAssignments = pgTable(
   "narrative_assignments",
@@ -1065,6 +1074,11 @@ export const narrativeAssignments = pgTable(
       .references(() => users.id),
     orderNo: integer("order_no").notNull(),
     videoUrl: text("video_url"),
+    // Admin-only (Amendment §61): the video's file name the link was checked
+    // against, and how ('drive' = name reported by Google Drive; 'sheet' =
+    // the sheet's video_file column only).
+    videoFile: text("video_file"),
+    videoCheck: text("video_check"),
     status: narrativeAssignmentStatusEnum("status").notNull().default("not_started"),
     statusReason: text("status_reason"),
     templateId: uuid("template_id").references(() => narrativeTemplates.id),

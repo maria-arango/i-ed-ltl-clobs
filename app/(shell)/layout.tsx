@@ -7,6 +7,7 @@ import { requireScoringAccess } from "@/lib/auth-helpers";
 import { getCoderQueue } from "@/lib/db/coder";
 import { getCalibrationQueue } from "@/lib/db/coder-calibration";
 import { AppShell } from "@/components/app-shell";
+import { hasOpenNarratives } from "@/lib/db/narratives";
 
 export default async function ShellLayout({
   children,
@@ -28,7 +29,7 @@ export default async function ShellLayout({
       email={session.user.email}
       name={session.user.name}
       role={session.user.role}
-      showMyNarratives={teams.includes("narratives")}
+      showMyNarratives={teams.includes("narratives") || (session.user.role === "admin" && (await hasOpenNarratives(session.user.id)))}
       isChiefCoder={session.user.isChiefCoder}
       showCalibration={session.user.datasetScope !== "training"}
       badges={badges}

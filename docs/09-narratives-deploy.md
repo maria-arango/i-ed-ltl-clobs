@@ -11,7 +11,7 @@
 | C. The eight Narratives enumerators | **Done**. Accounts created, Narratives team, the PINs you chose (Amendment §56) |
 | D. Merge the pull request | **You**: one click (below). Vercel then puts the new site live by itself |
 | E. Three settings in Vercel for the nightly Drive copy | **You**: about 5 minutes (below) |
-| F. Load the narratives and assign them | **You**, when the final set is chosen |
+| F. Load the narratives and assign them | **You**, when the final set is chosen (step-by-step below; Amendment §61) |
 
 ## D. Merge the pull request
 
@@ -33,7 +33,8 @@ The copy runs every night at 02:00 Uganda time. It puts two files into the share
 - `clobs-narratives_<date>.zip`: every assigned narrative as Word, plus `MANIFEST.csv`;
 - `clobs-narratives-data_<date>.json.gz`: all the narrative data, so any review can be rebuilt.
 
-The connection was tested on 2026-10-29: the test file `clobs-backup-connection-test.txt` in that
+The same setting also lets the platform check, read-only, that each narrative's video link is
+the right file (section F). The connection was tested on 2026-10-29: the test file `clobs-backup-connection-test.txt` in that
 folder came from the platform, and you can delete it.
 
 1. Go to <https://vercel.com> → sign in → click the project **i-ed-ltl-clobs** → **Settings**
@@ -57,20 +58,85 @@ folder came from the platform, and you can delete it.
 **Your daily manual copy** (on top of the nightly one): on the dashboard, **Submitted in the last 24
 hours (.zip)** downloads what was finished since yesterday. Save it into the same Drive folder.
 
-## F. Load and assign narratives
+## F. Load and assign narratives (Amendment §61)
 
-1. **Narratives** → scroll to **Load narratives** → choose the `NARRATIVE.md` files → **Check** →
-   read the table → **Load**.
-2. Lesson IDs are always removed (Amendment §57). Right after loading, a yellow box offers
-   **Download the code list**. Download it and save it in the Harvard Drive: it is the only record of
-   which N-code is which lesson, and it is shown only once.
-3. Assign each narrative:
-   - **one at a time:** **Assign** on its row (reviewer, order, the Drive link or file id of the video);
-   - **all at once:** **Assign from a sheet** with a CSV like `00_assignments.csv`. Put the
-     **N-code** (from the code list) in `video_id`, and the reviewer's email or exact full name in
-     `reviewer`.
-4. To rehearse, load the three placeholder files from `db/seed/narratives/` (invented content) and
-   assign one to yourself: tick **Narratives** on your own row on the Team screen first.
+### What you upload
+
+- **The review script Word files**, one per lesson, exactly as `review_script.py` makes them
+  (`01_<tr_id>_SCRIPT_<name>.docx`, like the ones in `20261021_reviewing_narratives/<reviewer>/
+  review_scripts_v2`). Not PDFs, not HTML. The platform shows them with the same layout: time,
+  speaker, text; bold scene lines; grey italic "seen" lines; the context card on top.
+- The older `NARRATIVE.md` files still work too.
+- The platform reads each lesson's ID (**tr_id**) from the file's own title ("Review script —
+  `<tr_id>`"), never from the file name, and works out the school (**sid**) from it.
+
+### 1. Load the scripts
+
+1. Open the site → **Narratives** (left menu) → scroll to **Load narratives**.
+2. Click **Choose Files** and select the script Word files (you can select many at once).
+3. Leave **Practice** unticked (see step 4 for practice).
+4. Click **Check N files**. A table lists each file with its **Lesson (tr_id)**, length and number
+   of lines. "New" means it can be loaded; "Already loaded" means it is there already.
+5. Click **Load N narratives**. They appear under **By narrative**, each with its tr_id and school.
+
+### 2. Assign them with a sheet
+
+Save a sheet as **CSV** with these columns (your `00_assignments.csv` works as it is; other
+columns are ignored):
+
+| Column | Example | What it does |
+|---|---|---|
+| `order` | `1` | The enumerator sees it as **Video 1**. Each number once per enumerator |
+| `reviewer` | `Aggrey` or their email | Who gets it (exact full name or email) |
+| `video_id` | `<tr_id>` | Which narrative: the lesson's tr_id |
+| `video_file` | `<sid>_<tr_id>_11_EAST_BIOLOGY_comp.mp4` | The video's file name in Drive |
+| `video_drive_id` | the Drive file id | Becomes the enumerator's **Open video** link |
+
+1. **Narratives** → **Assign from a sheet** → **Choose File** → your CSV → **Check sheet**.
+2. Read the table. For every row the platform checks that **the video belongs to the lesson**:
+   - it asks Google Drive for the linked file's real name and checks it starts with
+     `<sid>_<tr_id>_` of that narrative;
+   - it checks `video_file` the same way.
+
+   **✓ Checked in Drive** (or **✓ Matches the sheet**) and **Ready** mean the row is right. A red
+   reason ("the linked Drive file is … which is not lesson …", "this reviewer already has a
+   Video 1") means that row will **not** be assigned: fix the sheet and check again.
+3. Click **Assign N narratives**.
+
+The Drive check needs `GOOGLE_SERVICE_ACCOUNT_JSON` in Vercel (step E). Until then the platform
+checks `video_file` only.
+
+### 3. Assign one at a time (instead of a sheet)
+
+On a row under **By narrative**, click **Assign** → choose the reviewer (the order fills in with
+their next free number) → paste the Drive link or file id → **Assign**. The same video check runs;
+a wrong video is refused with the reason.
+
+### 4. A practice narrative (to see what enumerators see)
+
+1. **Team** → your own row → tick **Narratives** (optional: an admin with a narrative assigned
+   sees **My narratives** anyway).
+2. **Narratives** → **Load narratives** → choose one script → tick **Practice** → **Check** →
+   **Load 1 practice narrative**.
+3. Under **Practice narratives**, click **Assign** → choose yourself → paste its video link →
+   **Assign**.
+4. Left menu → **My narratives** → **Practice**. Edit it exactly as an enumerator would. Practice
+   narratives never count in progress, downloads or the nightly copy.
+
+### What enumerators see, and what only admins see
+
+| | Enumerators | Admins |
+|---|---|---|
+| Name of each narrative | **Video 1, Video 2…** (Practice first) | tr_id, school (sid), "shows as Video N" |
+| The narrative's own title | "Review script — `<tr_id>`" (kept on purpose, to check the video) | same |
+| Video | **Open video in a new tab** | the link, the checked file name and how it was checked |
+| Word downloads, MANIFEST.csv, nightly copy | — | sid, tr_id, video_file, video link, check |
+
+### Downloads
+
+- A script downloads as `01_<tr_id>_SCRIPT_<FirstName>.docx` in the original script layout, with
+  the enumerator's red text, strikethroughs and Word comments, and a "Reviewed on the platform by
+  …" line under the subtitle. `review_import.py` reads it like a script corrected in Word.
 
 ## Accounts and codes
 
@@ -85,7 +151,8 @@ hours (.zip)** downloads what was finished since yesterday. Save it into the sam
 - **A code needs correcting:** Team → **Change code** → type the right code → **Save**.
 - Enumerators cannot change their own code; the master team's codes stay the same everywhere.
 
-## Downloads
+## Downloads (all narratives)
 
 - **One narrative:** **Word** on its row. A submitted narrative downloads exactly as submitted.
-- **Everything submitted:** **Download submitted (.zip)**, with `MANIFEST.csv`.
+- **Everything submitted:** **Download submitted (.zip)**, with `MANIFEST.csv` (sid, tr_id, video
+  file and link for every file).

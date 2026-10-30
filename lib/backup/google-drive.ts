@@ -91,3 +91,49 @@ export async function uploadToDrive(
   const out = (await res.json()) as { id: string; name: string };
   return { id: out.id, name: out.name, bytes: file.data.length };
 }
+
+/**
+ * A file's name in Drive (shared drives supported), for checking that a
+ * video link belongs to its narrative (Amendment §61). Read-only.
+ */
+export async function getDriveFileName(
+  token: string,
+  fileId: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ name: string } | { error: string }> {
+  try {
+    const res = await fetchImpl(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=name&supportsAllDrives=true`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    if (res.status === 404) return { error: "Drive cannot find this file, or the platform has no access to it" };
+    if (!res.ok) return { error: `Drive answered ${res.status}` };
+    const body = (await res.json()) as { name?: string };
+    return body.name ? { name: body.name } : { error: "Drive returned no file name" };
+  } catch {
+    return { error: "Drive could not be reached" };
+  }
+}
+
+/**
+ * A lookup bound to the configured service account, or null when the
+ * platform has none (GOOGLE_SERVICE_ACCOUNT_JSON unset). The token is
+ * fetched once, on first use.
+ */
+export function driveNameLookup(
+  serviceAccountJson: string | undefined,
+  fetchImpl: typeof fetch = fetch,
+): ((fileId: string) => Promise<{ name: string } | { error: string }>) | null {
+  const sa = parseServiceAccount(serviceAccountJson);
+  if (!sa) return null;
+  let token: Promise<string> | null = null;
+  return async (fileId) => {
+    token ??= getAccessToken(sa, fetchImpl);
+    try {
+      return await getDriveFileName(await token, fileId, fetchImpl);
+    } catch {
+      token = null;
+      return { error: "the platform could not sign in to Drive" };
+    }
+  };
+}

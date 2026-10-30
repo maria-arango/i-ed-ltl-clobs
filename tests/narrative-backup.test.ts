@@ -5,7 +5,8 @@
  *  - Uploads go into the configured folder, shared drives supported.
  *  - The cron endpoint refuses anyone without the Vercel cron secret.
  *  - The copy holds every assigned narrative as Word plus the narrative
- *    tables as data — and no lesson IDs (Amendment §57).
+ *    tables as data, with sid and tr_id in the manifest and the data
+ *    (Amendment §61; Amendment B §6: both in every admin export and backup).
  *  - "Submitted in the last 24 hours" keeps only recent submissions.
  */
 import { generateKeyPairSync, createVerify } from "node:crypto";
@@ -115,9 +116,8 @@ beforeAll(async () => {
   ids.admin = admin.id;
   ids.a = a.id;
   await db.insert(userTeams).values({ userId: a.id, team: "narratives" });
-  const r = await confirmNarrativeImport(admin.id, [{ name: "n.md", text: BASE.split("99903_12").join("99981_1") }], { removeLessonIds: true, dataset: "test" });
+  const r = await confirmNarrativeImport(admin.id, [{ name: "n.md", text: BASE.split("99903_12").join("99981_1") }], { dataset: "test" });
   if (!r.ok) throw new Error(r.error);
-  expect(r.created[0].lessonId).toBe("99981_1"); // returned once, for the admin's code list
   const [n] = await db.select().from(narratives).where(eq(narratives.importedBy, admin.id));
   const asg = await assignNarrative(admin.id, { narrativeId: n.id, assigneeId: a.id, orderNo: 1, videoUrl: null });
   if (!asg.ok) throw new Error(asg.error);
@@ -126,7 +126,7 @@ beforeAll(async () => {
 afterAll(() => purgeFixture(FIXTURE));
 
 describe("backup contents", () => {
-  it("holds every assigned narrative as Word plus the data, with no lesson IDs", async () => {
+  it("holds every assigned narrative as Word plus the data, with sid and tr_id", async () => {
     const files = await buildNightlyBackup("test", new Date("2026-10-29T23:00:00Z"));
     expect(files.map((f) => f.name)).toEqual(["clobs-narratives_2026-10-29.zip", "clobs-narratives-data_2026-10-29.json.gz"]);
     const zip = await JSZip.loadAsync(files[0].data);
@@ -137,13 +137,13 @@ describe("backup contents", () => {
     const data = JSON.parse(json);
     expect(data.assignments.some((x: { id: string }) => x.id === assignmentId)).toBe(true);
     expect(data.documents.length).toBeGreaterThan(0);
-    expect(json).not.toContain("99981_1");
-    for (const f of names) {
-      if (f.endsWith(".docx")) {
-        const inner = await JSZip.loadAsync(await zip.file(f)!.async("uint8array"));
-        expect(await inner.file("word/document.xml")!.async("string")).not.toContain("99981_1");
-      }
-    }
+    expect(data.narratives.find((n: { lessonId: string }) => n.lessonId === "99981_1")).toBeTruthy();
+    const manifest = (await zip.file("MANIFEST.csv")!.async("string")).replace(/^\uFEFF/, "").split("\r\n");
+    expect(manifest[0].split(",").slice(0, 7)).toEqual(["file", "sid", "tr_id", "video_file", "video_link", "video_check", "format"]);
+    const row = manifest.find((l) => l.includes(",99981_1,"))!;
+    expect(row.split(",")[1]).toBe("99981");
+    expect(row).toContain("not checked");
+    expect(names.some((n) => /^01_99981_1_NARRATIVE_review_Backup\.docx$/.test(n))).toBe(true);
   });
 
   it("'submitted in the last 24 hours' keeps only recent submissions", async () => {

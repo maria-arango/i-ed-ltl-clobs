@@ -35,13 +35,15 @@ function Message({ ok, text }: { ok: boolean; text: string | null }) {
   );
 }
 
-/** Batches of files whose total text stays under ~2.5 MB (server action limit). */
-function batches<T extends { text: string }>(items: T[], maxBytes = 2_500_000, maxCount = 30): T[][] {
-  const out: T[][] = [];
-  let cur: T[] = [];
+type Upload = { name: string; text?: string; dataBase64?: string };
+
+/** Batches of files whose total size stays under ~2.5 MB (server action limit). */
+function batches(items: Upload[], maxBytes = 2_500_000, maxCount = 30): Upload[][] {
+  const out: Upload[][] = [];
+  let cur: Upload[] = [];
   let size = 0;
   for (const it of items) {
-    const n = new Blob([it.text]).size;
+    const n = new Blob([it.text ?? it.dataBase64 ?? ""]).size;
     if (cur.length && (size + n > maxBytes || cur.length >= maxCount)) {
       out.push(cur);
       cur = [];
@@ -54,25 +56,34 @@ function batches<T extends { text: string }>(items: T[], maxBytes = 2_500_000, m
   return out;
 }
 
+async function readUpload(f: File): Promise<Upload> {
+  if (/\.docx$/i.test(f.name)) {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return { name: f.name, dataBase64: btoa(bin) };
+  }
+  return { name: f.name, text: await f.text() };
+}
+
 export function ImportPanel() {
   const router = useRouter();
-  const [files, setFiles] = useState<Array<{ name: string; text: string }>>([]);
+  const [files, setFiles] = useState<Upload[]>([]);
+  const [practice, setPractice] = useState(false);
   const [rows, setRows] = useState<ImportPreviewRow[] | null>(null);
-  const [codes, setCodes] = useState<Array<{ displayCode: string; lessonId: string; file: string }>>([]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, start] = useTransition();
 
   const pick = async (list: FileList | null) => {
     setRows(null);
     setMsg(null);
-    const read = await Promise.all([...(list ?? [])].map(async (f) => ({ name: f.name, text: await f.text() })));
-    setFiles(read);
+    setFiles(await Promise.all([...(list ?? [])].map(readUpload)));
   };
   const preview = () =>
     start(async () => {
       const all: ImportPreviewRow[] = [];
       for (const b of batches(files)) {
-        const r = await previewImportAction(b);
+        const r = await previewImportAction(b, practice);
         if ("error" in r) {
           setMsg({ ok: false, text: r.error });
           return;
@@ -84,18 +95,16 @@ export function ImportPanel() {
   const confirm = () =>
     start(async () => {
       const importable = files.filter((_, i) => rows?.[i]?.importable);
-      const got: Array<{ displayCode: string; lessonId: string; file: string }> = [];
+      let loaded = 0;
       for (const b of batches(importable)) {
-        const r = await confirmImportAction(b);
+        const r = await confirmImportAction(b, practice);
         if (!r.ok) {
           setMsg({ ok: false, text: r.error ?? "Failed." });
-          setCodes(got);
           return;
         }
-        got.push(...(r.codes ?? []));
+        loaded += r.loaded ?? 0;
       }
-      setCodes(got);
-      setMsg({ ok: true, text: `${got.length} narrative${got.length === 1 ? "" : "s"} loaded.` });
+      setMsg({ ok: true, text: `${loaded} ${practice ? "practice " : ""}narrative${loaded === 1 ? "" : "s"} loaded.` });
       setFiles([]);
       setRows(null);
       router.refresh();
@@ -104,28 +113,40 @@ export function ImportPanel() {
   return (
     <div className="space-y-3">
       <p className="text-[14px] text-graphite">
-        Choose the pipeline&apos;s <code>NARRATIVE.md</code> files (one per lesson). Nothing is saved until you press Load.
+        Choose the review script Word files (<code>…_SCRIPT_….docx</code>, one per lesson) or the pipeline&apos;s{" "}
+        <code>NARRATIVE.md</code> files. The platform reads each lesson&apos;s ID (tr_id) from the file&apos;s own
+        title. Nothing is saved until you press Load.
       </p>
       <input
         type="file"
         multiple
-        accept=".md,.txt,text/plain,text/markdown"
+        accept=".docx,.md,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
         onChange={(e) => void pick(e.target.files)}
         className="block text-[14px]"
-        aria-label="NARRATIVE.md files"
+        aria-label="Review script Word files or NARRATIVE.md files"
       />
-      <p className="text-[14px]">
-        Lesson IDs are removed from every narrative: the platform stores none, and each narrative is known by its
-        code (N-0001…). After loading you can download the list of which code is which lesson. Save it in the
-        Harvard Drive; the platform does not keep it.
-      </p>
+      <label className="flex items-start gap-2 text-[14px] text-ink">
+        <input
+          type="checkbox"
+          checked={practice}
+          onChange={(e) => {
+            setPractice(e.target.checked);
+            setRows(null);
+          }}
+          className="mt-1 size-4 accent-[var(--clobs-bark)]"
+        />
+        <span>
+          <strong>Practice</strong> — for trying the platform. Practice narratives show as &ldquo;Practice&rdquo; on
+          the enumerator&apos;s list and are left out of progress, downloads and the nightly Drive copy.
+        </span>
+      </label>
       <div className="flex gap-2">
         <button type="button" disabled={!files.length || pending} onClick={preview} className={nxButtonClass("secondary")}>
           {pending && !rows ? "Checking…" : `Check ${files.length || ""} file${files.length === 1 ? "" : "s"}`}
         </button>
         {rows && (
           <button type="button" disabled={!n || pending} onClick={confirm} className={nxButtonClass("primary")}>
-            {pending ? "Loading…" : `Load ${n} narrative${n === 1 ? "" : "s"}`}
+            {pending ? "Loading…" : `Load ${n} ${practice ? "practice " : ""}narrative${n === 1 ? "" : "s"}`}
           </button>
         )}
       </div>
@@ -135,9 +156,10 @@ export function ImportPanel() {
             <thead className="bg-card text-smoke">
               <tr>
                 <th className="px-3 py-2 font-medium">File</th>
-                <th className="px-3 py-2 font-medium">Lesson</th>
+                <th className="px-3 py-2 font-medium">Lesson (tr_id)</th>
+                <th className="px-3 py-2 font-medium">Type</th>
                 <th className="px-3 py-2 font-medium">Length</th>
-                <th className="px-3 py-2 font-medium">Episodes</th>
+                <th className="px-3 py-2 font-medium">Lines / episodes</th>
                 <th className="px-3 py-2 font-medium">Result</th>
               </tr>
             </thead>
@@ -145,8 +167,9 @@ export function ImportPanel() {
               {rows.map((r, i) => (
                 <tr key={i} className="border-t border-hairline align-top">
                   <td className="px-3 py-2">{r.name}</td>
-                  <td className="px-3 py-2">{r.lessonId ?? "not found"}</td>
-                  <td className="px-3 py-2 tabular-nums">{r.duration}</td>
+                  <td className="mono px-3 py-2">{r.lessonId ?? "not found"}</td>
+                  <td className="px-3 py-2">{r.format === "script" ? "Review script" : "Narrative"}</td>
+                  <td className="mono px-3 py-2">{r.duration}</td>
                   <td className="px-3 py-2 tabular-nums">{r.episodes}</td>
                   <td className="px-3 py-2">
                     {r.importable ? (
@@ -169,27 +192,15 @@ export function ImportPanel() {
         </div>
       )}
       <Message ok={msg?.ok ?? true} text={msg?.text ?? null} />
-      {codes.length > 0 && <CodeListDownload codes={codes} />}
     </div>
   );
 }
 
-/** The code ↔ lesson list, built in the browser from this import only. */
-function CodeListDownload({ codes }: { codes: Array<{ displayCode: string; lessonId: string; file: string }> }) {
-  const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  const csv =
-    "\uFEFFcode,lesson_id,file\r\n" +
-    codes.map((c) => [c.displayCode, c.lessonId, c.file].map(cell).join(",")).join("\r\n") +
-    "\r\n";
-  const href = `data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`;
-  return (
-    <div className="rounded-xl border border-clay bg-clay-wash px-3 py-2 text-[14px] text-ink">
-      <a href={href} download={`narrative-codes_${new Date().toISOString().slice(0, 10)}.csv`} className="rounded-sm text-lake underline underline-offset-4">
-        Download the code list ({codes.length})
-      </a>{" "}
-      and save it in the Harvard Drive now. It is shown only once and is not stored in the platform.
-    </div>
-  );
+/** How a video link was checked against its narrative (Amendment §61). */
+export function VideoCheckBadge({ check, file }: { check: string | null; file: string | null }) {
+  if (check === "drive") return <span className="text-forest">✓ Checked in Drive{file ? `: ${file}` : ""}</span>;
+  if (check === "sheet") return <span className="text-forest">✓ Matches the sheet{file ? `: ${file}` : ""}</span>;
+  return <span className="text-clay">Video not checked</span>;
 }
 
 export function BackupNowButton() {
@@ -225,9 +236,11 @@ export function SheetPanel() {
   return (
     <div className="space-y-3">
       <p className="text-[14px] text-graphite">
-        A CSV with the columns <strong>order</strong>, <strong>reviewer</strong> (email or full name),{" "}
-        <strong>video_id</strong> (lesson ID or N-code) and <strong>video_drive_id</strong> or{" "}
-        <strong>video_link</strong>, like <code>00_assignments.csv</code>.
+        A CSV like <code>00_assignments.csv</code> with the columns <strong>order</strong>, <strong>reviewer</strong>{" "}
+        (email or full name), <strong>video_id</strong> (the lesson&apos;s tr_id), <strong>video_file</strong> and{" "}
+        <strong>video_drive_id</strong> (or <strong>video_link</strong>). Other columns are ignored. Every video is
+        checked against the lesson in the narrative&apos;s own title; a row whose video belongs to another lesson
+        cannot be assigned.
       </p>
       <input
         type="file"
@@ -273,22 +286,39 @@ export function SheetPanel() {
             <thead className="bg-card text-smoke">
               <tr>
                 <th className="px-3 py-2 font-medium">Line</th>
-                <th className="px-3 py-2 font-medium">Order</th>
                 <th className="px-3 py-2 font-medium">Reviewer</th>
-                <th className="px-3 py-2 font-medium">Narrative</th>
-                <th className="px-3 py-2 font-medium">Video link</th>
-                <th className="px-3 py-2 font-medium">Problems</th>
+                <th className="px-3 py-2 font-medium">Shows as</th>
+                <th className="px-3 py-2 font-medium">Lesson (tr_id)</th>
+                <th className="px-3 py-2 font-medium">School (sid)</th>
+                <th className="px-3 py-2 font-medium">Video</th>
+                <th className="px-3 py-2 font-medium">Result</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.line} className="border-t border-hairline align-top">
                   <td className="px-3 py-2 tabular-nums">{r.line}</td>
-                  <td className="px-3 py-2 tabular-nums">{r.orderNo ?? ""}</td>
                   <td className="px-3 py-2">{r.assigneeName ?? r.reviewer}</td>
-                  <td className="px-3 py-2">{r.narrativeCode ?? r.lesson}</td>
-                  <td className="px-3 py-2">{r.videoUrl ? "Yes" : "None"}</td>
-                  <td className="px-3 py-2 text-clay">{r.problems.join("; ")}</td>
+                  <td className="px-3 py-2">{r.orderNo !== null ? `Video ${r.orderNo}` : ""}</td>
+                  <td className="mono px-3 py-2">{r.lessonId ?? r.lesson}</td>
+                  <td className="mono px-3 py-2">{r.sid ?? ""}</td>
+                  <td className="px-3 py-2">
+                    {!r.videoUrl ? (
+                      <span className="text-clay">No link</span>
+                    ) : r.problems.length ? (
+                      <span className="break-all">{r.sheetFile ?? "link given"}</span>
+                    ) : (
+                      <VideoCheckBadge check={r.videoCheck} file={r.videoFile} />
+                    )}
+                    {r.videoNote && <div className="text-[12px] text-smoke">{r.videoNote}</div>}
+                  </td>
+                  <td className="px-3 py-2">
+                    {r.problems.length ? (
+                      <span className="text-clay">{r.problems.join("; ")}</span>
+                    ) : (
+                      <span className="text-forest">Ready</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -300,11 +330,23 @@ export function SheetPanel() {
   );
 }
 
-export function AssignInline({ narrativeId, reviewers, nextOrder }: { narrativeId: string; reviewers: Reviewer[]; nextOrder: number }) {
+/**
+ * Assign one narrative. Choosing a reviewer fills in their next free order
+ * number: the enumerator sees it as "Video <order>", so it must be unused.
+ */
+export function AssignInline({
+  narrativeId,
+  reviewers,
+  nextOrders,
+}: {
+  narrativeId: string;
+  reviewers: Reviewer[];
+  nextOrders: Record<string, number>;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [who, setWho] = useState("");
-  const [order, setOrder] = useState(String(nextOrder));
+  const [order, setOrder] = useState("1");
   const [link, setLink] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -317,7 +359,15 @@ export function AssignInline({ narrativeId, reviewers, nextOrder }: { narrativeI
   }
   return (
     <div className="flex flex-col gap-2">
-      <select aria-label="Reviewer" value={who} onChange={(e) => setWho(e.target.value)} className={input}>
+      <select
+        aria-label="Reviewer"
+        value={who}
+        onChange={(e) => {
+          setWho(e.target.value);
+          setOrder(String(nextOrders[e.target.value] ?? 1));
+        }}
+        className={input}
+      >
         <option value="">Choose a reviewer…</option>
         {reviewers.map((r) => (
           <option key={r.id} value={r.id}>
