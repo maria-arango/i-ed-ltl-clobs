@@ -6,6 +6,7 @@
 import { requireSessionWithTeams } from "@/lib/auth-helpers";
 import { canAccessScoring } from "@/lib/teams";
 import { AppShell } from "@/components/app-shell";
+import { hasOpenNarratives } from "@/lib/db/narratives";
 
 export default async function NarrativesAreaLayout({ children }: { children: React.ReactNode }) {
   const { session, teams } = await requireSessionWithTeams();
@@ -18,7 +19,7 @@ export default async function NarrativesAreaLayout({ children }: { children: Rea
       isChiefCoder={session.user.isChiefCoder}
       showCalibration={session.user.datasetScope !== "training"}
       showScoring={isAdmin || (teams.length > 0 && canAccessScoring(session.user.role, teams))}
-      showMyNarratives={teams.includes("narratives")}
+      showMyNarratives={teams.includes("narratives") || (session.user.role === "admin" && (await hasOpenNarratives(session.user.id)))}
     >
       {children}
     </AppShell>

@@ -789,3 +789,44 @@ Decision of 2026-10-29 (María):
     code automatically get the emailed 6-digit code; people with an assigned code get the 4-digit
     step (unknown emails too, so the page reveals nothing about them). This supersedes the PIN
     rules of §53 that relied on random or self-chosen PINs, and §56's "change your PIN" mitigation.
+
+Decisions of 2026-10-30 (María: review scripts, which narrative goes with which video):
+
+61. **Review scripts; lesson ids kept; videos checked; practice narratives.**
+    - *What is loaded.* The narratives are now the **review script** Word files made by
+      `20261014_code/20261027_narrative_review/review_script.py` (`…_SCRIPT_….docx`): a timed
+      transcript, "time ⇥ speaker ⇥ text", with scene lines in bold, "seen" lines in grey italic,
+      minute markers, the pipeline's grey `?` notes, and the context card and speaker labels on
+      top. The platform reads them as they are (every paragraph's text kept exactly) and still
+      accepts `NARRATIVE.md`. The editor shows the script in the same columns. A Word download of a
+      script keeps review_script.py's layout, so the team's `review_import.py` reads the corrections
+      back (checked on all 15 scripts in the reviewers' folders: identical lines, nothing
+      unreadable). Scripts have **no reflection questions** (María); time worked is still measured.
+    - *Lesson ids.* **Supersedes §54 and §57.** The lesson id (tr_id) is kept with each narrative,
+      admin-only (`narratives.lesson_id` and `label`, not granted to the restricted role), and the
+      school (sid) is derived from it. Both appear on the admin screens, in every Word file name,
+      in `MANIFEST.csv` and in the nightly copy (as Amendment B §6 requires for admin exports).
+      **Enumerators see each narrative as "Video 1, Video 2, Video 3…"** (their own order), never
+      by the admin label or N-code. By María's decision the lesson id **stays in the narrative's own
+      title** ("Review script — <tr_id>"), so the enumerator can check that the video they open is
+      the right one; the Drive file name shows it anyway. This applies to the Narratives team only:
+      the scoring side's blinding (CLAUDE.md §2–§3) is unchanged.
+    - *Video checks.* A video belongs to a narrative when its file name starts with
+      `<sid>_<tr_id>_` (repeated underscores ignored: one real file is `<sid>__<tr_id>_…`). When an
+      admin assigns, one at a time or from the sheet, the platform asks Google Drive for the linked
+      file's name (read-only, the nightly copy's service account) and compares it with the
+      narrative's own title; it also checks the sheet's `video_file`. A video that belongs to
+      another lesson cannot be assigned. A video that could not be checked (no Drive access, no
+      `video_file`) can be assigned but is marked "Video not checked" on the dashboard. The file
+      name checked and how (`drive` / `sheet`) are stored on the assignment, admin-only.
+    - *Unique numbers.* An order number is used at most once per person (so "Video 3" is never
+      ambiguous): assigning refuses a taken number and suggests the next free one, the sheet flags
+      clashes, and a reassigned narrative takes the new reviewer's next free number if its own is
+      taken.
+    - *Practice narratives.* A narrative can be loaded as **practice** (dataset `training`). It is
+      assigned and edited like any other, appears as "Practice" at the top of the enumerator's
+      list, and is left out of progress, the downloads and the nightly copy. The same file can be
+      loaded once as real and once as practice. An admin with a narrative assigned sees "My
+      narratives" without joining the team.
+    - Migration `0014_review-scripts.sql` (additive): `narrative_assignments.video_file` and
+      `video_check`; a file is unique per dataset instead of overall.

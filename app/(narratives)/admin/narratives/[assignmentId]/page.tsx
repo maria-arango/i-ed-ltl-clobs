@@ -9,6 +9,7 @@ import { requireAdmin } from "@/lib/auth-helpers";
 import { getAdminNarrative, listReviewers, listRevisions } from "@/lib/db/admin-narratives";
 import { anchoredCommentIds, docStats } from "@/lib/narratives/doc";
 import { answerFields } from "@/lib/narratives/template";
+import { VideoCheckBadge } from "@/components/narratives/admin/panels";
 import { DocView } from "@/components/narratives/doc-view";
 import { NxCard, NxStatus, nxButtonClass } from "@/components/narratives/nx-ui";
 import { AssignmentActions, RestoreButton } from "@/components/narratives/admin/panels";
@@ -48,17 +49,19 @@ export default async function AdminNarrative({ params }: Params) {
           Narratives
         </Link>
         <span aria-hidden> / </span>
-        <span className="text-graphite">{v.displayCode}</span>
+        <span className="text-graphite">{v.lessonId ?? v.displayCode}</span>
       </nav>
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <h1
           className="mono font-medium text-ink"
           style={{ fontSize: "var(--clobs-text-heading)", lineHeight: "var(--clobs-leading-heading)" }}
         >
-          {v.displayCode}
+          {v.lessonId ?? v.displayCode}
         </h1>
         <span className="text-[14px] text-smoke">
-          {v.durationLabel} · {v.assigneeName} · order {v.orderNo}
+          {v.sid ? `School ${v.sid} · ` : ""}
+          {v.durationLabel ? `${v.durationLabel} · ` : ""}
+          {v.assigneeName} · shows as {v.practice ? "Practice" : `Video ${v.orderNo}`}
         </span>
         <NxStatus status={v.status} />
         <a href={`/api/admin/narratives/${v.assignmentId}/docx`} className={nxButtonClass("primary", "ml-auto")}>
@@ -115,6 +118,11 @@ export default async function AdminNarrative({ params }: Params) {
                 )}
               </dd>
             </dl>
+            {v.videoUrl && (
+              <p className="mt-3 break-all text-[13px]">
+                <VideoCheckBadge check={v.videoCheck} file={v.videoFile} />
+              </p>
+            )}
           </NxCard>
 
           <NxCard className="p-5">

@@ -514,3 +514,55 @@ td.num,
   border-bottom-color: var(--clobs-bark);
 }
 .nx-doc s { text-decoration-thickness: 1.5px; }
+
+/* Review scripts (Amendment §61), laid out like the Word script: time and
+   speaker in fixed columns (monospace prefix; each tab widened to the next
+   column, see lib/narratives/script-layout.ts), wrapped text hanging under
+   the text column, scene lines bold, "seen" lines grey italic. --nx-ch is
+   one character of the prefix (mono at 0.9em, 0.6em advance). */
+.nx-doc { --nx-ch: calc(var(--clobs-text-body-lg) * 0.54); }
+.nx-doc .ProseMirror h3 {
+  font-size: var(--clobs-text-body);
+  font-weight: 600;
+  margin: 1em 0 0.3em;
+}
+.nx-doc .ProseMirror p[data-variant="subtitle"] {
+  color: var(--clobs-smoke);
+  font-style: italic;
+  font-size: 0.85em;
+}
+.nx-doc .ProseMirror p[data-variant="note"] {
+  color: var(--clobs-graphite);
+  font-style: italic;
+  font-size: 0.9em;
+}
+.nx-doc .ProseMirror p[data-variant="rule"] {
+  font-family: var(--clobs-font-mono);
+  color: var(--clobs-smoke);
+  font-size: 0.75em;
+  font-weight: 600;
+  margin: 1.1em 0 0.3em;
+  overflow: hidden;
+}
+.nx-doc .ProseMirror p[data-variant="flag"] {
+  color: var(--clobs-smoke);
+  font-style: italic;
+  font-size: 0.82em;
+  margin: -0.1em 0 0.4em;
+  padding-left: calc(var(--nx-ch) * 21);
+}
+.nx-doc .ProseMirror .nx-script {
+  tab-size: 0;
+  margin: 0 0 0.2em;
+  padding-left: calc(var(--nx-ch) * var(--nx-hang));
+  text-indent: calc(var(--nx-ch) * var(--nx-hang) * -1);
+}
+.nx-doc .nx-pre {
+  font-family: var(--clobs-font-mono);
+  font-size: 0.9em;
+}
+.nx-doc .nx-tab { padding-right: calc(var(--nx-ch) * var(--nx-tab)); }
+.nx-doc .ProseMirror p[data-variant="fact"] .nx-pre { font-weight: 600; }
+.nx-doc .ProseMirror .nx-scene { font-weight: 600; margin-top: 0.6em; }
+.nx-doc .ProseMirror .nx-seen { color: var(--clobs-smoke); font-style: italic; }
+.nx-doc .ProseMirror .nx-seen .nx-pre { font-style: normal; }

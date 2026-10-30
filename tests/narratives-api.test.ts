@@ -1,11 +1,14 @@
 /**
- * NARRATIVES API TESTS — Amendments §51–§54, ADR 0002, at the API layer.
+ * NARRATIVES API TESTS — Amendments §51–§54 and §61, ADR 0002, at the API layer.
  *
  * What must hold:
  *  - An enumerator sees only their own assignments, in order; anyone
  *    else's is a 404. Scoring-only accounts get 403, signed-out 401.
- *  - With "remove lesson IDs" the id is stored nowhere and never served;
- *    the restricted role physically cannot read lesson_id / source_text.
+ *  - The lesson id is kept for admins (§61). Enumerators know a narrative
+ *    as "Video <order>": the API serves no label, N-code, lesson_id,
+ *    source text or video file name, and the restricted role physically
+ *    cannot read lesson_id / source_text / video_file. (The lesson id does
+ *    stay inside the narrative's own text, on purpose.)
  *  - Saves are optimistic: a stale base revision is refused (409) and the
  *    refused version is KEPT as a conflict copy — never a silent overwrite.
  *  - An expired session (401) changes nothing on the server.
@@ -63,7 +66,7 @@ const FIXTURE = {
 // Synthetic narratives with lesson ids unique to this suite.
 const BASE = readFileSync("db/seed/narratives/placeholder-99903_12.md", "utf8");
 const LESSON_KEEP = "99971_1";
-const LESSON_REMOVE = "99972_2";
+const LESSON_SECOND = "99972_2";
 const LESSON_THIRD = "99973_3";
 const fileFor = (id: string) => ({ name: `${id}.md`, text: BASE.split("99903_12").join(id) });
 
@@ -139,22 +142,18 @@ beforeAll(async () => {
     { userId: ids.scorer, team: "scoring" },
   ]);
 
-  const keep = await confirmNarrativeImport(ids.admin, [fileFor(LESSON_KEEP), fileFor(LESSON_THIRD)], {
-    removeLessonIds: false,
-    dataset: "test",
-  });
-  const removed = await confirmNarrativeImport(ids.admin, [fileFor(LESSON_REMOVE)], {
-    removeLessonIds: true,
-    dataset: "test",
-  });
-  if (!keep.ok || !removed.ok) throw new Error("import failed");
+  const imported = await confirmNarrativeImport(
+    ids.admin,
+    [fileFor(LESSON_KEEP), fileFor(LESSON_SECOND), fileFor(LESSON_THIRD)],
+    { dataset: "test" },
+  );
+  if (!imported.ok) throw new Error("import failed");
   const all = await db.select().from(narratives).where(eq(narratives.importedBy, ids.admin));
   const byLabel = (l: string) => all.find((n) => n.label === l)!;
-  const removedRow = all.find((n) => n.lessonId === null)!;
 
   for (const [key, narrativeId, assignee, order] of [
     ["a2", byLabel(LESSON_KEEP).id, ids.a, 2],
-    ["a1", removedRow.id, ids.a, 1],
+    ["a1", byLabel(LESSON_SECOND).id, ids.a, 1],
     ["b1", byLabel(LESSON_THIRD).id, ids.b, 1],
   ] as const) {
     const r = await assignNarrative(ids.admin, {
@@ -174,19 +173,28 @@ afterAll(async () => {
 
 describe("import", () => {
   it("previews duplicates instead of importing twice", async () => {
-    const rows = await previewNarrativeImport([fileFor(LESSON_KEEP)]);
+    const rows = await previewNarrativeImport([fileFor(LESSON_KEEP)], "test");
     expect(rows[0].importable).toBe(false);
     expect(rows[0].duplicateOf).toMatch(/^N-\d{4}$/);
   });
 
-  it("with 'remove lesson IDs' stores the id nowhere", async () => {
+  it("keeps the lesson id (tr_id) for admins, and in the narrative's own text", async () => {
     const [row] = await db
       .select()
       .from(narratives)
-      .where(and(eq(narratives.importedBy, ids.admin), eq(narratives.label, narratives.displayCode)));
-    expect(row.lessonId).toBeNull();
-    expect(row.sourceText).not.toContain(LESSON_REMOVE);
-    expect(JSON.stringify(row.initialDoc)).not.toContain(LESSON_REMOVE);
+      .where(and(eq(narratives.importedBy, ids.admin), eq(narratives.lessonId, LESSON_SECOND)));
+    expect(row.label).toBe(LESSON_SECOND);
+    expect(JSON.stringify(row.initialDoc)).toContain(LESSON_SECOND);
+  });
+
+  it("loads the same file again as a practice narrative, separately", async () => {
+    const r = await confirmNarrativeImport(ids.admin, [fileFor(LESSON_KEEP)], { dataset: "training" });
+    expect(r.ok && r.created.length).toBe(1);
+    const rows = await db
+      .select({ dataset: narratives.dataset })
+      .from(narratives)
+      .where(and(eq(narratives.importedBy, ids.admin), eq(narratives.lessonId, LESSON_KEEP)));
+    expect(rows.map((x) => x.dataset).sort()).toEqual(["test", "training"]);
   });
 });
 
@@ -197,6 +205,7 @@ describe("access", () => {
     expect(res.status).toBe(200);
     const { narratives: list } = await res.json();
     expect(list.map((n: { assignmentId: string }) => n.assignmentId)).toEqual([asg.a1, asg.a2]);
+    expect(list.map((n: { label: string }) => n.label)).toEqual(["Video 1", "Video 2"]);
     expect(list[0].videoUrl).toBe("https://drive.google.com/file/d/1wxGK6SwKbMAsRhLA6oeiMsWV_testtesttest/view");
   });
 
@@ -213,21 +222,29 @@ describe("access", () => {
     expect((await listRoute()).status).toBe(401);
   });
 
-  it("never serves a removed lesson id or admin-only fields", async () => {
+  it("calls a narrative 'Video <order>' and never serves admin-only fields", async () => {
     actAs("a");
     const { body } = await getDoc(asg.a1);
-    const text = JSON.stringify(body);
-    expect(text).not.toContain(LESSON_REMOVE);
-    expect(text).not.toContain('"lessonId"');
-    expect(text).not.toContain('"sourceText"');
+    expect(body.label).toBe("Video 1");
+    const { doc, ...rest } = body;
+    const text = JSON.stringify(rest);
+    expect(text).not.toContain(LESSON_SECOND);
+    for (const field of ['"lessonId"', '"sourceText"', '"displayCode"', '"videoFile"', '"videoCheck"']) {
+      expect(text).not.toContain(field);
+    }
+    expect(text).not.toMatch(/N-\d{4}/);
+    // By decision (§61) the narrative's own title keeps the lesson id, so
+    // the enumerator can check it against the video.
+    expect(JSON.stringify(doc)).toContain(LESSON_SECOND);
   });
 
-  it("the restricted role cannot read lesson_id or source_text at all", async () => {
+  it("the restricted role cannot read lesson_id, source_text or video_file at all", async () => {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL_CODER, max: 1 });
     try {
       await expect(pool.query("SELECT lesson_id FROM narratives LIMIT 1")).rejects.toThrow(/permission denied/);
       await expect(pool.query("SELECT source_text FROM narratives LIMIT 1")).rejects.toThrow(/permission denied/);
       await expect(pool.query("SELECT * FROM narratives LIMIT 1")).rejects.toThrow(/permission denied/);
+      await expect(pool.query("SELECT video_file FROM narrative_assignments LIMIT 1")).rejects.toThrow(/permission denied/);
     } finally {
       await pool.end();
     }
@@ -418,6 +435,9 @@ describe("reassignment", () => {
     const [old] = await db.select().from(narrativeAssignments).where(eq(narrativeAssignments.id, asg.b1));
     expect(old.status).toBe("returned");
     expect(old.statusReason).toBe("B is away");
+    // A already has Video 1 and Video 2, so this one becomes Video 3.
+    const [newRow] = await db.select().from(narrativeAssignments).where(eq(narrativeAssignments.id, r.assignmentId));
+    expect(newRow.orderNo).toBe(3);
     actAs("b");
     expect((await getDoc(asg.b1)).status).toBe(404);
     actAs("a");

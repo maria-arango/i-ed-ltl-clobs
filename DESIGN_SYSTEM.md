@@ -646,3 +646,6 @@ Two additions, both for the review document:
   writes exactly `FF0000`, as in the master team's documents.
 - Comment highlights use `--clobs-marker-yellow`; the active comment uses `--clobs-score-1` with a
   bark underline. Evidence codes are `--clobs-smoke` at 0.72 em.
+- Review scripts (Amendment §61) use the same tokens and fonts: time and speaker in JetBrains Mono
+  at 0.9 em in fixed columns, scene lines semibold, "seen" lines, minute markers and `?` notes in
+  `--clobs-smoke` (italic where the Word script is italic). No new colours.

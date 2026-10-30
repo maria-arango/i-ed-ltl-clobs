@@ -517,12 +517,26 @@ Amendments §56–§58.
   - sign-in sends the emailed 6-digit code automatically to admins and to accounts without a code
     (`/api/signin-method`).
 
-## Next up (2026-10-29)
+## Progress (2026-10-30 — review scripts, video checks, practice; Amendment §61)
 
-1. María: merge the pull request (docs/09 §D), then add the 3 Vercel env vars and redeploy
-   (§E), then press "Copy … now" once to confirm.
-2. Recommend that the 8 enumerators change their PINs (their codes are their ODK IDs, §56).
-3. Load the final narratives, save the code list to Drive, assign (§F).
+- The platform loads the review script Word files (`lib/narratives/script.ts`), shows them in
+  columns (`lib/narratives/script-layout.ts`, decorations in `editor-extensions.ts`, updated
+  incrementally: 1,219-paragraph script types at ~11 ms per key) and downloads them in
+  review_script.py's layout. Checked against all 15 real scripts with the team's
+  `review_import.py`: identical lines, nothing unreadable; an edited copy reports exactly the edits.
+- Lesson ids kept (admin-only); enumerators see "Video N"; video links checked against the
+  narrative's own tr_id via the Drive file name (`lib/narratives/video-check.ts`,
+  `getDriveFileName`); order numbers unique per person; practice narratives (dataset `training`).
+- Migration 0014 (additive) must be applied to the live database after merging, with María's OK.
+
+## Next up (2026-10-30)
+
+1. María: merge PR #32 (paste the code) and the review-scripts PR.
+2. With María's OK: apply migration 0014 on live, then load her practice script and assign it to
+   her (docs/09 §F.4).
+3. María: add the 3 Vercel env vars and redeploy (docs/09 §E) — this also turns on the Drive
+   video check.
+4. Load the final scripts and assign them with the sheet (docs/09 §F).
 
 ## Earlier "next up" lists (history)
 

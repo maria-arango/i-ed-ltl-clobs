@@ -9,7 +9,6 @@ import {
   narrativeToDoc,
   padTimes,
   parseNarrative,
-  redactLessonId,
 } from "@/lib/narratives/parse";
 import { docStats, plainText, type PMNode } from "@/lib/narratives/doc";
 import { narrativeSchema, validateNarrativeDoc } from "@/lib/narratives/editor-schema";
@@ -101,16 +100,6 @@ describe("narrativeToDoc", () => {
     expect(validateNarrativeDoc(bad).ok).toBe(false);
     expect(validateNarrativeDoc({ type: "doc", content: [{ type: "table" }] }).ok).toBe(false);
     expect(validateNarrativeDoc("not json").ok).toBe(false);
-  });
-});
-
-describe("redactLessonId (Amendment §54)", () => {
-  it("removes every occurrence so the platform stores none", () => {
-    const red = redactLessonId(SAMPLE, "99903_12", "Narrative 3");
-    expect(red).not.toContain("99903_12");
-    const p = parseNarrative(red);
-    expect(p.lessonId).toBe("Narrative 3");
-    expect(p.episodes).toHaveLength(25);
   });
 });
 

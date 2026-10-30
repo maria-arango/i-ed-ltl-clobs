@@ -21,13 +21,22 @@ import Paragraph from "@tiptap/extension-paragraph";
 import Strike from "@tiptap/extension-strike";
 import Text from "@tiptap/extension-text";
 
-export type ParagraphVariant = "given" | "covers" | null;
+/**
+ * Paragraph kinds. NARRATIVE.md: `given`, `covers`. Review scripts
+ * (lib/narratives/script.ts): `subtitle`, `note` (italic guidance), `fact`
+ * ("label ⇥ text"), `rule` (a minute marker), `line` ("time ⇥ who ⇥ text")
+ * and `flag` (the pipeline's grey "?" note under a line). A new paragraph
+ * (Enter) is always plain; a plain paragraph typed as "time ⇥ who ⇥ text" is
+ * laid out and exported as a line (lib/narratives/script-layout.ts).
+ */
+export type ParagraphVariant = "given" | "covers" | "subtitle" | "note" | "fact" | "rule" | "line" | "flag" | null;
 
 export const NarrativeParagraph = Paragraph.extend({
   addAttributes() {
     return {
       variant: {
         default: null,
+        keepOnSplit: false,
         parseHTML: (el) => el.getAttribute("data-variant"),
         renderHTML: (attrs) => (attrs.variant ? { "data-variant": attrs.variant } : {}),
       },
@@ -35,7 +44,7 @@ export const NarrativeParagraph = Paragraph.extend({
   },
 });
 
-export const NarrativeHeading = Heading.configure({ levels: [1, 2] });
+export const NarrativeHeading = Heading.configure({ levels: [1, 2, 3] });
 
 // Strikethrough does NOT extend to text typed right after it: the review
 // convention is "strike the wrong words, then type the correction next to
